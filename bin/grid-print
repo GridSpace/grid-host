@@ -1,0 +1,116 @@
+#!/usr/bin/env node
+
+var fs = require('fs'),
+    url = require('url'),
+    http = require('http'),
+    https = require('https')
+    serve = require('serve-static')
+    connect = require('connect'),
+    key = null,
+    fn = null,
+    setup = {
+        "key": null,
+        "port": 8080,
+        "https-port": null,
+        "ssl-cert": null,
+        "ssl-key": null,
+        "config" : null,
+        "targets" : { }
+    };
+
+function addTarget(ip, name) {
+    setup.targets[name || ip] = {
+        ip: ip
+    };
+}
+
+process.argv.slice(2).forEach(v => {
+    if (key) {
+        if (fn) v = fn(v);
+        setup[key] = v;
+        key = null;
+        fn = null;
+    } else {
+        if (v.startsWith("-")) v = v.substring(1);
+        if (v.startsWith("-")) v = v.substring(1);
+        switch (v) {
+            case 'port':
+            case 'https-port':
+                key = v;
+                fn = parseInt;
+                break;
+            case 'ssl-cert':
+            case 'ssl-key':
+                key = v;
+                break;
+            case 'config':
+                key = v;
+                break;
+            case 'target':
+                key = v;
+                fn = addTarget;
+                break;
+            default:
+                throw "invalid option: "+v;
+        }
+    }
+});
+
+function encode(obj) {
+    return JSON.stringify(obj);
+}
+
+function decode(str) {
+    return JSON.parse(str);
+}
+
+function init(req, res, next) {
+    var parsed = url.parse(req.url, true);
+    req.gs = {
+        path: parsed.pathname,
+        query: parsed.query,
+    };
+    next();
+}
+
+function api(req, res, next) {
+    if (!req.gs.path.startsWith("/api/")) return next();
+
+    switch (req.gs.path.substring(5)) {
+        case "listTargets":
+            res.end(encode(setup.targets));
+            break;
+        case "pushPrint":
+            res.end("{result:true}");
+            break;
+        default:
+            next();
+    }
+
+}
+
+var handler = connect()
+    .use(init)
+    .use(api)
+    .use(serve(process.cwd()+"/static/"))
+    ;
+
+console.log(setup);
+console.log(setup['config']);
+
+if (setup['config']) setup = decode(fs.readFileSync(setup['config']));
+if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-cert']);
+if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
+
+if (setup['port']) {
+    http.createServer(handler).listen(setup.port);
+    console.log("grid-print started http server on port "+setup['port']);
+}
+
+if (setup['https-port']) {
+    https.createServer({
+        key: setup['ssl-key'],
+        cert: setup['ssl-cert']
+    }, handler).listen(setup['https-port']);
+    console.log("grid-print started https server on port "+setup['https-port']);
+}
