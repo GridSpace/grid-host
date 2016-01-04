@@ -89,8 +89,18 @@ function api(req, res, next) {
 
             req.on('data', data => { body += data });
             req.on('end', () => {
-                printTarget(req.gs.query.target, body);
-                res.end("{done:true}");
+                try {
+                    printTarget(
+                        req.gs.query.target,
+                        req.gs.query.filename,
+                        body
+                    );
+                    res.end("{done:true}");
+                } catch (e) {
+                    console.log(e);
+                    res.writeHead(500);
+                    res.end(e.toString());
+                }
             });
 
             break;
@@ -100,13 +110,26 @@ function api(req, res, next) {
 
 }
 
-function addTarget(ip, name) {
-    setup.targets[name || ip] = {
-        ip: ip
+function addTarget(host, name) {
+    setup.targets[name || host] = {
+        host: host
     };
 }
 
-function printTarget(target, data) {
+function postFile(host, name, data) {
+    // todo post file to flashair
+}
+
+function printTarget(target, filename, data) {
+    var pt = setup.target[target];
+
+    if (!pt) throw "invalid target: "+target;
+    if (pt.filter) {
+        // todo handle filter process
+    } else {
+        postFile(target.host, filename, data);
+    }
+
     console.log({printTo:target, data:data.length});
 }
 
