@@ -2,8 +2,8 @@
 
 `grid-print` is a simple 3d print sender with optional gcode
 translation. this is primarily intended as a print target for
-KIRI:MOTO to enable sending of files to FlashAir SD cards over
-WIFI networks.
+[KIRI:MOTO](https://grid.space/kiri/)
+to enable sending of files to FlashAir SD cards.
 
 ## Usage:
 
@@ -19,7 +19,7 @@ WIFI networks.
 
 `--ssl-key` File path for SSL server key (required for HTTPS)
 
-`--config` path to config file
+`--config` path to config file (overrides command-line options)
 
 `--target` print target in the form [name:host-name-or-address]
 
