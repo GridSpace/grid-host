@@ -15,14 +15,14 @@ var fs = require('fs'),
         "ssl-cert": null,
         "ssl-key": null,
         "config" : null,
-        "targets" : { }
+        "targets" : { },
+        "filters" : {
+            "gpx" : {
+                "path": "gpx",
+                "args": [ "{file-in}", "{file-out}" ]
+            }
+        }
     };
-
-function addTarget(ip, name) {
-    setup.targets[name || ip] = {
-        ip: ip
-    };
-}
 
 process.argv.slice(2).forEach(v => {
     if (key) {
@@ -77,11 +77,22 @@ function api(req, res, next) {
     if (!req.gs.path.startsWith("/api/")) return next();
 
     switch (req.gs.path.substring(5)) {
-        case "listTargets":
+        case "targets":
             res.end(encode(setup.targets));
             break;
-        case "pushPrint":
-            res.end("{result:true}");
+        case "print":
+            if (!req.method === 'POST') return next();
+            if (!req.gs.query.filename) return next();
+            if (!req.gs.query.target) return next();
+
+            var body = '';
+
+            req.on('data', data => { body += data });
+            req.on('end', () => {
+                printTarget(req.gs.query.target, body);
+                res.end("{done:true}");
+            });
+
             break;
         default:
             next();
@@ -89,14 +100,21 @@ function api(req, res, next) {
 
 }
 
+function addTarget(ip, name) {
+    setup.targets[name || ip] = {
+        ip: ip
+    };
+}
+
+function printTarget(target, data) {
+    console.log({printTo:target, data:data.length});
+}
+
 var handler = connect()
     .use(init)
     .use(api)
     .use(serve(process.cwd()+"/static/"))
     ;
-
-console.log(setup);
-console.log(setup['config']);
 
 if (setup['config']) setup = decode(fs.readFileSync(setup['config']));
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-cert']);
