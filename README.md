@@ -11,14 +11,37 @@ WIFI networks.
 
 ## Options:
 
-    `--port` Port to listen on (defaults to 8081)
+`--port` Port for HTTP (defaults to 8081)
 
-    `--https-port` Port for HTTPS (defaults to none)
+`--https-port` Port for HTTPS (defaults to none/off)
 
-    `--ssl-cert` File path for SSL server cert
+`--ssl-cert` File path for SSL server cert (required for HTTPS)
 
-    `--ssl-key` File path for SSL server key
+`--ssl-key` File path for SSL server key (required for HTTPS)
 
-    `--config` path to config file
+`--config` path to config file
 
-    `--target` print target in the form [name:ip-address]
+`--target` print target in the form [name:host-name-or-address]
+
+## Sample Config File:
+
+```
+{
+	"port": 8080,
+	"https-port": 8443,
+	"ssl-cert": "/path/to/cert",
+	"ssl-key": "/path/to/key",
+	"targets": {
+		"my_target": {
+			"host": "host-name-or-address",
+			"filter": "gpx"
+		}
+	},
+	"filters": {
+		"gpx": {
+			"path": "path_to_gpx",
+			"args": [ "{file_in}", "{file_out}" ]
+		}
+	},
+}
+```
