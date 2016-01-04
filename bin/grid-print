@@ -1,14 +1,175 @@
 #!/usr/bin/env node
 
+function lastmod(path) {
+	try {
+		return fs.statSync(path).mtime.getTime();
+	} catch (e) {
+		return 0;
+	}
+}
+
+function mkdirs(path) {
+	var root = "";
+	path.forEach(seg => {
+		if (root) {
+			root = root + "/" + seg;
+		} else {
+			root = seg;
+		}
+		lastmod(root) || fs.mkdirSync(root);
+	});
+}
+
+function encode(obj) {
+    return JSON.stringify(obj);
+}
+
+function decode(str) {
+    return JSON.parse(str);
+}
+
+function init(req, res, next) {
+    var parsed = url.parse(req.url, true);
+    req.gs = {
+        path: parsed.pathname,
+        query: parsed.query,
+    };
+    if (req.method === 'OPTIONS') {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Allow", "GET,POST,OPTIONS");
+        res.end();
+    } else {
+        next();
+    }
+}
+
+function api(req, res, next) {
+    if (!req.gs.path.startsWith("/api/")) return next();
+
+    switch (req.gs.path.substring(5)) {
+        case "targets":
+            res.end(encode(setup.targets));
+            break;
+        case "print":
+            if (req.method !== 'POST') return next();
+            if (!req.gs.query.filename) return next();
+            if (!req.gs.query.target) return next();
+
+            var body = '';
+
+            req.on('data', data => { body += data });
+            req.on('end', () => {
+                try {
+                    printTarget(
+                        req.gs.query.target,
+                        req.gs.query.filename,
+                        body, (err) => {
+                            if (err) {
+                                res.writeHead(500);
+                                res.end(err.toString());
+                            } else {
+                                res.setHeader("Access-Control-Allow-Origin", "*");
+                                res.end("{done:true}");
+                            }
+                        }
+                    );
+                } catch (e) {
+                    console.log(e);
+                    res.writeHead(500);
+                    res.end(e.toString());
+                }
+            });
+
+            break;
+        default:
+            next();
+    }
+
+}
+
+function addTarget(host, name, filter) {
+    setup.targets[name || host] = {
+        host: host,
+        filter: filter
+    };
+}
+
+function tempFileName() {
+    return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
+}
+
+function postFile(host, filename, data, callback) {
+    console.log({post2host:host, file:filename, data:data.length});
+    var form = new FormData(), req;
+    form.append("file", data, filename);
+    form.append("submit", "submit");
+    req = form.submit("http://"+host+"/upload.cgi", function(err, res) {
+        if (res) res.resume();
+        if (err) console.log({err:err});
+        callback();
+    });
+}
+
+function printTarget(target, filename, data, callback) {
+    var pt = setup.targets[target],
+        filter, proc, args;
+
+    if (!pt) throw "invalid target: "+target;
+    if (pt.filter && (filter = setup.filters[pt.filter])) {
+        var fin = tempFileName();
+        var fout = tempFileName();
+        var fname = filter.filename || filename;
+        fname = fname.replace("{seq}", printSequence++);
+        fname = fname.replace("{name}", filename);
+        fs.writeFileSync(fin, data);
+        args = filter.args.slice();
+        args.forEach((val,idx) => {
+            val = val.replace("{file-in}", fin);
+            val = val.replace("{file-out}", fout);
+            args[idx] = val;
+        });
+        proc = spawn(filter.path, args);
+        proc.stdout.on('data', data => console.log({out:data.toString()}));
+        proc.stderr.on('data', err => console.log({err:err.toString()}));
+        proc.on('exit', () => {
+            if (!lastmod(fout)) {
+                console.log("missing filtered output for "+filename);
+                callback("missing filter output");
+                return;
+            }
+            try {
+                postFile(pt.host, fname, fs.readFileSync(fout), callback);
+            } catch (e) {
+                callback(e);
+            }
+            fs.unlink(fin);
+            fs.unlink(fout);
+        });
+    } else {
+        postFile(pt.host, filename, data, callback);
+    }
+}
+
+/* *********************************************
+ * Start it up
+ ********************************************* */
+
 var fs = require('fs'),
     url = require('url'),
     http = require('http'),
     https = require('https')
     serve = require('serve-static')
     connect = require('connect'),
+    spawn = require('child_process').spawn,
+    FormData = require('form-data'),
+    printSequence = 0,
+    tempIndex = 0,
+    tempDir = null,
+    cwd = process.cwd(),
     key = null,
     fn = null,
     setup = {
+        "temp-dir": "tmp",
         "key": null,
         "port": 8080,
         "https-port": null,
@@ -19,11 +180,13 @@ var fs = require('fs'),
         "filters" : {
             "gpx" : {
                 "path": "gpx",
-                "args": [ "{file-in}", "{file-out}" ]
+                "args": [ "{file-in}", "{file-out}" ],
+                "filename": "print-{seq}.x3g"
             }
         }
     };
 
+/** handle command-line arguments */
 process.argv.slice(2).forEach(v => {
     if (key) {
         if (fn) v = fn(v);
@@ -56,87 +219,14 @@ process.argv.slice(2).forEach(v => {
     }
 });
 
-function encode(obj) {
-    return JSON.stringify(obj);
-}
-
-function decode(str) {
-    return JSON.parse(str);
-}
-
-function init(req, res, next) {
-    var parsed = url.parse(req.url, true);
-    req.gs = {
-        path: parsed.pathname,
-        query: parsed.query,
-    };
-    next();
-}
-
-function api(req, res, next) {
-    if (!req.gs.path.startsWith("/api/")) return next();
-
-    switch (req.gs.path.substring(5)) {
-        case "targets":
-            res.end(encode(setup.targets));
-            break;
-        case "print":
-            if (!req.method === 'POST') return next();
-            if (!req.gs.query.filename) return next();
-            if (!req.gs.query.target) return next();
-
-            var body = '';
-
-            req.on('data', data => { body += data });
-            req.on('end', () => {
-                try {
-                    printTarget(
-                        req.gs.query.target,
-                        req.gs.query.filename,
-                        body
-                    );
-                    res.end("{done:true}");
-                } catch (e) {
-                    console.log(e);
-                    res.writeHead(500);
-                    res.end(e.toString());
-                }
-            });
-
-            break;
-        default:
-            next();
-    }
-
-}
-
-function addTarget(host, name) {
-    setup.targets[name || host] = {
-        host: host
-    };
-}
-
-function postFile(host, name, data) {
-    // todo post file to flashair
-}
-
-function printTarget(target, filename, data) {
-    var pt = setup.target[target];
-
-    if (!pt) throw "invalid target: "+target;
-    if (pt.filter) {
-        // todo handle filter process
-    } else {
-        postFile(target.host, filename, data);
-    }
-
-    console.log({printTo:target, data:data.length});
-}
+/** temp dir for filtering */
+tempDir = cwd + "/" + setup["temp-dir"];
+mkdirs([tempDir]);
 
 var handler = connect()
     .use(init)
     .use(api)
-    .use(serve(process.cwd()+"/static/"))
+    .use(serve(cwd + "/static/"))
     ;
 
 if (setup['config']) setup = decode(fs.readFileSync(setup['config']));
