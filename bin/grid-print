@@ -44,10 +44,11 @@ function init(req, res, next) {
 }
 
 function api(req, res, next) {
-    if (!req.gs.path.startsWith("/api/")) return next();
+    if (!req.gs.path.startsWith(apiroot)) return next();
 
     switch (req.gs.path.substring(5)) {
         case "targets":
+			res.setHeader("Access-Control-Allow-Origin", "*");
             res.end(encode(setup.targets));
             break;
         case "print":
@@ -60,15 +61,17 @@ function api(req, res, next) {
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
+					console.log({queue:body.length, file:req.gs.query.filename, target:req.gs.query.target});
                     printTarget(
                         req.gs.query.target,
                         req.gs.query.filename,
                         body, (err) => {
                             if (err) {
+								res.setHeader("Access-Control-Allow-Origin", "*");
                                 res.writeHead(500);
                                 res.end(err.toString());
                             } else {
-                                res.setHeader("Access-Control-Allow-Origin", "*");
+								res.setHeader("Access-Control-Allow-Origin", "*");
                                 res.end("{done:true}");
                             }
                         }
@@ -169,6 +172,7 @@ var fs = require('fs'),
     key = null,
     fn = null,
     setup = {
+		"api-root": "api",
         "temp-dir": "tmp",
         "key": null,
         "port": 8080,
@@ -219,19 +223,20 @@ process.argv.slice(2).forEach(v => {
     }
 });
 
+if (setup['config']) setup = decode(fs.readFileSync(setup['config']));
+if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
+if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
+
 /** temp dir for filtering */
 tempDir = cwd + "/" + setup["temp-dir"];
 mkdirs([tempDir]);
 
-var handler = connect()
-    .use(init)
-    .use(api)
-    .use(serve(cwd + "/static/"))
+var apiroot = ["/",setup["api-root"] || 'api',"/"].join(''),
+	handler = connect()
+	    .use(init)
+	    .use(api)
+	    .use(serve(cwd + "/static/"))
     ;
-
-if (setup['config']) setup = decode(fs.readFileSync(setup['config']));
-if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-cert']);
-if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
 if (setup['port']) {
     http.createServer(handler).listen(setup.port);
