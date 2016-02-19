@@ -28,6 +28,12 @@ function decode(str) {
     return JSON.parse(str);
 }
 
+function setCORSHeaders(req,res) {
+	res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
+	res.setHeader("Access-Control-Allow-Credentials", true);
+	res.setHeader("Access-Control-Allow-Headers", "X-Moto-Ajax");
+}
+
 function init(req, res, next) {
     var parsed = url.parse(req.url, true);
     req.gs = {
@@ -35,7 +41,7 @@ function init(req, res, next) {
         query: parsed.query,
     };
     if (req.method === 'OPTIONS') {
-		res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
+		setCORSHeaders(req,res);
         res.setHeader("Allow", "GET,POST,OPTIONS");
         res.end();
     } else {
@@ -50,21 +56,32 @@ function api(req, res, next) {
 
     switch (req.gs.path.substring(5)) {
         case "targets":
-			res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
+		setCORSHeaders(req,res);
             res.end(encode(setup.targets));
             break;
 		case "check":
 			queueData = queued[req.gs.query.key];
-			res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
+			setCORSHeaders(req,res);
             res.end(encode(
 				queueData ? {
+					key: queueData.key,
 					status: queueData.status,
-					done: queueData.done,
-					error: queueData.error || false
+					error: queueData.error || false,
+					done: queueData.done
 				} : {
 					error: "invalid key"
 				}
 			));
+            break;
+		case "wait":
+			queueData = queued[req.gs.query.key];
+			setCORSHeaders(req,res);
+			if (queueData) {
+				console.log(encode({add_wait:queueData.key}));
+				queueData.waiting.push(res);
+			} else {
+				res.end(encode({error:"invalid key"}));
+			}
             break;
         case "print":
             if (req.method !== 'POST') return next();
@@ -83,18 +100,18 @@ function api(req, res, next) {
 						error: false,
 						status: "queueing",
 						target: req.gs.query.target,
-						filename: req.gs.query.filename
+						filename: req.gs.query.filename,
+						waiting: []
 					};
 					console.log({key:queueKey, size:body.length, file:req.gs.query.filename, target:req.gs.query.target});
                     printTarget(queueData, (err) => {
-                            if (err) {
-								res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
-                                res.writeHead(500);
+							setCORSHeaders(req,res);
+	                        if (err) {
+	                            res.writeHead(500);
 								res.end(encode({error:err.toString()}));
-                            } else {
-								res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
-                                res.end(encode({key:queueKey}));
-                            }
+	                        } else {
+	                            res.end(encode({key:queueKey}));
+	                        }
                         }
                     );
                 } catch (e) {
@@ -143,6 +160,14 @@ function postFile(host, queueData, callback) {
 		setTimeout(function() {
 			delete queued[queueData.key];
 		}, 600000);
+		queueData.waiting.forEach(function(res) {
+			res.end(encode({
+				key: queueData.key,
+				done: queueData.done,
+				error: queueData.error,
+				status: queueData.status
+			}));
+		});
     });
 	callback();
 }
