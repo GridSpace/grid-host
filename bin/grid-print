@@ -35,7 +35,7 @@ function init(req, res, next) {
         query: parsed.query,
     };
     if (req.method === 'OPTIONS') {
-        res.setHeader("Access-Control-Allow-Origin", "*");
+		res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
         res.setHeader("Allow", "GET,POST,OPTIONS");
         res.end();
     } else {
@@ -46,40 +46,61 @@ function init(req, res, next) {
 function api(req, res, next) {
     if (!req.gs.path.startsWith(apiroot)) return next();
 
+	var queueData;
+
     switch (req.gs.path.substring(5)) {
         case "targets":
-			res.setHeader("Access-Control-Allow-Origin", "*");
+			res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
             res.end(encode(setup.targets));
+            break;
+		case "check":
+			queueData = queued[req.gs.query.key];
+			res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
+            res.end(encode(
+				queueData ? {
+					status: queueData.status,
+					done: queueData.done,
+					error: queueData.error || false
+				} : {
+					error: "invalid key"
+				}
+			));
             break;
         case "print":
             if (req.method !== 'POST') return next();
             if (!req.gs.query.filename) return next();
             if (!req.gs.query.target) return next();
 
-            var body = '';
+            var body = '',
+				queueKey = new Date().getTime().toString(36);
 
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
-					console.log({queue:body.length, file:req.gs.query.filename, target:req.gs.query.target});
-                    printTarget(
-                        req.gs.query.target,
-                        req.gs.query.filename,
-                        body, (err) => {
+					queued[queueKey] = queueData = {
+						key: queueKey,
+						data: body,
+						error: false,
+						status: "queueing",
+						target: req.gs.query.target,
+						filename: req.gs.query.filename
+					};
+					console.log({key:queueKey, size:body.length, file:req.gs.query.filename, target:req.gs.query.target});
+                    printTarget(queueData, (err) => {
                             if (err) {
-								res.setHeader("Access-Control-Allow-Origin", "*");
+								res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
                                 res.writeHead(500);
-                                res.end(err.toString());
+								res.end(encode({error:err.toString()}));
                             } else {
-								res.setHeader("Access-Control-Allow-Origin", "*");
-                                res.end("{done:true}");
+								res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || "*");
+                                res.end(encode({key:queueKey}));
                             }
                         }
                     );
                 } catch (e) {
                     console.log(e);
                     res.writeHead(500);
-                    res.end(e.toString());
+                    res.end(encode({error:e.toString()}));
                 }
             });
 
@@ -101,30 +122,43 @@ function tempFileName() {
     return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
 }
 
-function postFile(host, filename, data, callback) {
-    console.log({post2host:host, file:filename, data:data.length});
+function postFile(host, queueData, callback) {
+    console.log({key:queueData.key, postTo:host});
+	queueData.status = "posting";
     var form = new FormData(), req;
-    form.append("file", data, filename);
+    form.append("file", queueData.data, queueData.filename);
     form.append("submit", "submit");
     req = form.submit("http://"+host+"/upload.cgi", function(err, res) {
         if (res) res.resume();
-        if (err) console.log({err:err});
-        callback();
+        if (err) {
+			console.log({key:queueData.key, err:err});
+			queueData.error = true;
+			queueData.status = err.toString();
+		} else {
+			console.log(encode({key:queueData.key, done:true}));
+			queueData.status = "complete";
+		}
+		queueData.data = null;
+		queueData.done = true;
+		setTimeout(function() {
+			delete queued[queueData.key];
+		}, 600000);
     });
+	callback();
 }
 
-function printTarget(target, filename, data, callback) {
-    var pt = setup.targets[target],
+function printTarget(queueData, callback) {
+    var pt = setup.targets[queueData.target],
         filter, proc, args;
 
-    if (!pt) throw "invalid target: "+target;
+    if (!pt) throw "invalid target: "+queueData.target;
     if (pt.filter && (filter = setup.filters[pt.filter])) {
         var fin = tempFileName();
         var fout = tempFileName();
-        var fname = filter.filename || filename;
+        var fname = filter.filename || queueData.filename;
         fname = fname.replace("{seq}", printSequence++);
-        fname = fname.replace("{name}", filename);
-        fs.writeFileSync(fin, data);
+        fname = fname.replace("{name}", queueData.filename);
+        fs.writeFileSync(fin, queueData.data);
         args = filter.args.slice();
         args.forEach((val,idx) => {
             val = val.replace("{file-in}", fin);
@@ -132,24 +166,32 @@ function printTarget(target, filename, data, callback) {
             args[idx] = val;
         });
         proc = spawn(filter.path, args);
-        proc.stdout.on('data', data => console.log({out:data.toString()}));
+        proc.stdout.on('data', data => console.log({out:queueData.data}));
         proc.stderr.on('data', err => console.log({err:err.toString()}));
         proc.on('exit', () => {
             if (!lastmod(fout)) {
                 console.log("missing filtered output for "+filename);
                 callback("missing filter output");
+				queueData.done = true;
+				queueData.error = true;
+				queueData.status = "missing filter output";
                 return;
             }
             try {
-                postFile(pt.host, fname, fs.readFileSync(fout), callback);
+				queueData.filename = fname;
+				queueData.data = fs.readFileSync(fout);
+                postFile(pt.host, queueData, callback);
             } catch (e) {
+				queueData.done = true;
+				queueData.error = true;
+				queueData.status = e.toString();
                 callback(e);
             }
             fs.unlink(fin);
             fs.unlink(fout);
         });
     } else {
-        postFile(pt.host, filename, data, callback);
+        postFile(pt.host, queueData, callback);
     }
 }
 
@@ -168,6 +210,7 @@ var fs = require('fs'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
+	queued = {},
     cwd = process.cwd(),
     key = null,
     fn = null,
