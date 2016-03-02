@@ -56,7 +56,7 @@ function api(req, res, next) {
 
     switch (req.gs.path.substring(5)) {
         case "targets":
-		setCORSHeaders(req,res);
+			setCORSHeaders(req,res);
             res.end(encode(setup.targets));
             break;
 		case "check":
@@ -65,6 +65,7 @@ function api(req, res, next) {
             res.end(encode(
 				queueData ? {
 					key: queueData.key,
+					pct: queueData.progress,
 					status: queueData.status,
 					error: queueData.error || false,
 					done: queueData.done
@@ -104,16 +105,9 @@ function api(req, res, next) {
 						waiting: []
 					};
 					console.log({key:queueKey, size:body.length, file:req.gs.query.filename, target:req.gs.query.target});
-                    printTarget(queueData, (err) => {
-							setCORSHeaders(req,res);
-	                        if (err) {
-	                            res.writeHead(500);
-								res.end(encode({error:err.toString()}));
-	                        } else {
-	                            res.end(encode({key:queueKey}));
-	                        }
-                        }
-                    );
+					setCORSHeaders(req,res);
+					res.end(encode({key:queueKey}));
+                    printTarget(queueData);
                 } catch (e) {
                     console.log(e);
                     res.writeHead(500);
@@ -139,12 +133,13 @@ function tempFileName() {
     return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
 }
 
-function postFile(host, queueData, callback) {
+function postFile(host, queueData) {
     console.log({key:queueData.key, postTo:host});
 	queueData.status = "posting";
     var form = new FormData(), req;
     form.append("file", queueData.data, queueData.filename);
     form.append("submit", "submit");
+	var track = progress();
     req = form.submit("http://"+host+"/upload.cgi", function(err, res) {
         if (res) res.resume();
         if (err) {
@@ -168,11 +163,14 @@ function postFile(host, queueData, callback) {
 				status: queueData.status
 			}));
 		});
-    });
-	callback();
+    }, track);
+	track.on('progress', function(progress) {
+		queueData.progress = progress.percentage;
+		// console.log(progress);
+	});
 }
 
-function printTarget(queueData, callback) {
+function printTarget(queueData) {
     var pt = setup.targets[queueData.target],
         filter, proc, args;
 
@@ -196,7 +194,6 @@ function printTarget(queueData, callback) {
         proc.on('exit', () => {
             if (!lastmod(fout)) {
                 console.log("missing filtered output for "+filename);
-                callback("missing filter output");
 				queueData.done = true;
 				queueData.error = true;
 				queueData.status = "missing filter output";
@@ -205,18 +202,17 @@ function printTarget(queueData, callback) {
             try {
 				queueData.filename = fname;
 				queueData.data = fs.readFileSync(fout);
-                postFile(pt.host, queueData, callback);
+                postFile(pt.host, queueData);
             } catch (e) {
 				queueData.done = true;
 				queueData.error = true;
 				queueData.status = e.toString();
-                callback(e);
             }
             fs.unlink(fin);
             fs.unlink(fout);
         });
     } else {
-        postFile(pt.host, queueData, callback);
+        postFile(pt.host, queueData);
     }
 }
 
@@ -232,6 +228,7 @@ var fs = require('fs'),
     connect = require('connect'),
     spawn = require('child_process').spawn,
     FormData = require('form-data'),
+	progress = require('progress-stream'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
@@ -296,7 +293,7 @@ if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
 /** temp dir for filtering */
-tempDir = cwd + "/" + setup["temp-dir"];
+tempDir = cwd + "/" + (setup["temp-dir"] || "tmp");
 mkdirs([tempDir]);
 
 var apiroot = ["/",setup["api-root"] || 'api',"/"].join(''),
