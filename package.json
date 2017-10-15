@@ -1,26 +1,27 @@
 {
-	"name": "grid-print",
-	"version": "0.1.0",
-	"description": "KIRI:MOTO 3D slicer print target gcode translator",
-	"author": "Stewart Allen <stewart@neuron.com>",
-	"private": false,
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/stewartoallen/grid-print.git"
-	},
-	"keywords": [
-		"grid.space",
-		"kiri:moto",
-		"server",
-		"3d",
-		"print",
-		"gcode",
-		"x3g"
-	],
-	"dependencies": {
-		"connect": "3.3.x",
-		"serve-static": "1.10.x",
-		"form-data": "1.0.0-rc3",
-		"progress-stream": "1.2.x"
-	}
+    "name": "grid-print",
+    "version": "0.1.0",
+    "description": "KIRI:MOTO 3D slicer print target gcode translator",
+    "author": "Stewart Allen <stewart@neuron.com>",
+    "private": false,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/stewartoallen/grid-print.git"
+    },
+    "keywords": [
+        "grid.space",
+        "kiri:moto",
+        "server",
+        "3d",
+        "print",
+        "gcode",
+        "x3g"
+    ],
+    "dependencies": {
+        "buffer-crc32": "^0.2.13",
+        "connect": "3.3.x",
+        "form-data": "1.0.0-rc3",
+        "progress-stream": "1.2.x",
+        "serve-static": "^1.13.1"
+    }
 }

@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 
 function lastmod(path) {
-	try {
-		return fs.statSync(path).mtime.getTime();
-	} catch (e) {
-		return 0;
-	}
+    try {
+        return fs.statSync(path).mtime.getTime();
+    } catch (e) {
+        return 0;
+    }
 }
 
 function mkdirs(path) {
-	var root = "";
-	path.forEach(seg => {
-		if (root) {
-			root = root + "/" + seg;
-		} else {
-			root = seg;
-		}
-		lastmod(root) || fs.mkdirSync(root);
-	});
+    var root = "";
+    path.forEach(seg => {
+        if (root) {
+            root = root + "/" + seg;
+        } else {
+            root = seg;
+        }
+        lastmod(root) || fs.mkdirSync(root);
+    });
 }
 
 function encode(obj) {
@@ -29,9 +29,9 @@ function decode(str) {
 }
 
 function setCORSHeaders(req,res) {
-	res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
-	res.setHeader("Access-Control-Allow-Credentials", true);
-	res.setHeader("Access-Control-Allow-Headers", "X-Moto-Ajax");
+    res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
+    res.setHeader("Access-Control-Allow-Credentials", true);
+    res.setHeader("Access-Control-Allow-Headers", "X-Moto-Ajax");
 }
 
 function init(req, res, next) {
@@ -41,7 +41,7 @@ function init(req, res, next) {
         query: parsed.query,
     };
     if (req.method === 'OPTIONS') {
-		setCORSHeaders(req,res);
+        setCORSHeaders(req,res);
         res.setHeader("Allow", "GET,POST,OPTIONS");
         res.end();
     } else {
@@ -52,61 +52,65 @@ function init(req, res, next) {
 function api(req, res, next) {
     if (!req.gs.path.startsWith(apiroot)) return next();
 
-	var queueData;
+    var queueData;
 
     switch (req.gs.path.substring(5)) {
         case "targets":
-			setCORSHeaders(req,res);
+            setCORSHeaders(req,res);
             res.end(encode(setup.targets));
             break;
-		case "check":
-			queueData = queued[req.gs.query.key];
-			setCORSHeaders(req,res);
+        case "check":
+            queueData = queued[req.gs.query.key];
+            setCORSHeaders(req,res);
             res.end(encode(
-				queueData ? {
-					key: queueData.key,
-					pct: queueData.progress,
-					status: queueData.status,
-					error: queueData.error || false,
-					done: queueData.done
-				} : {
-					error: "invalid key"
-				}
-			));
+                queueData ? {
+                    key: queueData.key,
+                    pct: queueData.progress,
+                    status: queueData.status,
+                    error: queueData.error || false,
+                    done: queueData.done
+                } : {
+                    error: "invalid key"
+                }
+            ));
             break;
-		case "wait":
-			queueData = queued[req.gs.query.key];
-			setCORSHeaders(req,res);
-			if (queueData) {
-				console.log(encode({add_wait:queueData.key}));
-				queueData.waiting.push(res);
-			} else {
-				res.end(encode({error:"invalid key"}));
-			}
+        case "wait":
+            queueData = queued[req.gs.query.key];
+            setCORSHeaders(req,res);
+            if (queueData) {
+                console.log(encode({add_wait:queueData.key}));
+                queueData.waiting.push(res);
+            } else {
+                res.end(encode({error:"invalid key"}));
+            }
             break;
         case "print":
+            let query = req.gs.query;
+
             if (req.method !== 'POST') return next();
-            if (!req.gs.query.filename) return next();
-            if (!req.gs.query.target) return next();
+            if (!query.filename) return next();
+            if (!query.target) return next();
 
             var body = '',
-				queueKey = new Date().getTime().toString(36);
+                queueKey = new Date().getTime().toString(36);
 
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
-					queued[queueKey] = queueData = {
-						key: queueKey,
-						data: body,
-						error: false,
-						status: "queueing",
-						target: req.gs.query.target,
-						filename: req.gs.query.filename,
-						waiting: []
-					};
-					console.log({key:queueKey, size:body.length, file:req.gs.query.filename, target:req.gs.query.target});
-					setCORSHeaders(req,res);
-					res.end(encode({key:queueKey}));
+                    queued[queueKey] = queueData = {
+                        key: queueKey,
+                        data: body,
+                        error: false,
+                        status: "queueing",
+                        target: query.target,
+                        filename: query.filename || "unnamed",
+                        ptime: query.time || 0,
+                        plength: query.length || 0,
+                        waiting: []
+                    };
+                    console.log({key:queueKey, size:body.length, file:query.filename, target:req.gs.query.target});
+                    setCORSHeaders(req,res);
+                    res.end(encode({key:queueKey}));
                     printTarget(queueData);
                 } catch (e) {
                     console.log(e);
@@ -135,39 +139,43 @@ function tempFileName() {
 
 function postFile(host, queueData) {
     console.log({key:queueData.key, postTo:host});
-	queueData.status = "posting";
+    queueData.status = "posting";
     var form = new FormData(), req;
     form.append("file", queueData.data, queueData.filename);
     form.append("submit", "submit");
-	var track = progress();
+    var track = progress();
     req = form.submit("http://"+host+"/upload.cgi", function(err, res) {
         if (res) res.resume();
         if (err) {
-			console.log({key:queueData.key, err:err});
-			queueData.error = true;
-			queueData.status = err.toString();
-		} else {
-			console.log(encode({key:queueData.key, done:true}));
-			queueData.status = "complete";
-		}
-		queueData.data = null;
-		queueData.done = true;
-		setTimeout(function() {
-			delete queued[queueData.key];
-		}, 600000);
-		queueData.waiting.forEach(function(res) {
-			res.end(encode({
-				key: queueData.key,
-				done: queueData.done,
-				error: queueData.error,
-				status: queueData.status
-			}));
-		});
+            console.log({key:queueData.key, err:err});
+            queueData.error = true;
+            queueData.status = err.toString();
+        } else {
+            console.log(encode({key:queueData.key, done:true}));
+            queueData.status = "complete";
+        }
+        queueData.data = null;
+        queueData.done = true;
+        setTimeout(function() {
+            delete queued[queueData.key];
+        }, 600000);
+        finish(queueData);
     }, track);
-	track.on('progress', function(progress) {
-		queueData.progress = progress.percentage;
-		// console.log(progress);
-	});
+    track.on('progress', function(progress) {
+        queueData.progress = progress.percentage;
+        // console.log(progress);
+    });
+}
+
+function finish(queueData) {
+    queueData.waiting.forEach(function(res) {
+        res.end(encode({
+            key: queueData.key,
+            done: queueData.done,
+            error: queueData.error,
+            status: queueData.status
+        }));
+    });
 }
 
 function printTarget(queueData) {
@@ -184,33 +192,56 @@ function printTarget(queueData) {
         fs.writeFileSync(fin, queueData.data);
         args = filter.args.slice();
         args.forEach((val,idx) => {
+            val = val.replace("{host}", pt.host);
+            val = val.replace("{port}", pt.port);
             val = val.replace("{file-in}", fin);
             val = val.replace("{file-out}", fout);
+            val = val.replace("{time}", queueData.ptime);
+            val = val.replace("{length}", queueData.plength);
+            val = val.replace("{filename}", queueData.filename);
             args[idx] = val;
         });
         proc = spawn(filter.path, args);
-        proc.stdout.on('data', data => console.log({out:queueData.data}));
-        proc.stderr.on('data', err => console.log({err:err.toString()}));
+        proc.on('error', error => {
+            console.log(error);
+            queueData.done = true;
+            queueData.error = true;
+            queueData.status = error.toString();
+            finish(queueData);
+        });
         proc.on('exit', () => {
             if (!lastmod(fout)) {
                 console.log("missing filtered output for "+filename);
-				queueData.done = true;
-				queueData.error = true;
-				queueData.status = "missing filter output";
+                queueData.done = true;
+                queueData.error = true;
+                queueData.status = "missing filter output";
                 return;
             }
             try {
-				queueData.filename = fname;
-				queueData.data = fs.readFileSync(fout);
-                postFile(pt.host, queueData);
+                queueData.filename = fname;
+                queueData.data = fs.readFileSync(fout);
+                if (filter.post) {
+                    postFile(pt.host, queueData);
+                } else {
+                    queueData.done = true;
+                    queueData.error = false;
+                    queueData.status = "spooled";
+                    finish(queueData);
+                }
             } catch (e) {
-				queueData.done = true;
-				queueData.error = true;
-				queueData.status = e.toString();
+                queueData.done = true;
+                queueData.error = true;
+                queueData.status = e.toString();
             }
             fs.unlink(fin);
             fs.unlink(fout);
         });
+        proc.stdout.on('data', data => console.log({
+            out: data.toString()
+        }));
+        proc.stderr.on('data', err => console.log({
+            err: err.toString()
+        }));
     } else {
         postFile(pt.host, queueData);
     }
@@ -228,16 +259,16 @@ var fs = require('fs'),
     connect = require('connect'),
     spawn = require('child_process').spawn,
     FormData = require('form-data'),
-	progress = require('progress-stream'),
+    progress = require('progress-stream'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
-	queued = {},
+    queued = {},
     cwd = process.cwd(),
     key = null,
     fn = null,
     setup = {
-		"api-root": "api",
+        "api-root": "api",
         "temp-dir": "tmp",
         "key": null,
         "port": 8080,
@@ -297,10 +328,10 @@ tempDir = cwd + "/" + (setup["temp-dir"] || "tmp");
 mkdirs([tempDir]);
 
 var apiroot = ["/",setup["api-root"] || 'api',"/"].join(''),
-	handler = connect()
-	    .use(init)
-	    .use(api)
-	    .use(serve(cwd + "/static/"))
+    handler = connect()
+        .use(init)
+        .use(api)
+        .use(serve(cwd + "/static/"))
     ;
 
 if (setup['port']) {

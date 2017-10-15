@@ -1,0 +1,23 @@
+#!/bin/bash
+
+host=${1}
+port=${2}
+filein=${3}
+fileout=${4}
+time=${5:-100}
+length=${6:-100}
+filename=${7:-noname}
+
+usage() {
+    echo "usage: gx-print [host] [port] [filein] [fileout] <time> <length>"
+    exit
+}
+
+[ -z ${host} ] || [ -z ${port} ] || [ -z ${filein} ] || [ -z ${fileout} ] && usage
+
+(
+    date
+    echo "host:${host} port:${port} in:${filein} out:${fileout} time:${time} length:${length} filename:${filename}"
+    node bin/util-gx.js make "${fileout}" "${filein}" bin/km.bmp "${time}" "${length}"
+    node bin/util-gx.js send "${fileout}" "${host}" "${port}" "${filename}"
+) >> /tmp/gx-print.log 2>&1
