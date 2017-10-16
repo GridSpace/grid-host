@@ -3,11 +3,11 @@
 
 class GXReader {
     constructor(file) {
+        this.file = file;
         this.buf = fs.readFileSync(file);
         this.pos = 16;
         this.magic = this.buf.slice(0,16).toString().trim();
-
-        console.log({
+        this.struct = {
             magic: this.magic,
             bmpoff: this.u32(),
             gc1off: this.u32(),
@@ -26,7 +26,7 @@ class GXReader {
             unk10:  this.u8(),
             unk11:  this.u8(),
             index:  this.pos
-        });
+        };
     }
 
     inc(inc) {
@@ -47,8 +47,15 @@ class GXReader {
         return this.buf.readUInt32LE(this.inc(4));
     }
 
-    string() {
+    print() {
+        console.log(this.struct);
+        return this;
+    }
 
+    extract() {
+        fs.writeFileSync(this.file + ".bmp", this.buf.slice(this.struct.bmpoff, this.struct.gc1off));
+        fs.writeFileSync(this.file + ".gcode", this.buf.slice(this.struct.gc1off, this.buf.length));
+        return this;
     }
 }
 
@@ -331,7 +338,10 @@ if (!module.parent) {
             new TCPipe(parseInt(arg.shift()), arg.shift(), parseInt(arg.shift()));
             break;
         case 'read':
-            new GXReader(arg.shift());
+            new GXReader(arg.shift()).print();
+            break;
+        case 'dump':
+            new GXReader(arg.shift()).print().extract();
             break;
         case 'make':
             let output = arg.shift();
@@ -345,6 +355,7 @@ if (!module.parent) {
                 "invalid command: " + cmd,
                 "usage:",
                 "  read [file]",
+                "  dump [file]",
                 "  make [outfile] [gcodefile] [bmp] <time> <length>",
                 "  send [file] [host] [port] <filename>"
             ].join("\n"));
