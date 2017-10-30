@@ -94,6 +94,7 @@ function api(req, res, next) {
             break;
         case "image":
             if (req.method !== 'POST') return next();
+            let name = req.gs.query.filename;
             var image = '';
             req.on('data', data => { image += data });
             req.on('end', () => {
@@ -101,8 +102,22 @@ function api(req, res, next) {
                 image = Buffer.from(image, "base64");
                 console.log({image: image.length});
                 var png = new PNG();
-                png.write(image);
-                console.log({png: png});
+                png.parse(image, (err, data) => {
+                    var bmp = BMP.encode({data:png.data, width:png.width, height: png.height});
+                    images[name] = png;
+                    console.log(images);
+                });
+                // for (var y = 0; y < png.height; y++) {
+                //     for (var x = 0; x < png.width; x++) {
+                //         var idx = (png.width * y + x) << 2;
+                //         // invert color
+                //         this.data[idx] = 255 - this.data[idx];
+                //         this.data[idx+1] = 255 - this.data[idx+1];
+                //         this.data[idx+2] = 255 - this.data[idx+2];
+                //         // and reduce opacity
+                //         this.data[idx+3] = this.data[idx+3] >> 1;
+                //     }
+                // }
             });
             break;
         case "print":
@@ -113,17 +128,17 @@ function api(req, res, next) {
             if (!query.target) return next();
 
             var body = '',
-                queueKey = new Date().getTime().toString(36),
-                image = query.image;
+                queueKey = new Date().getTime().toString(36);
 
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
-                    // if (image) {
-                    //     console.log({image: image});
-                    //     res.end(encode({error: "image test"}));
-                    //     return;
-                    // }
+                    var image = images[query.image];
+                    if (image) {
+                        console.log({image: image});
+                        res.end(encode({error: "image test"}));
+                        return;
+                    }
                     var filename = query.filename || "gprint.gx";
                     if (filename.indexOf(".gx") < 0) {
                         filename = filename + ".gx";
@@ -297,6 +312,7 @@ var fs = require('fs'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
+    images = {},
     queued = {},
     cwd = process.cwd(),
     key = null,
