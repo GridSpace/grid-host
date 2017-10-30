@@ -6,10 +6,10 @@ filein=${3}
 fileout=${4}
 time=${5:-100}
 length=${6:-100}
-filename=${7:-noname}
+filename=${7:-noname.gx}
 
 usage() {
-    echo "usage: gx-print [host] [port] [filein] [fileout] <time> <length>"
+    echo "usage: gx-print [host] [port] [filein] [fileout] <time> <length> <name>"
     exit
 }
 

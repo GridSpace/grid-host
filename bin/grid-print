@@ -62,7 +62,7 @@ function api(req, res, next) {
 
     var queueData;
 
-    switch (req.gs.path.substring(5)) {
+    switch (req.gs.path.substring(apiroot.length)) {
         case "targets":
             setCORSHeaders(req,res);
             res.end(encode(setup.targets));
@@ -92,6 +92,19 @@ function api(req, res, next) {
                 res.end(encode({error:"invalid key"}));
             }
             break;
+        case "image":
+            if (req.method !== 'POST') return next();
+            var image = '';
+            req.on('data', data => { image += data });
+            req.on('end', () => {
+                // console.log({image: image});
+                image = Buffer.from(image, "base64");
+                console.log({image: image.length});
+                var png = new PNG();
+                png.write(image);
+                console.log({png: png});
+            });
+            break;
         case "print":
             let query = req.gs.query;
 
@@ -100,27 +113,38 @@ function api(req, res, next) {
             if (!query.target) return next();
 
             var body = '',
-                queueKey = new Date().getTime().toString(36);
+                queueKey = new Date().getTime().toString(36),
+                image = query.image;
 
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
+                    // if (image) {
+                    //     console.log({image: image});
+                    //     res.end(encode({error: "image test"}));
+                    //     return;
+                    // }
+                    var filename = query.filename || "gprint.gx";
+                    if (filename.indexOf(".gx") < 0) {
+                        filename = filename + ".gx";
+                    }
                     queued[queueKey] = queueData = {
                         key: queueKey,
                         data: body,
                         error: false,
                         status: "queueing",
                         target: query.target,
-                        filename: query.filename || "unnamed",
+                        filename: filename,
                         ptime: query.time || 0,
                         plength: query.length || 0,
                         waiting: []
                     };
-                    log({key:queueKey, size:body.length, file:query.filename, target:req.gs.query.target});
+                    log({key:queueKey, size:body.length, file:filename, target:req.gs.query.target});
                     setCORSHeaders(req,res);
                     res.end(encode({key:queueKey}));
                     printTarget(queueData);
                 } catch (e) {
+                    console.log(e);
                     log(e);
                     res.writeHead(500);
                     res.end(encode({error:e.toString()}));
@@ -266,8 +290,10 @@ var fs = require('fs'),
     serve = require('serve-static')
     connect = require('connect'),
     spawn = require('child_process').spawn,
-    FormData = require('form-data'),
     progress = require('progress-stream'),
+    FormData = require('form-data'),
+    PNG = require('pngjs').PNG,
+    BMP = require('bmp-js'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
@@ -279,7 +305,7 @@ var fs = require('fs'),
         "api-root": "api",
         "temp-dir": "tmp",
         "key": null,
-        "port": 8080,
+        "port": 8181,
         "https-port": null,
         "ssl-cert": null,
         "ssl-key": null,
@@ -290,6 +316,10 @@ var fs = require('fs'),
                 "path": "gpx",
                 "args": [ "{file-in}", "{file-out}" ],
                 "filename": "print-{seq}.x3g"
+            },
+            "gx": {
+                "path": "bin/gx-print",
+                "args": [ "{host}", "{port}", "{file-in}", "{file-out}", "{time}", "{length}", "{filename}" ]
             }
         }
     };
@@ -327,7 +357,7 @@ process.argv.slice(2).forEach(v => {
     }
 });
 
-if (setup['config']) setup = decode(fs.readFileSync(setup['config']));
+if (setup['config']) setup = Object.assign(setup, decode(fs.readFileSync(setup['config'])));
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
