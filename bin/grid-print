@@ -1,5 +1,13 @@
 #!/usr/bin/env node
 
+function log(o) {
+    if (typeof(o) === 'object') {
+        console.log(JSON.stringify(o));
+    } else {
+        console.log(o);
+    }
+}
+
 function lastmod(path) {
     try {
         return fs.statSync(path).mtime.getTime();
@@ -78,7 +86,7 @@ function api(req, res, next) {
             queueData = queued[req.gs.query.key];
             setCORSHeaders(req,res);
             if (queueData) {
-                console.log(encode({add_wait:queueData.key}));
+                log({add_wait:queueData.key});
                 queueData.waiting.push(res);
             } else {
                 res.end(encode({error:"invalid key"}));
@@ -108,12 +116,12 @@ function api(req, res, next) {
                         plength: query.length || 0,
                         waiting: []
                     };
-                    console.log({key:queueKey, size:body.length, file:query.filename, target:req.gs.query.target});
+                    log({key:queueKey, size:body.length, file:query.filename, target:req.gs.query.target});
                     setCORSHeaders(req,res);
                     res.end(encode({key:queueKey}));
                     printTarget(queueData);
                 } catch (e) {
-                    console.log(e);
+                    log(e);
                     res.writeHead(500);
                     res.end(encode({error:e.toString()}));
                 }
@@ -138,7 +146,7 @@ function tempFileName() {
 }
 
 function postFile(host, queueData) {
-    console.log({key:queueData.key, postTo:host});
+    log({key:queueData.key, postTo:host});
     queueData.status = "posting";
     var form = new FormData(), req;
     form.append("file", queueData.data, queueData.filename);
@@ -147,11 +155,11 @@ function postFile(host, queueData) {
     req = form.submit("http://"+host+"/upload.cgi", function(err, res) {
         if (res) res.resume();
         if (err) {
-            console.log({key:queueData.key, err:err});
+            log({key:queueData.key, err:err});
             queueData.error = true;
             queueData.status = err.toString();
         } else {
-            console.log(encode({key:queueData.key, done:true}));
+            log(encode({key:queueData.key, done:true}));
             queueData.status = "complete";
         }
         queueData.data = null;
@@ -163,7 +171,7 @@ function postFile(host, queueData) {
     }, track);
     track.on('progress', function(progress) {
         queueData.progress = progress.percentage;
-        // console.log(progress);
+        // log(progress);
     });
 }
 
@@ -203,7 +211,7 @@ function printTarget(queueData) {
         });
         proc = spawn(filter.path, args);
         proc.on('error', error => {
-            console.log(error);
+            log(error);
             queueData.done = true;
             queueData.error = true;
             queueData.status = error.toString();
@@ -211,7 +219,7 @@ function printTarget(queueData) {
         });
         proc.on('exit', () => {
             if (!lastmod(fout)) {
-                console.log("missing filtered output for "+filename);
+                log("missing filtered output for "+filename);
                 queueData.done = true;
                 queueData.error = true;
                 queueData.status = "missing filter output";
@@ -233,13 +241,13 @@ function printTarget(queueData) {
                 queueData.error = true;
                 queueData.status = e.toString();
             }
-            fs.unlink(fin);
-            fs.unlink(fout);
+            fs.unlinkSync(fin);
+            fs.unlinkSync(fout);
         });
-        proc.stdout.on('data', data => console.log({
+        proc.stdout.on('data', data => log({
             out: data.toString()
         }));
-        proc.stderr.on('data', err => console.log({
+        proc.stderr.on('data', err => log({
             err: err.toString()
         }));
     } else {
@@ -336,7 +344,7 @@ var apiroot = ["/",setup["api-root"] || 'api',"/"].join(''),
 
 if (setup['port']) {
     http.createServer(handler).listen(setup.port);
-    console.log("grid-print started http server on port "+setup['port']);
+    log("grid-print started http server on port "+setup['port']);
 }
 
 if (setup['https-port']) {
@@ -344,5 +352,5 @@ if (setup['https-port']) {
         key: setup['ssl-key'],
         cert: setup['ssl-cert']
     }, handler).listen(setup['https-port']);
-    console.log("grid-print started https server on port "+setup['https-port']);
+    log("grid-print started https server on port "+setup['https-port']);
 }

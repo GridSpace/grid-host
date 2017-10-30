@@ -19,9 +19,9 @@
     ],
     "dependencies": {
         "buffer-crc32": "^0.2.13",
-        "connect": "3.3.x",
-        "form-data": "1.0.0-rc3",
-        "progress-stream": "1.2.x",
+        "connect": "^3.6.5",
+        "form-data": "^1.0.1",
+        "progress-stream": "^1.2.0",
         "serve-static": "^1.13.1"
     }
 }
