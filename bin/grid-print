@@ -101,6 +101,8 @@ function api(req, res, next) {
                 image = Buffer.from(image, "base64");
                 var png = new PNG();
                 png.parse(image, (err, data) => { images[name] = png });
+                setCORSHeaders(req,res);
+                res.end();
             });
             break;
         case "print":
