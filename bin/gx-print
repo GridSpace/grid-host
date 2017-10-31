@@ -7,9 +7,10 @@ fileout=${4}
 time=${5:-100}
 length=${6:-100}
 filename=${7:-noname.gx}
+image=${8:-bin/km.bmp}
 
 usage() {
-    echo "usage: gx-print [host] [port] [filein] [fileout] <time> <length> <name>"
+    echo "usage: gx-print [host] [port] [filein] [fileout] <time> <length> <name> <image>"
     exit
 }
 
@@ -17,7 +18,7 @@ usage() {
 
 (
     date
-    echo "host:${host} port:${port} in:${filein} out:${fileout} time:${time} length:${length} filename:${filename}"
-    node bin/util-gx.js make "${fileout}" "${filein}" bin/km.bmp "${time}" "${length}"
+    echo "host:${host} port:${port} in:${filein} out:${fileout} time:${time} length:${length} filename:${filename} image:${image}"
+    node bin/util-gx.js make "${fileout}" "${filein}" "${image}" "${time}" "${length}"
     node bin/util-gx.js send "${fileout}" "${host}" "${port}" "${filename}"
 ) >> /tmp/gx-print.log 2>&1

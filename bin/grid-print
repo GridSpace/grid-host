@@ -125,45 +125,38 @@ function api(req, res, next) {
                     if (image) {
                         image = Buffer.from(image, "base64");
                         var png = new PNG().parse(image, (err, data) => {
+                            var th = 80;
+                            var tw = 60;
                             var ratio = png.width / png.height;
-                            if (ratio > 4/3) {
-                                var div = png.height / 60;
-                                var xoff = (png.width - (80 * div)) / 2;
+                            if (ratio < 4/3) {
+                                var div = png.height / tw;
+                                var xoff = Math.round((png.width - (th * div)) / 2);
                                 var yoff = 0;
                             } else {
-                                var div = png.width / 80;
+                                var div = png.width / th;
                                 var xoff = 0;
-                                var yoff = (png.height - (60 * div)) / 2;
+                                var yoff = Math.round((png.height - (tw * div)) / 2);
                             }
-                            console.log({
-                                cw: (png.data.length/4)/png.height,
-                                ch: (png.data.length/4)/png.width,
-                                w: png.width,
-                                h: png.height
-                            });
-                            var buf = new Buffer(80 * 60 * 4);
-                            for (var y=0; y<60; y++) {
-                                var dy = (y * div + yoff);
-                                console.log(" --- " + y + " :: " + dy + " --- ");
-                                for (var x=0; x<80; x++) {
-                                    var bidx = (y * 80 + x) * 4;
-                                    var didx = Math.round((dy * png.width) + (x * div + xoff)) * 4;
-                                    console.log({ x: x,  dx: (x*div+xoff) });
-                                    buf[bidx+0] = png.data[didx+0];
-                                    buf[bidx+1] = png.data[didx+1];
-                                    buf[bidx+2] = png.data[didx+2];
-                                    buf[bidx+3] = png.data[didx+3];
+                            var buf = new Buffer(th * tw * 4);
+                            for (var y=0; y<tw; y++) {
+                                var dy = Math.round(y * div + yoff);
+                                if (dy < 0 || dy > png.height) continue;
+                                var ey = Math.round((y+1) * div + yoff);
+                                for (var x=0; x<th; x++) {
+                                    var dx = Math.round(x * div + xoff);
+                                    if (dx < 0 || dx > png.width) continue;
+                                    var ex = Math.round((x+1) * div + xoff);
+                                    var bidx = (y * th + x) * 4;
+                                    var pixval = png.averageBlock(dx,dy,ex,ey);
+                                    buf[bidx+0] = pixval[0];
+                                    buf[bidx+1] = pixval[1];
+                                    buf[bidx+2] = pixval[2];
+                                    buf[bidx+3] = pixval[3];
                                 }
                             }
-                            console.log({div:div, xoff:xoff, yoff:yoff});
-                            var bmp = BMP.encode({data:png.data, width:png.width, height:png.height});
-                            console.log({bmp1:bmp});
-                            fs.writeFileSync("/tmp/out1.bmp", bmp.data);
-                            var bmp2 = BMP.encode({data:buf, width:80, height:60});
-                            console.log({bmp2:bmp2});
-                            fs.writeFileSync("/tmp/out2.bmp", bmp2.data);
-                            // queueData.image = "filename";
-                            // printTarget(queueData);
+                            // BMP.encode({data:png.data, width:png.width, height:png.height});
+                            queueData.image = BMP.encode({data:buf, width:th, height:tw});
+                            printTarget(queueData);
                         });
                     } else {
                         printTarget(queueData);
@@ -242,9 +235,14 @@ function printTarget(queueData) {
     if (!pt) throw "invalid target: "+queueData.target;
     if (pt.filter && (filter = setup.filters[pt.filter])) {
         var ext = filter.ext || '.gcode';
+        var img = '';
         var fin = tempFileName();
         var fout = tempFileName();
         var fname = filter.filename || queueData.filename;
+        if (queueData.image) {
+            img = tempFileName();
+            fs.writeFileSync(img, queueData.image.data);
+        }
         if (fname.indexOf(ext) < 0) { fname = fname + ext }
         fname = fname.replace("{seq}", printSequence++);
         fname = fname.replace("{name}", queueData.filename);
@@ -258,6 +256,7 @@ function printTarget(queueData) {
             val = val.replace("{time}", queueData.ptime);
             val = val.replace("{length}", queueData.plength);
             val = val.replace("{filename}", queueData.filename);
+            val = val.replace("{image}", img);
             args[idx] = val;
         });
         proc = spawn(filter.path, args);
@@ -294,6 +293,7 @@ function printTarget(queueData) {
             }
             fs.unlinkSync(fin);
             fs.unlinkSync(fout);
+            if (img) fs.unlinkSync(img);
         });
         proc.stdout.on('data', data => log({
             out: data.toString()
@@ -347,10 +347,39 @@ var fs = require('fs'),
             "gx": {
                 "ext": ".gx",
                 "path": "bin/gx-print",
-                "args": [ "{host}", "{port}", "{file-in}", "{file-out}", "{time}", "{length}", "{filename}" ]
+                "args": [ "{host}", "{port}", "{file-in}", "{file-out}", "{time}", "{length}", "{filename}", "{image}" ]
             }
         }
     };
+
+PNG.prototype.pixAt = function(x,y) {
+    var idx = (x + this.width * y) * 4;
+    var dat = this.data;
+    return [
+        dat[idx++],
+        dat[idx++],
+        dat[idx++],
+        dat[idx++]
+    ];
+};
+
+PNG.prototype.averageBlock = function(x1,y1,x2,y2) {
+    var val = [0, 0, 0, 0];
+    var count = 0;
+    for (var x=x1; x<x2; x++) {
+        for (var y=y1; y<y2; y++) {
+            var v2 = this.pixAt(x,y);
+            for (var z=0; z<4; z++) {
+                val[z] += v2[z];
+            }
+            count++;
+        }
+    }
+    for (var z=0; z<4; z++) {
+        val[z] = Math.abs(val[z] / count);
+    }
+    return val;
+};
 
 /** handle command-line arguments */
 process.argv.slice(2).forEach(v => {
