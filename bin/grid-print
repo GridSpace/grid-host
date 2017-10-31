@@ -135,22 +135,30 @@ function api(req, res, next) {
                                 var xoff = 0;
                                 var yoff = (png.height - (60 * div)) / 2;
                             }
+                            console.log({
+                                cw: (png.data.length/4)/png.height,
+                                ch: (png.data.length/4)/png.width,
+                                w: png.width,
+                                h: png.height
+                            });
                             var buf = new Buffer(80 * 60 * 4);
                             for (var y=0; y<60; y++) {
+                                var dy = (y * div + yoff);
+                                console.log(" --- " + y + " :: " + dy + " --- ");
                                 for (var x=0; x<80; x++) {
                                     var bidx = (y * 80 + x) * 4;
-                                    var didx = Math.round((y * div + yoff) * png.width + (x * div + xoff)) * 4;
-                                    // var bidx = (x * 60 + y) * 4;
-                                    // var didx = Math.round((x * div) * png.height + (y * div)) * 4;
-                                    buf[bidx] = png.data[didx];
+                                    var didx = Math.round((dy * png.width) + (x * div + xoff)) * 4;
+                                    console.log({ x: x,  dx: (x*div+xoff) });
+                                    buf[bidx+0] = png.data[didx+0];
                                     buf[bidx+1] = png.data[didx+1];
                                     buf[bidx+2] = png.data[didx+2];
                                     buf[bidx+3] = png.data[didx+3];
                                 }
                             }
-                            var bmp = BMP.encode({data:png.data, width:png.width, height: png.height});
-                            console.log({bmp:bmp, div:div, xoff:xoff, yoff:yoff});
-                            fs.writeFileSync("/tmp/out.bmp", bmp.data);
+                            console.log({div:div, xoff:xoff, yoff:yoff});
+                            var bmp = BMP.encode({data:png.data, width:png.width, height:png.height});
+                            console.log({bmp1:bmp});
+                            fs.writeFileSync("/tmp/out1.bmp", bmp.data);
                             var bmp2 = BMP.encode({data:buf, width:80, height:60});
                             console.log({bmp2:bmp2});
                             fs.writeFileSync("/tmp/out2.bmp", bmp2.data);
