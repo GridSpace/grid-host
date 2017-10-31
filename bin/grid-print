@@ -98,26 +98,9 @@ function api(req, res, next) {
             var image = '';
             req.on('data', data => { image += data });
             req.on('end', () => {
-                // console.log({image: image});
                 image = Buffer.from(image, "base64");
-                console.log({image: image.length});
                 var png = new PNG();
-                png.parse(image, (err, data) => {
-                    var bmp = BMP.encode({data:png.data, width:png.width, height: png.height});
-                    images[name] = png;
-                    console.log(images);
-                });
-                // for (var y = 0; y < png.height; y++) {
-                //     for (var x = 0; x < png.width; x++) {
-                //         var idx = (png.width * y + x) << 2;
-                //         // invert color
-                //         this.data[idx] = 255 - this.data[idx];
-                //         this.data[idx+1] = 255 - this.data[idx+1];
-                //         this.data[idx+2] = 255 - this.data[idx+2];
-                //         // and reduce opacity
-                //         this.data[idx+3] = this.data[idx+3] >> 1;
-                //     }
-                // }
+                png.parse(image, (err, data) => { images[name] = png });
             });
             break;
         case "print":
@@ -133,28 +116,19 @@ function api(req, res, next) {
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
-                    var image = images[query.image];
-                    if (image) {
-                        console.log({image: image});
-                        res.end(encode({error: "image test"}));
-                        return;
-                    }
-                    var filename = query.filename || "gprint.gx";
-                    if (filename.indexOf(".gx") < 0) {
-                        filename = filename + ".gx";
-                    }
                     queued[queueKey] = queueData = {
                         key: queueKey,
                         data: body,
+                        image: images[query.image],
                         error: false,
                         status: "queueing",
                         target: query.target,
-                        filename: filename,
+                        filename: query.filename || "gprint",
                         ptime: query.time || 0,
                         plength: query.length || 0,
                         waiting: []
                     };
-                    log({key:queueKey, size:body.length, file:filename, target:req.gs.query.target});
+                    log({key:queueKey, size:body.length, file:queueData.filename, target:req.gs.query.target});
                     setCORSHeaders(req,res);
                     res.end(encode({key:queueKey}));
                     printTarget(queueData);
@@ -231,9 +205,30 @@ function printTarget(queueData) {
 
     if (!pt) throw "invalid target: "+queueData.target;
     if (pt.filter && (filter = setup.filters[pt.filter])) {
+        var ext = filter.ext || '.gcode';
         var fin = tempFileName();
         var fout = tempFileName();
         var fname = filter.filename || queueData.filename;
+        if (fname.indexOf(ext) < 0) {
+            fname = fname + ext;
+        }
+        if (pt.filter == 'gx' && queueData.image) {
+            console.log({image_convert: image});
+            var bmp = BMP.encode({data:png.data, width:png.width, height: png.height});
+            console.log({bmp:bmp});
+            throw "break";
+            // for (var y = 0; y < png.height; y++) {
+            //     for (var x = 0; x < png.width; x++) {
+            //         var idx = (png.width * y + x) << 2;
+            //         // invert color
+            //         this.data[idx] = 255 - this.data[idx];
+            //         this.data[idx+1] = 255 - this.data[idx+1];
+            //         this.data[idx+2] = 255 - this.data[idx+2];
+            //         // and reduce opacity
+            //         this.data[idx+3] = this.data[idx+3] >> 1;
+            //     }
+            // }
+        }
         fname = fname.replace("{seq}", printSequence++);
         fname = fname.replace("{name}", queueData.filename);
         fs.writeFileSync(fin, queueData.data);
@@ -334,6 +329,7 @@ var fs = require('fs'),
                 "filename": "print-{seq}.x3g"
             },
             "gx": {
+                "ext": ".gx",
                 "path": "bin/gx-print",
                 "args": [ "{host}", "{port}", "{file-in}", "{file-out}", "{time}", "{length}", "{filename}" ]
             }
