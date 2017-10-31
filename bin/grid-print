@@ -92,19 +92,6 @@ function api(req, res, next) {
                 res.end(encode({error:"invalid key"}));
             }
             break;
-        case "image":
-            if (req.method !== 'POST') return next();
-            let name = req.gs.query.filename;
-            var image = '';
-            req.on('data', data => { image += data });
-            req.on('end', () => {
-                image = Buffer.from(image, "base64");
-                var png = new PNG();
-                png.parse(image, (err, data) => { images[name] = png });
-                setCORSHeaders(req,res);
-                res.end();
-            });
-            break;
         case "print":
             let query = req.gs.query;
 
@@ -118,10 +105,12 @@ function api(req, res, next) {
             req.on('data', data => { body += data });
             req.on('end', () => {
                 try {
+                    body = body.split("\0");
+                    var image = body[1] || null;
+                    var gcode = body[0];
                     queued[queueKey] = queueData = {
                         key: queueKey,
-                        data: body,
-                        image: images[query.image],
+                        data: gcode,
                         error: false,
                         status: "queueing",
                         target: query.target,
@@ -133,7 +122,44 @@ function api(req, res, next) {
                     log({key:queueKey, size:body.length, file:queueData.filename, target:req.gs.query.target});
                     setCORSHeaders(req,res);
                     res.end(encode({key:queueKey}));
-                    printTarget(queueData);
+                    if (image) {
+                        image = Buffer.from(image, "base64");
+                        var png = new PNG().parse(image, (err, data) => {
+                            var ratio = png.width / png.height;
+                            if (ratio > 4/3) {
+                                var div = png.height / 60;
+                                var xoff = (png.width - (80 * div)) / 2;
+                                var yoff = 0;
+                            } else {
+                                var div = png.width / 80;
+                                var xoff = 0;
+                                var yoff = (png.height - (60 * div)) / 2;
+                            }
+                            var buf = new Buffer(80 * 60 * 4);
+                            for (var y=0; y<60; y++) {
+                                for (var x=0; x<80; x++) {
+                                    var bidx = (y * 80 + x) * 4;
+                                    var didx = Math.round((y * div + yoff) * png.width + (x * div + xoff)) * 4;
+                                    // var bidx = (x * 60 + y) * 4;
+                                    // var didx = Math.round((x * div) * png.height + (y * div)) * 4;
+                                    buf[bidx] = png.data[didx];
+                                    buf[bidx+1] = png.data[didx+1];
+                                    buf[bidx+2] = png.data[didx+2];
+                                    buf[bidx+3] = png.data[didx+3];
+                                }
+                            }
+                            var bmp = BMP.encode({data:png.data, width:png.width, height: png.height});
+                            console.log({bmp:bmp, div:div, xoff:xoff, yoff:yoff});
+                            fs.writeFileSync("/tmp/out.bmp", bmp.data);
+                            var bmp2 = BMP.encode({data:buf, width:80, height:60});
+                            console.log({bmp2:bmp2});
+                            fs.writeFileSync("/tmp/out2.bmp", bmp2.data);
+                            // queueData.image = "filename";
+                            // printTarget(queueData);
+                        });
+                    } else {
+                        printTarget(queueData);
+                    }
                 } catch (e) {
                     console.log(e);
                     log(e);
@@ -211,26 +237,7 @@ function printTarget(queueData) {
         var fin = tempFileName();
         var fout = tempFileName();
         var fname = filter.filename || queueData.filename;
-        if (fname.indexOf(ext) < 0) {
-            fname = fname + ext;
-        }
-        if (pt.filter == 'gx' && queueData.image) {
-            console.log({image_convert: image});
-            var bmp = BMP.encode({data:png.data, width:png.width, height: png.height});
-            console.log({bmp:bmp});
-            throw "break";
-            // for (var y = 0; y < png.height; y++) {
-            //     for (var x = 0; x < png.width; x++) {
-            //         var idx = (png.width * y + x) << 2;
-            //         // invert color
-            //         this.data[idx] = 255 - this.data[idx];
-            //         this.data[idx+1] = 255 - this.data[idx+1];
-            //         this.data[idx+2] = 255 - this.data[idx+2];
-            //         // and reduce opacity
-            //         this.data[idx+3] = this.data[idx+3] >> 1;
-            //     }
-            // }
-        }
+        if (fname.indexOf(ext) < 0) { fname = fname + ext }
         fname = fname.replace("{seq}", printSequence++);
         fname = fname.replace("{name}", queueData.filename);
         fs.writeFileSync(fin, queueData.data);
@@ -309,7 +316,6 @@ var fs = require('fs'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
-    images = {},
     queued = {},
     cwd = process.cwd(),
     key = null,
