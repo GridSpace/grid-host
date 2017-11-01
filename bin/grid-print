@@ -128,7 +128,7 @@ function api(req, res, next) {
                             var th = 80;
                             var tw = 60;
                             var ratio = png.width / png.height;
-                            if (ratio < 4/3) {
+                            if (ratio > 4/3) {
                                 var div = png.height / tw;
                                 var xoff = Math.round((png.width - (th * div)) / 2);
                                 var yoff = 0;
@@ -255,7 +255,7 @@ function printTarget(queueData) {
             val = val.replace("{file-out}", fout);
             val = val.replace("{time}", queueData.ptime);
             val = val.replace("{length}", queueData.plength);
-            val = val.replace("{filename}", queueData.filename);
+            val = val.replace("{filename}", fname);
             val = val.replace("{image}", img);
             args[idx] = val;
         });
