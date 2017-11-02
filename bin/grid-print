@@ -148,6 +148,12 @@ function api(req, res, next) {
                                     var ex = Math.round((x+1) * div + xoff);
                                     var bidx = (y * th + x) * 4;
                                     var pixval = png.averageBlock(dx,dy,ex,ey);
+                                    if (Math.abs(pixval[0] - pixval[1]) + Math.abs(pixval[2] - pixval[1]) < 5) {
+                                        pixval[0] = pixval[0] / 2;
+                                        pixval[1] = pixval[1] / 2;
+                                        pixval[2] = pixval[2] / 2;
+                                        pixval[3] = pixval[3] / 2;
+                                    }
                                     buf[bidx+0] = pixval[0];
                                     buf[bidx+1] = pixval[1];
                                     buf[bidx+2] = pixval[2];
