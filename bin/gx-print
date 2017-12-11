@@ -2,23 +2,25 @@
 
 host=${1}
 port=${2}
-filein=${3}
-fileout=${4}
-time=${5:-100}
-length=${6:-100}
-filename=${7:-noname.gx}
-image=${8:-bin/km.bmp}
+file=${3}
+time=${4:-100}
+length=${5:-100}
+name=${6:-noname.gx}
+image=${7:-bin/km.bmp}
+
+fileout="${file}.out"
 
 usage() {
-    echo "usage: gx-print [host] [port] [filein] [fileout] <time> <length> <name> <image>"
+    echo "usage: gx-print [host] [port] [file] <time> <length> <name> <image>"
     exit
 }
 
-[ -z ${host} ] || [ -z ${port} ] || [ -z ${filein} ] || [ -z ${fileout} ] && usage
+[ -z ${host} ] || [ -z ${port} ] || [ -z ${file} ] && usage
 
 (
     date
-    echo "host:${host} port:${port} in:${filein} out:${fileout} time:${time} length:${length} filename:${filename} image:${image}"
-    node bin/util-gx.js make "${fileout}" "${filein}" "${image}" "${time}" "${length}"
-    node bin/util-gx.js send "${fileout}" "${host}" "${port}" "${filename}"
-) >> /tmp/gx-print.log 2>&1
+    echo "gx-print ${host} ${port} ${file} ${time} ${length} ${name} ${image}"
+    node bin/gx-util.js make "${fileout}" "${file}" "${image}" "${time}" "${length}"
+    node bin/gx-util.js send "${fileout}" "${host}" "${port}" "${name}"
+    echo "cleanup tmp ${fileout}" && rm -f "${fileout}"
+) # >> /tmp/gx-print.log 2>&1

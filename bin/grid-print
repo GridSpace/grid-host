@@ -60,38 +60,41 @@ function init(req, res, next) {
 function api(req, res, next) {
     if (!req.gs.path.startsWith(apiroot)) return next();
 
-    var queueData;
+    var queueEntry;
 
     switch (req.gs.path.substring(apiroot.length)) {
+
         case "targets":
             setCORSHeaders(req,res);
             res.end(encode(setup.targets));
             break;
+
         case "check":
-            queueData = queued[req.gs.query.key];
+            queueEntry = queued[req.gs.query.key];
             setCORSHeaders(req,res);
             res.end(encode(
-                queueData ? {
-                    key: queueData.key,
-                    pct: queueData.progress,
-                    status: queueData.status,
-                    error: queueData.error || false,
-                    done: queueData.done
+                queueEntry ? {
+                    key: queueEntry.key,
+                    status: queueEntry.status,
+                    error: queueEntry.error,
+                    done: queueEntry.done
                 } : {
                     error: "invalid key"
                 }
             ));
             break;
+
         case "wait":
-            queueData = queued[req.gs.query.key];
+            queueEntry = queued[req.gs.query.key];
             setCORSHeaders(req,res);
-            if (queueData) {
-                log({add_wait:queueData.key});
-                queueData.waiting.push(res);
+            if (queueEntry) {
+                log({wait_on:queueEntry.key});
+                queueEntry.waiting.push(res);
             } else {
-                res.end(encode({error:"invalid key"}));
+                res.end(encode({error:"invalid queue key"}));
             }
             break;
+
         case "print":
             let query = req.gs.query;
 
@@ -99,73 +102,45 @@ function api(req, res, next) {
             if (!query.filename) return next();
             if (!query.target) return next();
 
-            var body = '',
-                queueKey = new Date().getTime().toString(36);
+            var body = '';
+            var queueKey = new Date().getTime().toString(36);
 
-            req.on('data', data => { body += data });
+            queued[queueKey] = queueEntry = {
+                key:    queueKey,           // unique uid for queue entry
+                data:   null,               // gcode
+                done:   false,              // queue item completed
+                error:  false,              // an error occurred
+                status: "queueing",
+                target: query.target,
+                name:   query.filename || "gprint",
+                estime: query.time || 0,    // estimated print time
+                fused:  query.length || 0,  // filament used
+                waiting: [],                // http clients waiting
+                cleanup: []                 // tmp file names to cleanup
+            };
+
+            req.on('data', data => {
+                body += data
+            });
+
             req.on('end', () => {
                 try {
                     body = body.split("\0");
                     var image = body[1] || null;
                     var gcode = body[0];
-                    queued[queueKey] = queueData = {
-                        key: queueKey,
-                        data: gcode,
-                        error: false,
-                        status: "queueing",
-                        target: query.target,
-                        filename: query.filename || "gprint",
-                        ptime: query.time || 0,
-                        plength: query.length || 0,
-                        waiting: []
-                    };
-                    log({key:queueKey, size:body.length, file:queueData.filename, target:req.gs.query.target});
+                    queueEntry.data = gcode;
+                    queueEntry.status = "queued";
+                    log({key:queueKey, size:body.length, file:queueEntry.filename, target:req.gs.query.target});
                     setCORSHeaders(req,res);
                     res.end(encode({key:queueKey}));
+
                     if (image) {
-                        image = Buffer.from(image, "base64");
-                        var png = new PNG().parse(image, (err, data) => {
-                            var th = 80;
-                            var tw = 60;
-                            var ratio = png.width / png.height;
-                            if (ratio > 4/3) {
-                                var div = png.height / tw;
-                                var xoff = Math.round((png.width - (th * div)) / 2);
-                                var yoff = 0;
-                            } else {
-                                var div = png.width / th;
-                                var xoff = 0;
-                                var yoff = Math.round((png.height - (tw * div)) / 2);
-                            }
-                            var buf = new Buffer(th * tw * 4);
-                            for (var y=0; y<tw; y++) {
-                                var dy = Math.round(y * div + yoff);
-                                if (dy < 0 || dy > png.height) continue;
-                                var ey = Math.round((y+1) * div + yoff);
-                                for (var x=0; x<th; x++) {
-                                    var dx = Math.round(x * div + xoff);
-                                    if (dx < 0 || dx > png.width) continue;
-                                    var ex = Math.round((x+1) * div + xoff);
-                                    var bidx = (y * th + x) * 4;
-                                    var pixval = png.averageBlock(dx,dy,ex,ey);
-                                    if (Math.abs(pixval[0] - pixval[1]) + Math.abs(pixval[2] - pixval[1]) < 5) {
-                                        pixval[0] = Math.round(pixval[0] * 0.8);
-                                        pixval[1] = Math.round(pixval[1] * 0.8);
-                                        pixval[2] = Math.round(pixval[2] * 0.8);
-                                        pixval[3] = Math.round(pixval[3] * 0.8);
-                                    }
-                                    buf[bidx+0] = pixval[0];
-                                    buf[bidx+1] = pixval[1];
-                                    buf[bidx+2] = pixval[2];
-                                    buf[bidx+3] = pixval[3];
-                                }
-                            }
-                            // BMP.encode({data:png.data, width:png.width, height:png.height});
-                            queueData.image = BMP.encode({data:buf, width:th, height:tw});
-                            printTarget(queueData);
+                        png2bmp(Buffer.from(image, "base64"), bmp => {
+                            queueEntry.image = bmp;
+                            queueTarget(queueEntry);
                         });
                     } else {
-                        printTarget(queueData);
+                        queueTarget(queueEntry);
                     }
                 } catch (e) {
                     console.log(e);
@@ -176,139 +151,163 @@ function api(req, res, next) {
             });
 
             break;
+
         default:
             next();
     }
 
 }
 
-function addTarget(host, name, filter) {
-    setup.targets[name || host] = {
-        host: host,
-        filter: filter
-    };
-}
-
 function tempFileName() {
     return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
 }
 
-function postFile(host, queueData) {
-    log({key:queueData.key, postTo:host});
-    queueData.status = "posting";
+function formPost(host, port, data, name, queueEntry, onDone) {
+    log({post:queueEntry.key, host:host, port:port});
+    queueEntry.status = "posting";
     var form = new FormData(), req;
-    form.append("file", queueData.data, queueData.filename);
+    form.append("file", data, name);
     form.append("submit", "submit");
     var track = progress();
-    req = form.submit("http://"+host+"/upload.cgi", function(err, res) {
+    req = form.submit("http://"+host+":"+port+"/upload.cgi", function(err, res) {
         if (res) res.resume();
         if (err) {
-            log({key:queueData.key, err:err});
-            queueData.error = true;
-            queueData.status = err.toString();
+            log({key:queueEntry.key, err:err});
+            queueEntry.error = true;
+            queueEntry.status = err.toString();
         } else {
-            log(encode({key:queueData.key, done:true}));
-            queueData.status = "complete";
+            log(encode({key:queueEntry.key, done:true}));
+            queueEntry.status = "complete";
         }
-        queueData.data = null;
-        queueData.done = true;
-        setTimeout(function() {
-            delete queued[queueData.key];
-        }, 600000);
-        finish(queueData);
+        onDone();
     }, track);
     track.on('progress', function(progress) {
-        queueData.progress = progress.percentage;
-        // log(progress);
+        queueEntry.progress = progress.percentage;
     });
 }
 
-function finish(queueData) {
-    queueData.waiting.forEach(function(res) {
+function finish(queueEntry) {
+    if (!queueEntry.error) {
+        queueEntry.status = "finished";
+    }
+    queueEntry.data = null;
+    queueEntry.done = true;
+    queueEntry.waiting.forEach(function(res) {
         res.end(encode({
-            key: queueData.key,
-            done: queueData.done,
-            error: queueData.error,
-            status: queueData.status
+            key: queueEntry.key,
+            status: queueEntry.status,
+            error: queueEntry.error,
+            done: queueEntry.done
         }));
     });
+    // expire completed entries and tmp files after 10 minutes
+    setTimeout(function() {
+        delete queued[queueEntry.key];
+        queueEntry.cleanup.forEach(filename => {
+            try { fs.unlinkSync(filename) } catch (e) { log(e) }
+        });
+    }, 600000);
 }
 
-function printTarget(queueData) {
-    var pt = setup.targets[queueData.target],
-        filter, proc, args;
+function processFilters(queueEntry, index) {
+    const filter = Object.assign({}, queueEntry.filters[index]);
+    const target = queueEntry.target;
 
-    if (!pt) throw "invalid target: "+queueData.target;
-    if (pt.filter && (filter = setup.filters[pt.filter])) {
-        var ext = filter.ext || '.gcode';
+    if (filter.formPost || filter.post) {
+        var data = queueEntry.data;
+        var name = queueEntry.name;
+        formPost(filter.host, filter.port || 80, data, name, queueEntry, () => {
+            processFilters(queueEntry, index + 1);
+        });
+        return;
+    }
+
+    if (filter.exec) {
         var img = '';
-        var fin = tempFileName();
-        var fout = tempFileName();
-        var fname = filter.filename || queueData.filename;
-        if (queueData.image) {
+        var ext = filter.ext || '.gcode';
+        var fname = filter.name || queueEntry.name;
+        var file = tempFileName();
+
+        // emit file with data and add to cleanup list
+        fs.writeFileSync(file, queueEntry.data);
+        queueEntry.cleanup.push(file);
+
+        // storge image, if present, and add to cleanup list
+        if (queueEntry.image) {
             img = tempFileName();
-            fs.writeFileSync(img, queueData.image.data);
+            fs.writeFileSync(img, queueEntry.image.data);
+            queueEntry.cleanup.push(img);
         }
-        if (fname.indexOf(ext) < 0) { fname = fname + ext }
+
+        // add missing file name extension
+        if (fname.indexOf(ext) < 0) {
+            fname = fname + ext;
+         }
+
         fname = fname.replace("{seq}", printSequence++);
-        fname = fname.replace("{name}", queueData.filename);
-        fs.writeFileSync(fin, queueData.data);
-        args = filter.args.slice();
+        fname = fname.replace("{name}", queueEntry.name);
+
+        args = (filter.args || []).slice();
         args.forEach((val,idx) => {
-            val = val.replace("{host}", pt.host);
-            val = val.replace("{port}", pt.port);
-            val = val.replace("{file-in}", fin);
-            val = val.replace("{file-out}", fout);
-            val = val.replace("{time}", queueData.ptime);
-            val = val.replace("{length}", queueData.plength);
-            val = val.replace("{filename}", fname);
+            // replace any provided key/values from target
+            for (var tkey in target) {
+                val = val.replace("{" + tkey + "}", target[tkey]);
+            }
+            val = val.replace("{file}", file);
+            val = val.replace("{print-time}", queueEntry.estime);
+            val = val.replace("{filament-used}", queueEntry.fused);
+            val = val.replace("{name}", fname);
             val = val.replace("{image}", img);
             args[idx] = val;
         });
-        proc = spawn(filter.path, args);
-        proc.on('error', error => {
-            log(error);
-            queueData.done = true;
-            queueData.error = true;
-            queueData.status = error.toString();
-            finish(queueData);
-        });
-        proc.on('exit', () => {
-            if (!lastmod(fout)) {
-                log("missing filtered output for "+filename);
-                queueData.done = true;
-                queueData.error = true;
-                queueData.status = "missing filter output";
-                return;
-            }
-            try {
-                queueData.filename = fname;
-                queueData.data = fs.readFileSync(fout);
-                if (filter.post) {
-                    postFile(pt.host, queueData);
-                } else {
-                    queueData.done = true;
-                    queueData.error = false;
-                    queueData.status = "spooled";
-                    finish(queueData);
+
+        queueEntry.status = "exec " + filter.exec;
+
+        proc = spawn(filter.exec, args)
+            .on('error', error => {
+                log(error);
+                queueEntry.error = true;
+                queueEntry.status = error.toString();
+                finish(queueEntry);
+            })
+            .on('exit', () => {
+                // refresh contents of data (for formPost)
+                if (filter.refresh) {
+                    queueEntry.data = fs.readFileSync(file);
                 }
-            } catch (e) {
-                queueData.done = true;
-                queueData.error = true;
-                queueData.status = e.toString();
-            }
-            fs.unlinkSync(fin);
-            fs.unlinkSync(fout);
-            if (img) fs.unlinkSync(img);
-        });
+                processFilters(queueEntry, index + 1);
+            });
+
         proc.stdout.on('data', data => log({
             out: data.toString()
         }));
+
         proc.stderr.on('data', err => log({
             err: err.toString()
         }));
+
+        return;
+    }
+
+    finish(queueEntry);
+}
+
+function queueTarget(queueEntry) {
+    var target = setup.targets[queueEntry.target],
+        filter = setup.filters[target.filter],
+        proc, args;
+
+    if (!target) throw "invalid target: " + queueEntry.target;
+    if (!filter) throw "missing filter for " + queueEntry.target;
+
+    queueEntry.target = target;
+
+    if (Array.isArray(filter)) {
+        queueEntry.filters = filter;
+        processFilters(queueEntry, 0);
     } else {
-        postFile(pt.host, queueData);
+        queueEntry.filters = [ filter ];
+        processFilters(queueEntry, 0);
     }
 }
 
@@ -325,8 +324,7 @@ var fs = require('fs'),
     spawn = require('child_process').spawn,
     progress = require('progress-stream'),
     FormData = require('form-data'),
-    PNG = require('pngjs').PNG,
-    BMP = require('bmp-js'),
+    png2bmp = require('./gx-util').png2bmp,
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
@@ -345,47 +343,24 @@ var fs = require('fs'),
         "config" : null,
         "targets" : { },
         "filters" : {
-            "gpx" : {
-                "path": "gpx",
-                "args": [ "{file-in}", "{file-out}" ],
-                "filename": "print-{seq}.x3g"
+            "post": {
+                "post": true
             },
+            "x3g" : [{
+                "exec": "gpx",
+                "args": [ "{file}", "{file}.x3g" ],
+            }, {
+                "exec": "mv",
+                "args": [ "{file}.x3g", "{file}" ],
+                "refresh": true
+            }],
             "gx": {
-                "ext": ".gx",
-                "path": "bin/gx-print",
-                "args": [ "{host}", "{port}", "{file-in}", "{file-out}", "{time}", "{length}", "{filename}", "{image}" ]
+                "exec": "bin/gx-print",
+                "args": [ "{host}", "{port}", "{file}", "{print-time}", "{filament-used}", "{name}", "{image}" ],
+                "ext": ".gx"
             }
         }
     };
-
-PNG.prototype.pixAt = function(x,y) {
-    var idx = (x + this.width * y) * 4;
-    var dat = this.data;
-    return [
-        dat[idx++],
-        dat[idx++],
-        dat[idx++],
-        dat[idx++]
-    ];
-};
-
-PNG.prototype.averageBlock = function(x1,y1,x2,y2) {
-    var val = [0, 0, 0, 0];
-    var count = 0;
-    for (var x=x1; x<x2; x++) {
-        for (var y=y1; y<y2; y++) {
-            var v2 = this.pixAt(x,y);
-            for (var z=0; z<4; z++) {
-                val[z] += v2[z];
-            }
-            count++;
-        }
-    }
-    for (var z=0; z<4; z++) {
-        val[z] = Math.abs(val[z] / count);
-    }
-    return val;
-};
 
 /** handle command-line arguments */
 process.argv.slice(2).forEach(v => {
@@ -409,10 +384,6 @@ process.argv.slice(2).forEach(v => {
                 break;
             case 'config':
                 key = v;
-                break;
-            case 'target':
-                key = v;
-                fn = addTarget;
                 break;
             default:
                 throw "invalid option: "+v;
