@@ -22,5 +22,7 @@ usage() {
     echo "gx-print ${host} ${port} ${file} ${time} ${length} ${name} ${image}"
     node bin/gx-util.js make "${fileout}" "${file}" "${image}" "${time}" "${length}"
     node bin/gx-util.js send "${fileout}" "${host}" "${port}" "${name}"
+    code=$?
     echo "cleanup tmp ${fileout}" && rm -f "${fileout}"
-) # >> /tmp/gx-print.log 2>&1
+    exit $code
+) || exit 1

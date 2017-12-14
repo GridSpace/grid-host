@@ -224,6 +224,8 @@ function processFilters(queueEntry, index) {
 
     if (filter.exec) {
         var img = '';
+        var err = '';
+        var out = '';
         var ext = filter.ext || '.gcode';
         var fname = filter.name || queueEntry.name;
         var file = tempFileName();
@@ -270,7 +272,12 @@ function processFilters(queueEntry, index) {
                 queueEntry.status = error.toString();
                 finish(queueEntry);
             })
-            .on('exit', () => {
+            .on('exit', code => {
+                if (code) {
+                    queueEntry.error = true;
+                    queueEntry.status = err;
+                    return finish(queueEntry);
+                }
                 // refresh contents of data (for formPost)
                 if (filter.refresh) {
                     queueEntry.data = fs.readFileSync(file);
@@ -279,11 +286,11 @@ function processFilters(queueEntry, index) {
             });
 
         proc.stdout.on('data', data => log({
-            out: data.toString()
+            out: out = data.toString()
         }));
 
-        proc.stderr.on('data', err => log({
-            err: err.toString()
+        proc.stderr.on('data', error => log({
+            err: err = error.toString()
         }));
 
         return;

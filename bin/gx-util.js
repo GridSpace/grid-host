@@ -127,7 +127,7 @@ class LineBuffer {
 }
 
 class FFControl {
-    constructor(host, port) {
+    constructor(host, port, onError) {
         const socket = new net.Socket().connect({
             host: host,
             port: port
@@ -155,24 +155,43 @@ class FFControl {
                 }
             })
             .on("error", (error) => {
-                console.log({error: error});
+                this._error(error);
             })
             .on("end", () => {
-                console.log({end: [host,port]});
+                this._end("end");
             })
             .on("close", () => {
-                console.log({close: [host,port]});
+                this._end("close");
             })
             ;
 
         socket.lineBuffer = new LineBuffer(socket);
 
+        this.disconnected = false;
         this.connected = false;
         this.socket = socket;
+        this.host = host;
+        this.port = port;
         this.queue = [];
         this.timer = null;
         this.next = null;
         this.output = [];
+        this.onError = onError;
+    }
+
+    _end(type) {
+        this.connected = false;
+        this.disconnected = true;
+        console.log({end: [this.host, this.port], type: type});
+    }
+
+    _error(error) {
+        if (this.onError) {
+            this.onError(error);
+        } else {
+            console.log({error: error});
+            process.exit(1);
+        }
     }
 
     sendBuffer(buf, callback) {
@@ -186,6 +205,7 @@ class FFControl {
     }
 
     doSendTimer() {
+        if (this.disconnected) return this._error("disconnected");
         if (!this.connected || this.timer) return;
         if (this.queue.length > 0) this.timer = setTimeout(() => {
             this.doSend()
@@ -211,7 +231,10 @@ function uint32b(val) {
 class GXSender {
     constructor(file, host, port, filename) {
         const buffer = fs.readFileSync(file);
-        const ctrl = new FFControl(host, port);
+        const ctrl = new FFControl(host, port, error => {
+            console.error(error);
+            process.exit(1);
+        });
         ctrl.sendCommand("M601 S1", lines => { console.log(lines) }); // take control
         ctrl.sendCommand("M115", lines => { console.log(lines) });
         ctrl.sendCommand("M650", lines => { console.log(lines) });
