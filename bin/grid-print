@@ -365,6 +365,10 @@ var fs = require('fs'),
                 "exec": "bin/gx-print",
                 "args": [ "{host}", "{port}", "{file}", "{print-time}", "{filament-used}", "{name}", "{image}" ],
                 "ext": ".gx"
+            },
+            "scp": {
+                "exec": "scp",
+                "args": [ "{file}", "{user}@{host}:{dir}/{name}" ]
             }
         }
     };
