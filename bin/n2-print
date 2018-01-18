@@ -1,0 +1,20 @@
+#!/bin/bash
+
+host=${1}
+file=${2}
+
+usage() {
+    echo "usage: n2-print [host] [file]"
+    exit
+}
+
+[ -z ${host} ] || [ -z ${file} ] && usage
+
+(
+    date
+    echo "n2-print ${host} ${file}"
+    node bin/n2-util.js send "${file}" "${host}"
+    node bin/n2-util.js print /home/root/$(basename "${file}") "${host}"
+    code=$?
+    exit $code
+) || exit 1

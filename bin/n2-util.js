@@ -216,35 +216,20 @@ class N2Print {
             port: port
         })
             .on("connect", data => {
-                console.log("connected");
-                var packet = Buffer.concat([
-                    Buffer.from([
-                        0, 0, 0, 0, // packet length (overwrite)
-                        8, 0, 0, 0, // command 8
-                        1, 0,
-                        0xff, 0xff, 0xff, 0xff, // magic
-                        0xff, 0xff, 0xff, 0xff, // magic
-                        1, 0,
-                        0, 0,
-                        0, 0,
-                        0, 0,
-                        2, 0,
-                        1,
-                        0, 0, 0, 0 // string length (overwrite)
-                    ]),
-                    Buffer.from(file, "utf16le"),
-                    Buffer.from([
-                        0, 0, 0, 0
-                    ])
-                ]);
-
-                packet.writeUInt32LE(packet.length - 4, 0);
-                packet.writeUInt32LE(file.length * 2, 29);
-                dump(packet);
-                socket.write(packet);
+                // console.log("connected");
+                var packet = new Packet()
+                    .setCommand(0x8)
+                    .setHeader(1,0,0,0,2)
+                    .append([1])
+                    .writeInt(file.length * 2)
+                    .append(file)
+                    .append([0,0,0,0])
+                    .update();
+                // dump(packet.buf);
+                socket.write(packet.buf);
             })
             .on("data", data => {
-                dump(data);
+                // dump(data);
             })
             .on("error", (error) => {
                 socket.end();
@@ -253,17 +238,16 @@ class N2Print {
                 socket.end();
             })
             .on("close", () => {
-                console.log("closed");
-                // ok
+                // console.log("closed");
             })
             ;
     }
 }
 
 class N2Send {
-    constructor(fileName, host, port) {
-        const file = fs.readFileSync(fileName);
-        fileName = fileName.split('/');
+    constructor(file, host, port, fileName) {
+        const fbuf = fs.readFileSync(file);
+        fileName = (fileName || file).split('/');
         fileName = fileName[fileName.length-1];
         console.log({sending: fileName, to: host, port: port});
         let tf = 1024 / 1000;
@@ -279,7 +263,7 @@ class N2Send {
                 let packet = new Packet()
                     .setCommand(0xc)
                     .setHeader(0, 0, 0, 2, 1)
-                    .writeInt(file.length)
+                    .writeInt(fbuf.length)
                     .writeInt(0) // 0
                     .writeInt(0) // data length
                     .writeInt(0) // 0
@@ -293,7 +277,7 @@ class N2Send {
             .on("data", data => {
                 // console.log("--- server ---");
                 // dump(data);
-                let tosend = Math.min(file.length - findx, 8192);
+                let tosend = Math.min(fbuf.length - findx, 8192);
                 if (tosend <= 0) {
                     socket.end();
                     return;
@@ -304,7 +288,7 @@ class N2Send {
                     .writeInt(seqno++)
                     .writeInt(tosend)
                     .writeInt(tosend)
-                    .append(file.slice(findx, findx + tosend))
+                    .append(fbuf.slice(findx, findx + tosend))
                     .update();
                 // console.log("--- client ---");
                 // packet.dump();
@@ -312,7 +296,7 @@ class N2Send {
                 findx += tosend;
                 let mark = new Date().getTime();
                 console.log({
-                    progress: (100 * findx / file.length).toFixed(2),
+                    progress: (100 * findx / fbuf.length).toFixed(2),
                     rate: Math.round((findx/(mark-time))*tf), // kB/sec
                     time: ((mark-time)/1000).toFixed(2) // seconds
                 });
@@ -464,7 +448,7 @@ module.exports = {
 if (!module.parent) {
     const arg = process.argv.slice(2);
     const cmd = arg.shift();
-    let file, host, port, lport;
+    let file, host, port, lport, fname;
 
     switch (cmd) {
         case 'pipe':
@@ -477,7 +461,8 @@ if (!module.parent) {
             file = arg.shift();
             host = arg.shift() || "localhost";
             port = arg.shift() || "31626";
-            new N2Send(file, host, parseInt(port));
+            fname = arg.shift();
+            new N2Send(file, host, parseInt(port), fname);
             break;
         case 'print':
             file = arg.shift();
@@ -490,7 +475,7 @@ if (!module.parent) {
                 "invalid command: " + cmd,
                 "usage:",
                 "  pipe  [host] [port] [local-port]",
-                "  send  [file] [host] [port]",
+                "  send  [file] [host] [port] [filename]",
                 "  print [file] [host] [port]"
             ].join("\n"));
             break;
