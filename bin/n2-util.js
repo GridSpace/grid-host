@@ -224,8 +224,10 @@ class N2Print {
                         1, 0,
                         0xff, 0xff, 0xff, 0xff, // magic
                         0xff, 0xff, 0xff, 0xff, // magic
-                        1, 0, 0, 0,
-                        0, 0, 0, 0,
+                        1, 0,
+                        0, 0,
+                        0, 0,
+                        0, 0,
                         2, 0,
                         1,
                         0, 0, 0, 0 // string length (overwrite)
@@ -258,6 +260,146 @@ class N2Print {
     }
 }
 
+class N2Send {
+    constructor(fileName, host, port) {
+        const file = fs.readFileSync(fileName);
+        fileName = fileName.split('/');
+        fileName = fileName[fileName.length-1];
+        console.log({sending: fileName, to: host, port: port});
+        let tf = 1024 / 1000;
+        let time = new Date().getTime();
+        let seqno = 1;
+        let findx = 0;
+        const socket = new net.Socket().connect({
+            host: host,
+            port: port
+        })
+            .on("connect", data => {
+                // console.log("connected");
+                let packet = new Packet()
+                    .setCommand(0xc)
+                    .setHeader(0, 0, 0, 2, 1)
+                    .writeInt(file.length)
+                    .writeInt(0) // 0
+                    .writeInt(0) // data length
+                    .writeInt(0) // 0
+                    .writeInt(fileName.length * 2)
+                    .append(fileName)
+                    .update();
+                // console.log("--- client ---");
+                // packet.dump();
+                socket.write(packet.buf);
+            })
+            .on("data", data => {
+                // console.log("--- server ---");
+                // dump(data);
+                let tosend = Math.min(file.length - findx, 8192);
+                if (tosend <= 0) {
+                    socket.end();
+                    return;
+                }
+                let packet = new Packet()
+                    .setCommand(0xe)
+                    .setHeader(0, 0, 2, 0, 1)
+                    .writeInt(seqno++)
+                    .writeInt(tosend)
+                    .writeInt(tosend)
+                    .append(file.slice(findx, findx + tosend))
+                    .update();
+                // console.log("--- client ---");
+                // packet.dump();
+                socket.write(packet.buf);
+                findx += tosend;
+                let mark = new Date().getTime();
+                console.log({
+                    progress: (100 * findx / file.length).toFixed(2),
+                    rate: Math.round((findx/(mark-time))*tf), // kB/sec
+                    time: ((mark-time)/1000).toFixed(2) // seconds
+                });
+            })
+            .on("error", (error) => {
+                socket.end();
+            })
+            .on("end", () => {
+                socket.end();
+            })
+            .on("close", () => {
+                // console.log("closed");
+            })
+            ;
+    }}
+
+class Packet {
+    constructor(buf) {
+        this.buf = buf || Buffer.from([
+            0, 0, 0, 0, // packet length
+            0, 0, 0, 0, // command
+            1,          // version
+            0,          // 0=client, 1=server
+            0xff, 0xff, 0xff, 0xff, // magic
+            0xff, 0xff, 0xff, 0xff, // magic
+            0, 0,       // h0
+            0, 0,       // h1
+            0, 0,       // h2
+            2, 0,       // h3
+            1, 0        // h4
+        ]);
+    }
+
+    setCommand(c) {
+        this.buf.writeUInt32LE(c, 4);
+        return this;
+    }
+
+    setMagic(v0, v1) {
+        this.buf.writeUInt32LE(v0, 10);
+        this.buf.writeUInt32LE(v1, 14);
+        return this;
+    }
+
+    setHeader(v0, v1, v2, v3, v4, v5) {
+        this.buf.writeUInt16LE(v0, 18);
+        this.buf.writeUInt16LE(v1, 20);
+        this.buf.writeUInt16LE(v2, 22);
+        this.buf.writeUInt16LE(v3, 24);
+        this.buf.writeUInt16LE(v4, 26);
+        return this;
+    }
+
+    writeShort(v) {
+        let pos = this.buf.length;
+        this.append([0,0]);
+        this.buf.writeUInt16LE(v, pos);
+        return this;
+    }
+
+    writeInt(v) {
+        let pos = this.buf.length;
+        this.append([0,0,0,0]);
+        this.buf.writeUInt32LE(v, pos);
+        return this;
+    }
+
+    append(buf) {
+        if (typeof(buf) === 'string') {
+            buf = Buffer.from(buf, "utf16le");
+        } else if (Array.isArray(buf)) {
+            buf = Buffer.from(buf);
+        }
+        this.buf = Buffer.concat([this.buf, buf]);
+        return this;
+    }
+
+    update() {
+        this.buf.writeUInt32LE(this.buf.length - 4, 0);
+        return this;
+    }
+
+    dump() {
+        dump(this.buf);
+    }
+}
+
 class TCPipe {
     constructor(lport, dhost, dport) {
         this.server = net.createServer(client => {
@@ -266,11 +408,6 @@ class TCPipe {
             const emit = (socket, buffer) => {
                 console.log("--- " + socket.name + " ---");
                 decode(buffer);
-                // if (buffer.length > 256) {
-                //     console.log(buffer.toString("hex"));
-                // } else {
-                //     console.log(buffer.toString().trim());
-                // }
             };
             const onData = (socket, buffer) => {
                 if (last != socket) { emit(socket, buffer); buf = buffer }
@@ -327,25 +464,33 @@ module.exports = {
 if (!module.parent) {
     const arg = process.argv.slice(2);
     const cmd = arg.shift();
+    let file, host, port, lport;
 
     switch (cmd) {
         case 'pipe':
-            let dhost = arg.shift() || "localhost";
-            let dport = arg.shift() || "31625";
-            let lport = arg.shift() || dport;
-            new TCPipe(parseInt(lport), dhost, parseInt(dport));
+            host = arg.shift() || "localhost";
+            port = arg.shift() || "31625";
+            lport = arg.shift() || port;
+            new TCPipe(parseInt(lport), host, parseInt(port));
+            break;
+        case 'send':
+            file = arg.shift();
+            host = arg.shift() || "localhost";
+            port = arg.shift() || "31626";
+            new N2Send(file, host, parseInt(port));
             break;
         case 'print':
-            let file = arg.shift();
-            let host = arg.shift() || "localhost";
-            let port = arg.shift() || "31625";
+            file = arg.shift();
+            host = arg.shift() || "localhost";
+            port = arg.shift() || "31625";
             new N2Print(file, host, parseInt(port));
             break;
         default:
             console.log([
                 "invalid command: " + cmd,
                 "usage:",
-                "  pipe [dhost] [dport] [lport]",
+                "  pipe  [host] [port] [local-port]",
+                "  send  [file] [host] [port]",
                 "  print [file] [host] [port]"
             ].join("\n"));
             break;
