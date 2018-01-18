@@ -229,7 +229,9 @@ class N2Print {
                 socket.write(packet.buf);
             })
             .on("data", data => {
+                console.log({printing: file});
                 // dump(data);
+                socket.end();
             })
             .on("error", (error) => {
                 socket.end();

@@ -366,6 +366,11 @@ var fs = require('fs'),
                 "args": [ "{host}", "{port}", "{file}", "{print-time}", "{filament-used}", "{name}", "{image}" ],
                 "ext": ".gx"
             },
+            "n2": {
+                "exec": "bin/n2-print",
+                "args": [ "{host}", "{file}", "{name}" ],
+                "ext": ".gcode"
+            },
             "scp": {
                 "exec": "scp",
                 "args": [ "{file}", "{user}@{host}:{dir}/{name}" ]

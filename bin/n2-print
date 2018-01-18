@@ -2,19 +2,20 @@
 
 host=${1}
 file=${2}
+name=${3}
 
 usage() {
-    echo "usage: n2-print [host] [file]"
+    echo "usage: n2-print [host] [file] [name]"
     exit
 }
 
-[ -z ${host} ] || [ -z ${file} ] && usage
+[ -z ${host} ] || [ -z ${file} ] || [ -z ${name} ] && usage
 
 (
     date
     echo "n2-print ${host} ${file}"
-    node bin/n2-util.js send "${file}" "${host}"
-    node bin/n2-util.js print /home/root/$(basename "${file}") "${host}"
+    node bin/n2-util.js send "${file}" "${host}" 31626 "${name}"
+    node bin/n2-util.js print "/home/root/${name}" "${host}" 31625
     code=$?
     exit $code
 ) || exit 1
