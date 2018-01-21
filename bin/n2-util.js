@@ -19,27 +19,35 @@ function str(v, b) {
      return lpad(v.toString(16), b*2, '0') + "=" + rpad(v.toString(10), b*3);
 }
 
-function dump(buf) {
+function dump(buf, skip, words, word) {
     let left = '';
     let right = '';
     let index = 0;
     let count = 0;
+    words = words || 4;
+    word = word || 4;
+    let wout = word * words;
+    let leftpad = words * (word * 3 + 1);
     let emit = function() {
-        console.log(rpad(left, 52) + right);
+        console.log(rpad(left, leftpad) + right);
         left = '';
         right = '';
         count = 0;
     };
 
+    if (skip) buf = buf.slice(skip);
+
     while (index < buf.length) {
         let ch = buf.readUInt8(index++);
         left += lpad(ch.toString(16), 2, '0') + ' ';
         right += String.fromCharCode(ch > 32 && ch < 128 ? ch : 32);
-        if (++count == 16) emit();
-        if (count && count % 4 === 0) left += ' ';
+        if (++count == wout) emit();
+        if (count && count % word === 0) left += ' ';
     }
 
     if (count) emit();
+
+    // console.log({len: buf.length, lines: buf.length / wout});
 }
 
 function decode(buf) {
@@ -503,6 +511,15 @@ if (!module.parent) {
     let file, host, port, lport, fname;
 
     switch (cmd) {
+        case 'dump':
+            file = arg.shift();
+            let skip = parseInt(arg.shift() || "0");
+            let words = parseInt(arg.shift() || "4");
+            let word = parseInt(arg.shift() || "4");
+            fs.readFile(file, function(err, data) {
+                dump(data, skip, words, word);
+            })
+            break;
         case 'pipe':
             host = arg.shift() || "localhost";
             port = arg.shift() || "31625";
