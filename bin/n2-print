@@ -3,6 +3,7 @@
 host=${1}
 file=${2}
 name=${3}
+port=${4:31625}
 
 usage() {
     echo "usage: n2-print [host] [file] [name]"
@@ -14,8 +15,7 @@ usage() {
 (
     date
     echo "n2-print ${host} ${file}"
-    node bin/n2-util.js send "${file}" "${host}" 31626 "${name}"
-    node bin/n2-util.js print "/home/root/${name}" "${host}" 31625
+    node bin/n2-util.js print "${file}" "${host}" "${port}" "${name}"
     code=$?
     exit $code
 ) || exit 1

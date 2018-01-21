@@ -188,7 +188,7 @@ function formPost(host, port, data, name, queueEntry, onDone) {
 
 function finish(queueEntry) {
     if (!queueEntry.error) {
-        queueEntry.status = "finished";
+        queueEntry.status = "sent";
     }
     queueEntry.data = null;
     queueEntry.done = true;

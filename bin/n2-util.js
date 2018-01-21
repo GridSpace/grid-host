@@ -247,7 +247,7 @@ class N2Print {
 }
 
 class N2Send {
-    constructor(file, host, port, fileName) {
+    constructor(file, host, port, fileName, onDone) {
         const fbuf = fs.readFileSync(file);
         fileName = (fileName || file).split('/');
         fileName = fileName[fileName.length-1];
@@ -279,12 +279,20 @@ class N2Send {
             .on("data", data => {
                 // console.log("--- server ---");
                 // dump(data);
+                let packet = new Packet(data);
+                if (packet.getCommand() == 0xd) {
+                    fileName = packet.readLengthString(48);
+                    console.log({location: fileName});
+                }
                 let tosend = Math.min(fbuf.length - findx, 8192);
                 if (tosend <= 0) {
                     socket.end();
+                    if (onDone) {
+                        onDone(fileName);
+                    }
                     return;
                 }
-                let packet = new Packet()
+                packet = new Packet()
                     .setCommand(0xe)
                     .setHeader(0, 0, 2, 0, 1)
                     .writeInt(seqno++)
@@ -332,15 +340,36 @@ class Packet {
         ]);
     }
 
+    getCommand() {
+        return this.buf.readUInt32LE(4);
+    }
+
     setCommand(c) {
         this.buf.writeUInt32LE(c, 4);
         return this;
+    }
+
+    getMagic() {
+        return [
+            this.buf.readUInt32LE(10),
+            this.buf.readUInt32LE(4)
+        ];
     }
 
     setMagic(v0, v1) {
         this.buf.writeUInt32LE(v0, 10);
         this.buf.writeUInt32LE(v1, 14);
         return this;
+    }
+
+    getHeader() {
+        return [
+            this.buf.readUInt16LE(18),
+            this.buf.readUInt16LE(20),
+            this.buf.readUInt16LE(22),
+            this.buf.readUInt16LE(24),
+            this.buf.readUInt16LE(26)
+        ];
     }
 
     setHeader(v0, v1, v2, v3, v4, v5) {
@@ -350,6 +379,27 @@ class Packet {
         this.buf.writeUInt16LE(v3, 24);
         this.buf.writeUInt16LE(v4, 26);
         return this;
+    }
+
+    readBytes(pos, len) {
+        return this.buf.slice(pos, pos+len);
+    }
+
+    readString(pos, len, enc) {
+        return this.readBytes(pos, len).toString(enc || 'utf16le');
+    }
+
+    readLengthString(pos, enc) {
+        let len = this.readInt(pos);
+        return this.readBytes(pos + 4, len).toString(enc || 'utf16le');
+    }
+
+    readShort(pos) {
+        return this.buf.readUInt16BE(pos);
+    }
+
+    readInt(pos) {
+        return this.buf.readUInt32BE(pos);
     }
 
     writeShort(v) {
@@ -449,7 +499,7 @@ module.exports = {
 
 if (!module.parent) {
     const arg = process.argv.slice(2);
-    const cmd = arg.shift();
+    const cmd = arg.shift() || '';
     let file, host, port, lport, fname;
 
     switch (cmd) {
@@ -466,19 +516,28 @@ if (!module.parent) {
             fname = arg.shift();
             new N2Send(file, host, parseInt(port), fname);
             break;
-        case 'print':
+        case 'kick':
             file = arg.shift();
             host = arg.shift() || "localhost";
             port = arg.shift() || "31625";
             new N2Print(file, host, parseInt(port));
             break;
+        case 'print':
+            file = arg.shift();
+            host = arg.shift() || "localhost";
+            port = parseInt(arg.shift() || "31625");
+            fname = arg.shift();
+            new N2Send(file, host, port + 1, fname, function(filename) {
+                new N2Print(filename, host, port);
+            });
+            break;
         default:
             console.log([
                 "invalid command: " + cmd,
                 "usage:",
-                "  pipe  [host] [port] [local-port]",
                 "  send  [file] [host] [port] [filename]",
-                "  print [file] [host] [port]"
+                "  kick  [file] [host] [port]",
+                "  print [file] [host] [port] [filename]"
             ].join("\n"));
             break;
     }
