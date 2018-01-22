@@ -20,6 +20,7 @@ function str(v, b) {
 }
 
 function dump(buf, skip, words, word) {
+    // new Packet(buf);
     let left = '';
     let right = '';
     let index = 0;
@@ -162,6 +163,16 @@ class Reader {
         return data;
     }
 
+    readLong() {
+        if (this.remain() < 8) return 0;
+        const data = (
+            this.buffer.readUInt32LE(this.index) &
+            this.buffer.readUInt32LE(this.index) << 32
+        );
+        this.index += 8;
+        return data;
+    }
+
     readIntBE() {
         if (this.remain() < 4) return 0;
         const data = this.buffer.readUInt32BE(this.index);
@@ -184,6 +195,7 @@ class Reader {
     }
 
     readString(len, enc) {
+        if (!len) len = this.readInt();
         if (this.remain() < len) return null;
         return this.readBytes(len).toString(enc || 'utf16le');
     }
@@ -308,6 +320,9 @@ class N2Send {
 
 class Packet {
     constructor(buf) {
+        if (buf) {
+            this.decode(buf);
+        }
         this.buf = buf || Buffer.from([
             0, 0, 0, 0, // packet length
             0, 0, 0, 0, // command
@@ -321,6 +336,34 @@ class Packet {
             2, 0,       // h3 (# longs)
             1, 0        // h4 (# strings)
         ]);
+    }
+
+    decode(buf) {
+        let inp = new Reader(buf);
+        let data = this.data = {
+            len: inp.readInt(),     // packet length
+            typ: inp.readInt(),     // packet type
+            ver: inp.readByte(),    // packet version
+            cs:  inp.readByte(),    // 0=client, 1=server
+            m1:  inp.readInt(),     // 0xffffffff (magic1)
+            m2:  inp.readInt(),     // 0xffffffff (magic2)
+            nb:  inp.readShort(),   // # bytes
+            ns:  inp.readShort(),   // # shorts
+            ni:  inp.readShort(),   // # ints
+            nl:  inp.readShort(),   // # longs
+            nS:  inp.readShort(),   // # strings
+            bd:  [],                // byte data
+            sd:  [],                // short data
+            id:  [],                // int data
+            ld:  [],                // long data
+            Sd:  []                 // String data
+        };
+        for (let i=0; i<data.nb; i++) data.bd.push(inp.readByte())
+        for (let i=0; i<data.ns; i++) data.sd.push(inp.readShort())
+        for (let i=0; i<data.ni; i++) data.id.push(inp.readInt())
+        for (let i=0; i<data.nl; i++) data.ld.push(inp.readLong())
+        for (let i=0; i<data.nS; i++) data.Sd.push(inp.readString())
+        console.log(data);
     }
 
     getCommand() {
