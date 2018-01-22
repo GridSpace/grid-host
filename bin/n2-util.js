@@ -53,7 +53,7 @@ function dump(buf, skip, words, word) {
 function decode(buf) {
     const inp = new Reader(buf);
     const len = inp.readInt(),
-            s1 = inp.readInt(),
+            s1 = inp.readInt(),     // packet type
             s2 = inp.readByte(),
             s3 = inp.readByte(),
             m1 = inp.readInt(),     // 0xffffffff (magic1)
@@ -66,8 +66,6 @@ function decode(buf) {
             c5 = inp.readShort(),   // command5 (2 bytes)
             c6 = inp.readShort();   // command6 (2 bytes)
 
-    // console.log("buffer.length = " + buf.length + " len = " + len);
-
     switch (s1) {
         case 0x01: // client string command (home.getinfo or setting.getinfo)
             console.log({command: inp.readString(c5)});
@@ -75,18 +73,8 @@ function decode(buf) {
         case 0x02: // server home.getinfo
             let skip = inp.readBytes(20);
             console.log("<< home.info = " + JSON.stringify({
-                // nb0: inp.readByte(),
-                // nb1: inp.readByte(),
-                // nb2: inp.readByte(),
-                // nb3: inp.readByte(),
-                // ns0: inp.readByte(),
-                // ns1: inp.readByte(),
-                // ns2: inp.readByte(),
-                // ns3: inp.readByte()
-
                 nb: lpad(inp.readInt().toString(2), 16, '0'),
                 ns: lpad(inp.readInt().toString(2), 16, '0')
-
                 /**
                   0 = 0000000000000000 = 0
                   1 = 0011111110000000 = 16256
@@ -111,19 +99,6 @@ function decode(buf) {
                  64 = 0100001010000000
                 128 = 0100001100000000
                  */
-
-                // n1: inp.readInt(),
-                // s1: inp.readInt(),
-                // n2: inp.readInt(),
-                // s2: inp.readInt(),
-                // bv: inp.readInt(),
-                // bs: inp.readInt(),
-                // v0: inp.readInt(),
-                // t0: inp.readInt(),
-                // v1: inp.readInt(),
-                // t1: inp.readInt(),
-                // v2: inp.readInt(),
-                // t2: inp.readInt()
             }));
             dump(buf);
             break;
@@ -340,11 +315,11 @@ class Packet {
             0,          // 0=client, 1=server
             0xff, 0xff, 0xff, 0xff, // magic
             0xff, 0xff, 0xff, 0xff, // magic
-            0, 0,       // h0
-            0, 0,       // h1
-            0, 0,       // h2
-            2, 0,       // h3
-            1, 0        // h4
+            0, 0,       // h0 (# bytes)
+            0, 0,       // h1 (# shorts)
+            0, 0,       // h2 (# ints)
+            2, 0,       // h3 (# longs)
+            1, 0        // h4 (# strings)
         ]);
     }
 
