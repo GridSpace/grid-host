@@ -52,6 +52,7 @@ function dump(buf, skip, words, word) {
 }
 
 function decode(buf) {
+    const pkt = new Packet(buf);
     const inp = new Reader(buf);
     const len = inp.readInt(),
             s1 = inp.readInt(),     // packet type
@@ -67,71 +68,79 @@ function decode(buf) {
             c5 = inp.readShort(),   // command5 (2 bytes)
             c6 = inp.readShort();   // command6 (2 bytes)
 
-    switch (s1) {
+    switch (pkt.getCommand()) {
         case 0x01: // client string command (home.getinfo or setting.getinfo)
             console.log({command: inp.readString(c5)});
             break;
         case 0x02: // server home.getinfo
-            let skip = inp.readBytes(20);
-            console.log("<< home.info = " + JSON.stringify({
-                nb: lpad(inp.readInt().toString(2), 16, '0'),
-                ns: lpad(inp.readInt().toString(2), 16, '0')
-                /**
-                  0 = 0000000000000000 = 0
-                  1 = 0011111110000000 = 16256
-                  2 = 0100000000000000 = 16384
-                  3 = 0100000001000000 = 16448
-                  4 = 0100000010000000 = 16512
-                  5 = 0100000010100000 = 16544
-                  6 = 0100000011000000 = 16576
-                  7 = 0100000011100000 = 16608
-                  8 = 0100000100000000 = 16640
-                  9 = 0100000100010000 = 16656
-                 10 = 0100000100100000 = 16672
-                 11 = 0100000100110000
-                 12 = 0100000101000000
-                 13 = 0100000101010000
-                 14 = 0100000101100000
-                 15 = 0100000101110000
-                 16 = 0100000110000000
-                 17 = 0100000110001000
-                 25 = 0100000111001000
-                 32 = 0100001000000000
-                 64 = 0100001010000000
-                128 = 0100001100000000
-                 */
-            }));
-            dump(buf);
+            // let skip = inp.readBytes(20);
+            // console.log("<< home.info = " + JSON.stringify({
+            //     nb: lpad(inp.readInt().toString(2), 16, '0'),
+            //     ns: lpad(inp.readInt().toString(2), 16, '0')
+            //     /**
+            //       0 = 0000000000000000 = 0
+            //       1 = 0011111110000000 = 16256
+            //       2 = 0100000000000000 = 16384
+            //       3 = 0100000001000000 = 16448
+            //       4 = 0100000010000000 = 16512
+            //       5 = 0100000010100000 = 16544
+            //       6 = 0100000011000000 = 16576
+            //       7 = 0100000011100000 = 16608
+            //       8 = 0100000100000000 = 16640
+            //       9 = 0100000100010000 = 16656
+            //      10 = 0100000100100000 = 16672
+            //      11 = 0100000100110000
+            //      12 = 0100000101000000
+            //      13 = 0100000101010000
+            //      14 = 0100000101100000
+            //      15 = 0100000101110000
+            //      16 = 0100000110000000
+            //      17 = 0100000110001000
+            //      25 = 0100000111001000
+            //      32 = 0100001000000000
+            //      64 = 0100001010000000
+            //     128 = 0100001100000000
+            //      */
+            // }));
+            // dump(buf);
+            console.log(pkt.data);
             break;
         case 0x03: // client gcode command (M104 T0 S0) (ends w/ "\n")
             console.log({gcode: inp.readString(c5).trim()});
             break;
         case 0x04: // client get dir info
             console.log(">> get dir info");
-            dump(buf);
+            console.log(pkt.data);
+            // dump(buf);
             break;
         case 0x05: // server dir info
             console.log("<< dir info");
-            dump(buf);
+            console.log(pkt.data);
+            // dump(buf);
             break;
         case 0x06: // client get file info
             console.log(">> get file info");
-            dump(buf);
+            console.log(pkt.data);
+            // dump(buf);
             break;
         case 0x07: // server file info
             console.log("<< file info");
-            dump(buf);
+            console.log(pkt.data);
+            // dump(buf);
             break;
         case 0x08: // client start print
             console.log(">> start print: " + inp.readString(c5));
-            dump(buf);
+            console.log(pkt.data);
+            // dump(buf);
             break;
         case 0x09: // server print start ACK
             console.log("<< print started");
-            dump(buf);
+            console.log(pkt.data);
+            // dump(buf);
             break;
         case 0x0a: // server setting.getinfo
             console.log("<< settings.info");
+            console.log(pkt.data);
             break;
         default:
             dump(buf);
@@ -363,7 +372,6 @@ class Packet {
         for (let i=0; i<data.ni; i++) data.id.push(inp.readInt())
         for (let i=0; i<data.nl; i++) data.ld.push(inp.readLong())
         for (let i=0; i<data.nS; i++) data.Sd.push(inp.readString())
-        console.log(data);
     }
 
     getCommand() {
