@@ -60,6 +60,15 @@ function init(req, res, next) {
 function api(req, res, next) {
     if (!req.gs.path.startsWith(apiroot)) return next();
 
+    let query = req.gs.query;
+
+    // require key
+    if (setup.key && query.key !== setup.key) {
+        res.writeHead(401);
+        res.end();
+        return;
+    }
+
     var queueEntry;
 
     switch (req.gs.path.substring(apiroot.length)) {
@@ -70,7 +79,7 @@ function api(req, res, next) {
             break;
 
         case "check":
-            queueEntry = queued[req.gs.query.key];
+            queueEntry = queued[query.key];
             setCORSHeaders(req,res);
             res.end(encode(
                 queueEntry ? {
@@ -85,7 +94,7 @@ function api(req, res, next) {
             break;
 
         case "wait":
-            queueEntry = queued[req.gs.query.key];
+            queueEntry = queued[query.key];
             setCORSHeaders(req,res);
             if (queueEntry) {
                 log({wait_on:queueEntry.key});
@@ -96,8 +105,6 @@ function api(req, res, next) {
             break;
 
         case "print":
-            let query = req.gs.query;
-
             if (req.method !== 'POST') return next();
             if (!query.filename) return next();
             if (!query.target) return next();

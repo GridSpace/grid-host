@@ -51,99 +51,74 @@ function dump(buf, skip, words, word) {
     // console.log({len: buf.length, lines: buf.length / wout});
 }
 
+let lastN0 = Infinity;
+let lastCMD = null;
+
 function decode(buf) {
     const pkt = new Packet(buf);
-    const inp = new Reader(buf);
-    const len = inp.readInt(),
-            s1 = inp.readInt(),     // packet type
-            s2 = inp.readByte(),
-            s3 = inp.readByte(),
-            m1 = inp.readInt(),     // 0xffffffff (magic1)
-            m2 = inp.readInt(),     // 0xffffffff (magic2)
-            c1 = inp.readInt(),     // command1 (4 bytes)
-            c2 = inp.readShort(),   // command2 (2 bytes)
-            c3 = inp.readShort(),   // command3 (2 bytes)
-            c4 = inp.readShort(),   // command4 (2 bytes)
-            xx = s1 === 3 || s1 === 8 ? inp.readByte() : 0, // random extra byte when s1 == 3
-            c5 = inp.readShort(),   // command5 (2 bytes)
-            c6 = inp.readShort();   // command6 (2 bytes)
 
     switch (pkt.getCommand()) {
         case 0x01: // client string command (home.getinfo or setting.getinfo)
-            console.log({command: inp.readString(c5)});
+            let CMD = pkt.data.strings[0];
+            if (CMD !== lastCMD) {
+                console.log({command: CMD});
+                lastCMD = CMD;
+            }
             break;
         case 0x02: // server home.getinfo
-            // let skip = inp.readBytes(20);
-            // console.log("<< home.info = " + JSON.stringify({
-            //     nb: lpad(inp.readInt().toString(2), 16, '0'),
-            //     ns: lpad(inp.readInt().toString(2), 16, '0')
-            //     /**
-            //       0 = 0000000000000000 = 0
-            //       1 = 0011111110000000 = 16256
-            //       2 = 0100000000000000 = 16384
-            //       3 = 0100000001000000 = 16448
-            //       4 = 0100000010000000 = 16512
-            //       5 = 0100000010100000 = 16544
-            //       6 = 0100000011000000 = 16576
-            //       7 = 0100000011100000 = 16608
-            //       8 = 0100000100000000 = 16640
-            //       9 = 0100000100010000 = 16656
-            //      10 = 0100000100100000 = 16672
-            //      11 = 0100000100110000
-            //      12 = 0100000101000000
-            //      13 = 0100000101010000
-            //      14 = 0100000101100000
-            //      15 = 0100000101110000
-            //      16 = 0100000110000000
-            //      17 = 0100000110001000
-            //      25 = 0100000111001000
-            //      32 = 0100001000000000
-            //      64 = 0100001010000000
-            //     128 = 0100001100000000
-            //      */
-            // }));
             // dump(buf);
-            console.log(pkt.data);
+            // console.log(pkt.toString());
+            let N0 = pkt.data.ints[1];
+            if (N0 !== lastN0) {
+                console.log([
+                    "n0",
+                    N0,
+                    lpad(N0.toString(16), 8, "0"),
+                    lpad(N0.toString(2), 32, "0")
+                ].join(", "));
+                lastN0 = N0;
+            }
             break;
         case 0x03: // client gcode command (M104 T0 S0) (ends w/ "\n")
-            console.log({gcode: inp.readString(c5).trim()});
+            // dump(buf);
+            console.log({gcode: pkt.data.strings});
             break;
         case 0x04: // client get dir info
             console.log(">> get dir info");
-            console.log(pkt.data);
+            console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x05: // server dir info
             console.log("<< dir info");
-            console.log(pkt.data);
+            console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x06: // client get file info
             console.log(">> get file info");
-            console.log(pkt.data);
+            console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x07: // server file info
             console.log("<< file info");
-            console.log(pkt.data);
+            console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x08: // client start print
             console.log(">> start print: " + inp.readString(c5));
-            console.log(pkt.data);
+            console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x09: // server print start ACK
             console.log("<< print started");
-            console.log(pkt.data);
+            console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x0a: // server setting.getinfo
             console.log("<< settings.info");
-            console.log(pkt.data);
+            console.log(pkt.toString());
             break;
         default:
-            dump(buf);
+            console.log(pkt.toString());
             break;
     }
 }
@@ -342,36 +317,54 @@ class Packet {
             0, 0,       // h0 (# bytes)
             0, 0,       // h1 (# shorts)
             0, 0,       // h2 (# ints)
-            2, 0,       // h3 (# longs)
-            1, 0        // h4 (# strings)
+            0, 0,       // h3 (# longs)
+            0, 0        // h4 (# strings)
         ]);
+    }
+
+    toString() {
+        let data = this.data;
+        let darr = function(name, arr, len) {
+            if (arr.length === 0) return null;
+            if (arr.length <= (len || 5)) return name + "[" + arr.length + "]"+ " = " + arr.join(", ");
+            return [name + "[" + arr.length + "] ="].concat(arr).join("\n ");
+        };
+        return [
+            "[" + [data.typ, data.cs, data.m1, data.m2].join(",") + "]",
+            darr("bytes", data.bytes, 1000),
+            darr("shorts", data.shorts, 1000),
+            darr("ints", data.ints, 1),
+            darr("longs", data.longs, 1),
+            darr("strings", data.strings, 1)
+        ].filter(v => v !== null).join("\n");
     }
 
     decode(buf) {
         let inp = new Reader(buf);
+        let len = inp.readInt();    // packet length
         let data = this.data = {
-            len: inp.readInt(),     // packet length
             typ: inp.readInt(),     // packet type
             ver: inp.readByte(),    // packet version
             cs:  inp.readByte(),    // 0=client, 1=server
             m1:  inp.readInt(),     // 0xffffffff (magic1)
             m2:  inp.readInt(),     // 0xffffffff (magic2)
-            nb:  inp.readShort(),   // # bytes
-            ns:  inp.readShort(),   // # shorts
-            ni:  inp.readShort(),   // # ints
-            nl:  inp.readShort(),   // # longs
-            nS:  inp.readShort(),   // # strings
-            bd:  [],                // byte data
-            sd:  [],                // short data
-            id:  [],                // int data
-            ld:  [],                // long data
-            Sd:  []                 // String data
+            bytes:   [],            // byte data
+            shorts:  [],            // short data
+            ints:    [],            // int data
+            longs:   [],            // long data
+            strings: []             // String data
         };
-        for (let i=0; i<data.nb; i++) data.bd.push(inp.readByte())
-        for (let i=0; i<data.ns; i++) data.sd.push(inp.readShort())
-        for (let i=0; i<data.ni; i++) data.id.push(inp.readInt())
-        for (let i=0; i<data.nl; i++) data.ld.push(inp.readLong())
-        for (let i=0; i<data.nS; i++) data.Sd.push(inp.readString())
+        let nb = inp.readShort();   // # bytes
+        let ns = inp.readShort();   // # shorts
+        let ni = inp.readShort();   // # ints
+        let nl = inp.readShort();   // # longs
+        let nS = inp.readShort();   // # strings
+
+        for (let i=0; i<nb; i++) data.bytes.push(inp.readByte())
+        for (let i=0; i<ns; i++) data.shorts.push(inp.readShort())
+        for (let i=0; i<ni; i++) data.ints.push(inp.readInt())
+        for (let i=0; i<nl; i++) data.longs.push(inp.readLong())
+        for (let i=0; i<nS; i++) data.strings.push(inp.readString())
     }
 
     getCommand() {
@@ -436,6 +429,10 @@ class Packet {
         return this.buf.readUInt32BE(pos);
     }
 
+    writeByte(v) {
+        return this.append([v]);
+    }
+
     writeShort(v) {
         let pos = this.buf.length;
         this.append([0,0]);
@@ -447,6 +444,12 @@ class Packet {
         let pos = this.buf.length;
         this.append([0,0,0,0]);
         this.buf.writeUInt32LE(v, pos);
+        return this;
+    }
+
+    writeString(str) {
+        this.writeInt(str.length * 2);
+        this.append(str);
         return this;
     }
 
@@ -476,7 +479,7 @@ class TCPipe {
             let last = null;
             let buf = null;
             const emit = (socket, buffer) => {
-                console.log("--- " + socket.name + " ---");
+                // console.log("--- " + socket.name + " ---");
                 decode(buffer);
             };
             const onData = (socket, buffer) => {
@@ -527,6 +530,67 @@ class TCPipe {
     }
 }
 
+class N2Control {
+    constructor(host, port) {
+        let temp = 0;
+        console.log({ctrl: host, port: port});
+        let socket = this.socket = new net.Socket().connect({
+            host: host,
+            port: port
+        })
+            .on("connect", () => {
+                console.log("connected");
+                let packet = new Packet()
+                    .setCommand(0x1)
+                    .setHeader(0, 0, 0, 0, 1)
+                    .writeString("setting.getinfo")
+                    .update();
+                socket.write(packet.buf);
+                packet = new Packet()
+                    .setCommand(0x1)
+                    .setHeader(0, 0, 0, 0, 1)
+                    .writeString("home.getinfo")
+                    .update();
+                socket.write(packet.buf);
+            })
+            .on("data", data => {
+                let packet = new Packet(data);
+                console.log([temp-1, packet.data.ints[1]]);
+
+                if (packet.getCommand() === 2) {
+                    packet = new Packet()
+                        .setCommand(0x3)
+                        .setHeader(1, 0, 0, 0, 1)
+                        .writeByte(0)
+                        .writeString("M104 T0 S" + temp + "\n")
+                        .update();
+                    temp++;
+
+                    socket.write(packet.buf);
+
+                    setTimeout(() => {
+                        packet = new Packet()
+                            .setCommand(0x1)
+                            .setHeader(0, 0, 0, 0, 1)
+                            .writeString("home.getinfo")
+                            .update();
+                        socket.write(packet.buf);
+                    }, 3000);
+                }
+            })
+            .on("error", error => {
+                socket.end();
+                console.log({error: error});
+            })
+            .on("end", () => {
+                console.log('end');
+            })
+            .on("close", () => {
+                console.log('close');
+            });
+    }
+}
+
 module.exports = {
     TCPipe: TCPipe
 };
@@ -545,6 +609,9 @@ if (!module.parent) {
             fs.readFile(file, function(err, data) {
                 dump(data, skip, words, word);
             })
+            break;
+        case 'ctrl':
+            new N2Control(arg.shift(), parseInt(arg.shift() || "31625"));
             break;
         case 'pipe':
             host = arg.shift() || "localhost";
