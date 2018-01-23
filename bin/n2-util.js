@@ -4,6 +4,12 @@
 const crc32 = require('buffer-crc32');
 const net   = require('net');
 const fs    = require('fs');
+const tmp32 = Buffer.from([0,0,0,0]);
+
+function int2float(v) {
+    tmp32.writeInt32BE(v,0);
+    return tmp32.readFloatBE(0);
+}
 
 function lpad(s, l, pv) {
     while (s.length < l) s = (pv || ' ') + s;
@@ -56,6 +62,7 @@ let lastCMD = null;
 
 function decode(buf) {
     const pkt = new Packet(buf);
+    const dat = pkt.data;
 
     switch (pkt.getCommand()) {
         case 0x01: // client string command (home.getinfo or setting.getinfo)
@@ -66,55 +73,100 @@ function decode(buf) {
             }
             break;
         case 0x02: // server home.getinfo
-            // dump(buf);
-            // console.log(pkt.toString());
-            let N0 = pkt.data.ints[1];
-            if (N0 !== lastN0) {
-                console.log([
-                    "n0",
-                    N0,
-                    lpad(N0.toString(16), 8, "0"),
-                    lpad(N0.toString(2), 32, "0")
-                ].join(", "));
-                lastN0 = N0;
-            }
+            console.log({
+                n0:  [
+                    int2float(dat.ints[0]), // n0 temp
+                    int2float(dat.ints[1])  // n0 temp target
+                ],
+                n1:  [
+                    int2float(dat.ints[2]), // n1 temp
+                    int2float(dat.ints[3])  // n1 temp target
+                ],
+                bed: [
+                    int2float(dat.ints[4]), // bed temp
+                    int2float(dat.ints[5])  // bed temp target
+                ],
+                feed: [
+                    int2float(dat.ints[6]),  // feed rate
+                    int2float(dat.ints[21])  // feed rate
+                ],
+                fan: [
+                    int2float(dat.ints[7]),  // fan speed
+                    int2float(dat.ints[22])  // fan speed
+                ],
+                n0flow: [
+                    int2float(dat.ints[8]),  // n0 flow
+                    int2float(dat.ints[23])  // n0 flow
+                ],
+                n1flow: [
+                    int2float(dat.ints[9]),  // n1 flow
+                    int2float(dat.ints[24])  // n1 flow
+                ],
+                pct: [
+                    int2float(dat.ints[10]), // build % complete
+                ],
+                height: [
+                    int2float(dat.ints[11]), // height pos
+                    int2float(dat.ints[12])  // height max
+                ],
+                unki: [
+                    dat.ints[13],
+                    dat.ints[14],
+                    int2float(dat.ints[15]),
+                    int2float(dat.ints[16]),
+                    dat.ints[17],
+                    dat.ints[18],
+                    dat.ints[19],            // current layer
+                    dat.ints[20],            // total layers
+                    int2float(dat.ints[25]), // filament used n0
+                    int2float(dat.ints[26])  // filament used n1
+                ],
+                time: [
+                    dat.longs[0], // running
+                    dat.longs[1], // estimated from file
+                    dat.longs[2]  // estimated from run
+                ],
+                unkl: dat.longs[3],
+                flags: dat.bytes,
+                file: dat.strings[0]
+            })
             break;
         case 0x03: // client gcode command (M104 T0 S0) (ends w/ "\n")
             // dump(buf);
-            console.log({gcode: pkt.data.strings});
+            console.log({gcode: dat.strings});
             break;
         case 0x04: // client get dir info
-            console.log(">> get dir info");
+            console.log("-->> get dir info");
             console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x05: // server dir info
-            console.log("<< dir info");
+            console.log("<<-- dir info");
             console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x06: // client get file info
-            console.log(">> get file info");
+            console.log("-->> get file info");
             console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x07: // server file info
-            console.log("<< file info");
+            console.log("<<-- file info");
             console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x08: // client start print
-            console.log(">> start print: " + inp.readString(c5));
+            console.log("-->> start print: " + inp.readString(c5));
             console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x09: // server print start ACK
-            console.log("<< print started");
+            console.log("<<-- print started");
             console.log(pkt.toString());
             // dump(buf);
             break;
         case 0x0a: // server setting.getinfo
-            console.log("<< settings.info");
+            console.log("<<-- settings.info");
             console.log(pkt.toString());
             break;
         default:
@@ -154,6 +206,13 @@ class Reader {
             this.buffer.readUInt32LE(this.index) << 32
         );
         this.index += 8;
+        return data;
+    }
+
+    readFloatBE() {
+        if (this.remain() < 4) return 0;
+        const data = this.buffer.readFloatBE(this.index);
+        this.index += 4;
         return data;
     }
 
@@ -240,7 +299,6 @@ class N2Send {
             port: port
         })
             .on("connect", data => {
-                // console.log("connected");
                 let packet = new Packet()
                     .setCommand(0xc)
                     .setHeader(0, 0, 0, 2, 1)
@@ -251,13 +309,9 @@ class N2Send {
                     .writeInt(fileName.length * 2)
                     .append(fileName)
                     .update();
-                // console.log("--- client ---");
-                // packet.dump();
                 socket.write(packet.buf);
             })
             .on("data", data => {
-                // console.log("--- server ---");
-                // dump(data);
                 let packet = new Packet(data);
                 if (packet.getCommand() == 0xd) {
                     fileName = packet.readLengthString(48);
@@ -279,8 +333,6 @@ class N2Send {
                     .writeInt(tosend)
                     .append(fbuf.slice(findx, findx + tosend))
                     .update();
-                // console.log("--- client ---");
-                // packet.dump();
                 socket.write(packet.buf);
                 findx += tosend;
                 let mark = new Date().getTime();
@@ -305,7 +357,7 @@ class N2Send {
 class Packet {
     constructor(buf) {
         if (buf) {
-            this.decode(buf);
+            if (Buffer.isBuffer(buf)) this.decode(buf);
         }
         this.buf = buf || Buffer.from([
             0, 0, 0, 0, // packet length
@@ -343,7 +395,7 @@ class Packet {
         let inp = new Reader(buf);
         let len = inp.readInt();    // packet length
         let data = this.data = {
-            typ: inp.readInt(),     // packet type
+            typ: inp.readInt(),     // packet type (command)
             ver: inp.readByte(),    // packet version
             cs:  inp.readByte(),    // 0=client, 1=server
             m1:  inp.readInt(),     // 0xffffffff (magic1)
@@ -387,6 +439,21 @@ class Packet {
         this.buf.writeUInt32LE(v0, 10);
         this.buf.writeUInt32LE(v1, 14);
         return this;
+    }
+
+    setData(data) {
+        var bytes = data.bytes || [];
+        var shorts = data.shorts || [];
+        var ints = data.ints || [];
+        var longs = data.longs || [];
+        var strings = data.strings || [];
+        setHeader(bytes.length, shorts.length, ints.length, longs.length, strings.length);
+        if (bytes.length) this.append(bytes);
+        for (let i=0; i<shorts.length; i++) this.writeShort(shorts[i]);
+        for (let i=0; i<ints.length; i++) this.writeInt(ints[i]);
+        for (let i=0; i<longs.length; i++) this.writeLong(longs[i]);
+        for (let i=0; i<strings.length; i++) this.writeString(strings[i]);
+        return this.update();
     }
 
     getHeader() {
@@ -444,6 +511,14 @@ class Packet {
         let pos = this.buf.length;
         this.append([0,0,0,0]);
         this.buf.writeUInt32LE(v, pos);
+        return this;
+    }
+
+    writeLong(v) {
+        let pos = this.buf.length;
+        this.append([0,0,0,0,0,0,0,0]);
+        this.buf.writeUInt32LE(v & 0xffffffff, pos);
+        this.buf.writeUInt32LE(v >> 32, pos);
         return this;
     }
 
@@ -555,7 +630,7 @@ class N2Control {
             })
             .on("data", data => {
                 let packet = new Packet(data);
-                console.log([temp-1, packet.data.ints[1]]);
+                if (temp) console.log([temp-1, packet.data.ints[1]]);
 
                 if (packet.getCommand() === 2) {
                     packet = new Packet()
