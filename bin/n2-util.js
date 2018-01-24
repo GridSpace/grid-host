@@ -7,7 +7,7 @@ const fs    = require('fs');
 const tmp32 = Buffer.from([0,0,0,0]);
 
 function int2float(v) {
-    tmp32.writeInt32BE(v,0);
+    tmp32.writeUInt32BE(v,0);
     return tmp32.readFloatBE(0);
 }
 
@@ -73,6 +73,7 @@ function decode(buf) {
             }
             break;
         case 0x02: // server home.getinfo
+            // console.log(pkt.toString()),
             console.log({
                 n0:  [
                     int2float(dat.ints[0]), // n0 temp
@@ -102,22 +103,17 @@ function decode(buf) {
                     int2float(dat.ints[9]),  // n1 flow
                     int2float(dat.ints[24])  // n1 flow
                 ],
-                pct: [
+                progress:
                     int2float(dat.ints[10]), // build % complete
-                ],
                 height: [
                     int2float(dat.ints[11]), // height pos
                     int2float(dat.ints[12])  // height max
                 ],
-                unki: [
-                    dat.ints[13],
-                    dat.ints[14],
-                    int2float(dat.ints[15]),
-                    int2float(dat.ints[16]),
-                    dat.ints[17],
-                    dat.ints[18],
+                layer: [
                     dat.ints[19],            // current layer
-                    dat.ints[20],            // total layers
+                    dat.ints[20]             // total layers
+                ],
+                filament: [
                     int2float(dat.ints[25]), // filament used n0
                     int2float(dat.ints[26])  // filament used n1
                 ],
@@ -126,48 +122,68 @@ function decode(buf) {
                     dat.longs[1], // estimated from file
                     dat.longs[2]  // estimated from run
                 ],
+                unki: [
+                    dat.ints[13],
+                    dat.ints[14],
+                    int2float(dat.ints[15]),
+                    int2float(dat.ints[16]),
+                    dat.ints[17],
+                    dat.ints[18]
+                ],
                 unkl: dat.longs[3],
                 flags: dat.bytes,
                 file: dat.strings[0]
             })
             break;
         case 0x03: // client gcode command (M104 T0 S0) (ends w/ "\n")
-            // dump(buf);
             console.log({gcode: dat.strings});
             break;
         case 0x04: // client get dir info
             console.log("-->> get dir info");
             console.log(pkt.toString());
-            // dump(buf);
             break;
         case 0x05: // server dir info
             console.log("<<-- dir info");
             console.log(pkt.toString());
-            // dump(buf);
             break;
         case 0x06: // client get file info
             console.log("-->> get file info");
             console.log(pkt.toString());
-            // dump(buf);
             break;
         case 0x07: // server file info
             console.log("<<-- file info");
             console.log(pkt.toString());
-            // dump(buf);
             break;
         case 0x08: // client start print
             console.log("-->> start print: " + inp.readString(c5));
             console.log(pkt.toString());
-            // dump(buf);
             break;
         case 0x09: // server print start ACK
             console.log("<<-- print started");
             console.log(pkt.toString());
-            // dump(buf);
             break;
         case 0x0a: // server setting.getinfo
             console.log("<<-- settings.info");
-            console.log(pkt.toString());
+            // console.log(pkt.toString()),
+            console.log({
+                company: dat.strings[0],
+                model: dat.strings[1],
+                serial: dat.strings[2],
+                version: dat.strings[3],
+                firmware: dat.strings[13],
+                net: {
+                    ip: dat.strings[5],
+                    net: dat.strings[6],
+                    router: dat.strings[7],
+                    dns: dat.strings[8]
+                },
+                wifi: {
+                    ssid: dat.strings[9],
+                    ip: dat.strings[10],
+                    router: dat.strings[11],
+                    dns: dat.strings[12]
+                }
+            });
             break;
         default:
             console.log(pkt.toString());
@@ -605,9 +621,9 @@ class TCPipe {
     }
 }
 
-class N2Control {
+class N2Monitor {
     constructor(host, port) {
-        let temp = 0;
+        let timeout = 0;
         console.log({ctrl: host, port: port});
         let socket = this.socket = new net.Socket().connect({
             host: host,
@@ -621,37 +637,18 @@ class N2Control {
                     .writeString("setting.getinfo")
                     .update();
                 socket.write(packet.buf);
-                packet = new Packet()
-                    .setCommand(0x1)
-                    .setHeader(0, 0, 0, 0, 1)
-                    .writeString("home.getinfo")
-                    .update();
-                socket.write(packet.buf);
             })
             .on("data", data => {
-                let packet = new Packet(data);
-                if (temp) console.log([temp-1, packet.data.ints[1]]);
-
-                if (packet.getCommand() === 2) {
-                    packet = new Packet()
-                        .setCommand(0x3)
-                        .setHeader(1, 0, 0, 0, 1)
-                        .writeByte(0)
-                        .writeString("M104 T0 S" + temp + "\n")
+                decode(data);
+                setTimeout(() => {
+                    timeout = 3000;
+                    let packet = new Packet()
+                        .setCommand(0x1)
+                        .setHeader(0, 0, 0, 0, 1)
+                        .writeString("home.getinfo")
                         .update();
-                    temp++;
-
                     socket.write(packet.buf);
-
-                    setTimeout(() => {
-                        packet = new Packet()
-                            .setCommand(0x1)
-                            .setHeader(0, 0, 0, 0, 1)
-                            .writeString("home.getinfo")
-                            .update();
-                        socket.write(packet.buf);
-                    }, 3000);
-                }
+                }, timeout);
             })
             .on("error", error => {
                 socket.end();
@@ -685,8 +682,8 @@ if (!module.parent) {
                 dump(data, skip, words, word);
             })
             break;
-        case 'ctrl':
-            new N2Control(arg.shift(), parseInt(arg.shift() || "31625"));
+        case 'monitor':
+            new N2Monitor(arg.shift(), parseInt(arg.shift() || "31625"));
             break;
         case 'pipe':
             host = arg.shift() || "localhost";
