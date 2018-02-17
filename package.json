@@ -24,6 +24,7 @@
         "form-data": "^1.0.1",
         "pngjs": "^3.3.0",
         "progress-stream": "^1.2.0",
-        "serve-static": "^1.13.1"
+        "serve-static": "^1.13.1",
+        "serialport": "^5.0.0"
     }
 }
