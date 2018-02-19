@@ -23,9 +23,11 @@ if (opt.probe) {
 const port = opt._[0];                          // serial port name
 const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
-const buf = [];                                 // output buffer
 
+let   buf = [];                                 // output buffer
 let   waiting = 0;                              // unack'd output lines
+
+console.log({port: port, baud: baud, bufmax: bufmax});
 
 const client = new SerialPort(port, { baudRate: baud })
     .on('open', function() {
@@ -34,14 +36,15 @@ const client = new SerialPort(port, { baudRate: baud })
     .on('line', function(line) {
         line = line.toString().trim();
         if (line == "ok") {
-            if (waiting < bufmax && buf.length) {
-                console.log("[" + waiting + "] -->" + buf[0]);
-                client.write(buf.shift() + "\n");
-            } else {
-                waiting--;
-            }
+            waiting--;
         }
-        console.log("[" + waiting + "] <-- " + line);
+        // if (line.indexOf("echo:Unknown command") === 0) {
+        //     waiting--;
+        // }
+        console.log("[" + waiting + ":" + bufmax + "," + buf.length + "] <-- " + line);
+        while (waiting < bufmax && buf.length) {
+            write(buf.shift());
+        }
     })
     .on('close', function() {
         console.log("* close");
@@ -49,6 +52,10 @@ const client = new SerialPort(port, { baudRate: baud })
 
 process.stdin.on("line", line => {
     line = line.toString().trim();
+    if (line.indexOf("*abort") === 0) {
+        buf = [];
+        return;
+    }
     if (line.indexOf("*send ") === 0) {
         console.log("==> " + line);
         let gcode = fs.readFileSync(line.substring(6)).toString().split("\n");
@@ -60,16 +67,24 @@ process.stdin.on("line", line => {
     }
 });
 
+const write = (line) => {
+    switch (line.charAt(0)) {
+        case ';':
+            return;
+        case 'M':
+        case 'G':
+            waiting++;
+            break;
+    }
+    console.log("[" + waiting + "] -->" + line);
+    client.write(line + "\n");
+}
+
 const send = (line, priority) => {
+    line = line.trim();
+    if (line.length === 0) return;
     if (waiting < bufmax) {
-        console.log("[" + waiting + "] -->" + line);
-        client.write(line + "\n");
-        switch (line.charAt(0)) {
-            case 'M':
-            case 'G':
-                waiting++;
-                break;
-        }
+        write(line);
     } else {
         if (priority) {
             buf.splice(0, 0, line)
