@@ -3,6 +3,23 @@ const SerialPort = require('serialport');
 const opt = require('minimist')(process.argv.slice(2));
 const fs = require('fs');
 
+if (opt.probe) {
+    SerialPort.list((err, ports) => {
+        ports.forEach(port => {
+            console.log([
+                port.comName,
+                port.pnpId        || null,
+                port.manufacturer || null,
+                port.vendorId     || null,
+                port.productId    || null,
+                port.serialNumber || null
+            ].join(", "));
+        });
+        process.exit(0);
+    });
+    return;
+}
+
 const port = opt._[0];                          // serial port name
 const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
