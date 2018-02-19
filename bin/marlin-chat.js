@@ -26,8 +26,13 @@ const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
 
 let   buf = [];                                 // output buffer
 let   waiting = 0;                              // unack'd output lines
+let   maxout = 0;
 
 console.log({port: port, baud: baud, bufmax: bufmax});
+
+const log = (line) => {
+    console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout "] " + line);
+};
 
 const client = new SerialPort(port, { baudRate: baud })
     .on('open', function() {
@@ -41,9 +46,12 @@ const client = new SerialPort(port, { baudRate: baud })
         // if (line.indexOf("echo:Unknown command") === 0) {
         //     waiting--;
         // }
-        console.log("[" + waiting + ":" + bufmax + "," + buf.length + "] <-- " + line);
+        log("<-- " + line);
         while (waiting < bufmax && buf.length) {
             write(buf.shift());
+        }
+        if (buf.length === 0) {
+            maxout = 0;
         }
     })
     .on('close', function() {
@@ -76,7 +84,7 @@ const write = (line) => {
             waiting++;
             break;
     }
-    console.log("[" + waiting + "] -->" + line);
+    log("--> " + line);
     client.write(line + "\n");
 }
 
@@ -91,6 +99,7 @@ const send = (line, priority) => {
         } else {
             buf.push(line);
         }
+        maxout = Math.max(maxout, buf.length);
     }
 };
 
