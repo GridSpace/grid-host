@@ -32,23 +32,25 @@ const client = new SerialPort(port, { baudRate: baud })
         console.log("* open: " + port);
     })
     .on('line', function(line) {
+        line = line.toString().trim();
         if (line == "ok") {
             if (waiting < bufmax && buf.length) {
+                console.log("[" + waiting + "] -->" + buf[0]);
                 client.write(buf.shift() + "\n");
             } else {
                 waiting--;
             }
         }
-        console.log("[" + waiting + "] <-- " + line.toString());
+        console.log("[" + waiting + "] <-- " + line);
     })
     .on('close', function() {
         console.log("* close");
     });
 
 process.stdin.on("line", line => {
-    line = line.toString();
-    console.log("--> " + line);
+    line = line.toString().trim();
     if (line.indexOf("*send ") === 0) {
+        console.log("==> " + line);
         let gcode = fs.readFileSync(line.substring(6)).toString().split("\n");
         gcode.forEach(line => {
             send(line);
@@ -60,8 +62,14 @@ process.stdin.on("line", line => {
 
 const send = (line, priority) => {
     if (waiting < bufmax) {
+        console.log("[" + waiting + "] -->" + line);
         client.write(line + "\n");
-        waiting++;
+        switch (line.charAt(0)) {
+            case 'M':
+            case 'G':
+                waiting++;
+                break;
+        }
     } else {
         if (priority) {
             buf.splice(0, 0, line)
