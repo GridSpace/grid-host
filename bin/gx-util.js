@@ -1,6 +1,7 @@
 /** Copyright 2014-2017 Stewart Allen -- All Rights Reserved */
 "use strict";
 
+const lbuff = require("buffer.lines");
 const crc32 = require('buffer-crc32');
 const net   = require('net');
 const fs    = require('fs');
@@ -98,34 +99,6 @@ class GXWriter {
     }
 }
 
-class LineBuffer {
-    constructor(stream) {
-        this.buffer = null;
-        this.stream = stream;
-        this.stream.on("data", data => {
-            if (this.buffer) {
-                this.buffer = Buffer.concat([this.buffer, data]);
-            } else {
-                this.buffer = data;
-            }
-            this.nextLine()
-        });
-    }
-
-    nextLine() {
-        let left = 0;
-        const data = this.buffer;
-        const cr = data.indexOf("\r");
-        const lf = data.indexOf("\n");
-        if (lf && cr + 1 == lf) { left = 1 }
-        if (lf >= 0) {
-            this.stream.emit("line", data.slice(0, lf - left));
-            this.buffer = data.slice(lf + 1);
-            this.nextLine();
-        }
-    }
-}
-
 class FFControl {
     constructor(host, port, onError) {
         const socket = new net.Socket().connect({
@@ -165,7 +138,7 @@ class FFControl {
             })
             ;
 
-        socket.lineBuffer = new LineBuffer(socket);
+        socket.lineBuffer = new lbuff(socket);
 
         this.disconnected = false;
         this.connected = false;

@@ -1,4 +1,4 @@
-const LineBuffer = require("./LineBuffer");
+const LineBuffer = require("buffer.lines");
 const SerialPort = require('serialport');
 const opt = require('minimist')(process.argv.slice(2));
 const fs = require('fs');
@@ -27,68 +27,91 @@ const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
 let   buf = [];                                 // output buffer
 let   waiting = 0;                              // unack'd output lines
 let   maxout = 0;
+let   paused = false;                           // queue processing paused
+let   processing = false;                       // queue being drained
 
 console.log({port: port, baud: baud, bufmax: bufmax});
 
-const log = (line) => {
-    console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout "] " + line);
+const cmdlog = (line) => {
+    console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+};
+
+const evtlog = (line) => {
+    console.log("*** " + line + " ***");
 };
 
 const client = new SerialPort(port, { baudRate: baud })
     .on('open', function() {
-        console.log("* open: " + port);
+        evtlog("open: " + port);
     })
     .on('line', function(line) {
         line = line.toString().trim();
         if (line == "ok") {
             waiting--;
         }
-        // if (line.indexOf("echo:Unknown command") === 0) {
-        //     waiting--;
-        // }
-        log("<-- " + line);
-        while (waiting < bufmax && buf.length) {
-            write(buf.shift());
-        }
-        if (buf.length === 0) {
-            maxout = 0;
-        }
+        cmdlog("<-- " + line);
+        processQueue();
     })
     .on('close', function() {
-        console.log("* close");
+        evtlog("close");
     });
 
 process.stdin.on("line", line => {
     line = line.toString().trim();
     if (line.indexOf("*abort") === 0) {
-        buf = [];
+        abort();
+        return;
+    }
+    if (line.indexOf("*pause") === 0) {
+        pause();
+        return;
+    }
+    if (line.indexOf("*resume") === 0) {
+        resume();
         return;
     }
     if (line.indexOf("*send ") === 0) {
-        console.log("==> " + line);
+        evtlog("send: " + line);
         let gcode = fs.readFileSync(line.substring(6)).toString().split("\n");
         gcode.forEach(line => {
-            send(line);
+            queue(line);
         });
     } else {
-        send(line, true);
+        queue(line, true);
     }
 });
 
-const write = (line) => {
-    switch (line.charAt(0)) {
-        case ';':
-            return;
-        case 'M':
-        case 'G':
-            waiting++;
-            break;
-    }
-    log("--> " + line);
-    client.write(line + "\n");
-}
+const abort = () => {
+    evtlog("execution aborted");
+    buf = [];
+};
 
-const send = (line, priority) => {
+const pause = () => {
+    if (paused) return;
+    evtlog("execution paused");
+    paused = true;
+};
+
+const resume = () => {
+    if (!paused) return;
+    evtlog("execution resumed");
+    paused = false;
+    processQueue();
+};
+
+const processQueue = () => {
+    if (processing) return;
+    processing = true;
+    while (waiting < bufmax && buf.length && !paused) {
+        write(buf.shift());
+    }
+    if (buf.length === 0) {
+        maxout = 0;
+    }
+    processing = false;
+};
+
+const queue = (line, priority) => {
     line = line.trim();
     if (line.length === 0) return;
     if (waiting < bufmax) {
@@ -102,6 +125,23 @@ const send = (line, priority) => {
         maxout = Math.max(maxout, buf.length);
     }
 };
+
+const write = (line) => {
+    if (line.indexOf("M2000") === 0) {
+        pause();
+        return;
+    }
+    switch (line.charAt(0)) {
+        case ';':
+            return;
+        case 'M':
+        case 'G':
+            waiting++;
+            break;
+    }
+    cmdlog("--> " + line);
+    client.write(line + "\n");
+}
 
 new LineBuffer(client);
 new LineBuffer(process.stdin);
