@@ -1,13 +1,20 @@
-# grid-print: a simple 3d print file sender
+# grid-host: multi-target file sender for 3d printers and cnc mills
 
-`grid-print` is a simple 3d print sender with optional gcode
+`grid-host` is a multi-target file sender with pluggable gcode
 translation. this is primarily intended as a print target for
-[KIRI:MOTO](https://grid.space/kiri/)
-to enable sending of files to FlashAir SD cards.
+[KIRI:MOTO](https://grid.space/kiri/) to enable sending of files
+to networked 3d printers and cnc mills.
+
+It is different from OctoPrint in that it is mainly designed with
+multiple targets in mind rather than acting as a host for a single
+printer. It is vastly simpler to setup and run delegating the more
+complex integration tasks to modules or external programs like
+Octoprint.
+
 
 ## Usage:
 
-    bin/grid-print [options]
+    bin/grid-host [options]
 
 ## Options:
 
@@ -21,7 +28,7 @@ to enable sending of files to FlashAir SD cards.
 
 `--config` path to config file (overrides command-line options)
 
-`--target` print target in the form [name:host-name-or-address]
+`--target` device target in the form [name:host-name-or-address]
 
 ## Sample Config File:
 
