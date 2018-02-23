@@ -46,10 +46,15 @@ const client = new SerialPort(port, { baudRate: baud })
     })
     .on('line', function(line) {
         line = line.toString().trim();
-        if (line == "ok") {
+        if (line.indexOf("ok") === 0) {
             waiting--;
+            line = '';
         }
         cmdlog("<-- " + line);
+        if (line.indexOf("ok ") === 0) {
+            line = line.substring(3);
+        }
+        processLine(line);
         processQueue();
     })
     .on('close', function() {
@@ -97,6 +102,14 @@ const resume = () => {
     evtlog("execution resumed");
     paused = false;
     processQueue();
+};
+
+const processLine = (line) => {
+    if (line.length === 0) return;
+    if (line.indexOf("T:") === 0) { } // parse extruder/bed temps
+    if (line.indexOf("X:") === 0) { } // parse x/y/z/e positions
+    if (line.indexOf("_min:") > 0) { } // parse endstop status
+    if (line.indexOf("_max:") > 0) { } // parse endstop status
 };
 
 const processQueue = () => {
