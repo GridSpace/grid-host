@@ -1,0 +1,29 @@
+{
+    "port": 8181,
+    "https-port": 8443,
+    "ssl-cert": "etc/ssl.crt",
+    "ssl-key": "etc/ssl.key",
+    "targets": {
+        "n2": {
+            "comment": "raise3d n2",
+            "filter": "raise3d n2",
+            "host": "192.168.1.10"
+        },
+        "finder": {
+            "comment": "flashforge finder",
+            "filter": "gx",
+            "host": "192.168.1.11",
+            "port": 8899
+        },
+        "gpx_target": {
+            "host": "host-name-or-address",
+            "filter": "gpx"
+        }
+    },
+    "filters": {
+        "gpx": {
+            "path": "path_to_gpx",
+            "args": [ "{file_in}", "{file_out}" ]
+        }
+    }
+}

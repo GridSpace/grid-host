@@ -1,6 +1,6 @@
-# grid-host: multi-target file sender for 3d printers and cnc mills
+# Grid:Host -- multi-target file sender
 
-`grid-host` is a multi-target file sender with pluggable gcode
+`Grid:Host` is a multi-target file sender with pluggable gcode
 translation. this is primarily intended as a print target for
 [KIRI:MOTO](https://grid.space/kiri/) to enable sending of files
 to networked 3d printers and cnc mills.
@@ -16,6 +16,7 @@ Octoprint.
 
     bin/grid-host [options]
 
+
 ## Options:
 
 `--port` Port for HTTP (defaults to 8081)
@@ -30,29 +31,25 @@ Octoprint.
 
 `--target` device target in the form [name:host-name-or-address]
 
+
 ## Sample Config File:
 
-```
-{
-	"port": 8080,
-	"https-port": 8443,
-	"ssl-cert": "/path/to/cert",
-	"ssl-key": "/path/to/key",
-	"targets": {
-		"my_target": {
-			"host": "host-name-or-address",
-			"filter": "gpx"
-		}
-	},
-	"filters": {
-		"gpx": {
-			"path": "path_to_gpx",
-			"args": [ "{file_in}", "{file_out}" ]
-		}
-	},
-}
-```
+rename etc/config.json.sample to etc/config.json
+
+currently built-in filter types:
+
+* gx - flashforge finder printers
+* n2 - raise3d n-series printers
+* x3g - gcode to x3g conversion using GPX for Makerbots
+* scp - file copy via scp to host target
+* post - http post to target (flashair wifi sd cards, etc)
+
 
 ## Generate a Self-Signed Cert
 
-```openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout ssl.key -out ssl.crt```
+```openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout etc/ssl.key -out etc/ssl.crt```
+
+
+## Starting Grid:Host
+
+bin/grid-host -config etc/config.json
