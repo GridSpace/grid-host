@@ -46,12 +46,9 @@ const client = new SerialPort(port, { baudRate: baud })
     })
     .on('line', function(line) {
         line = line.toString().trim();
+        cmdlog("<-- " + line);
         if (line.indexOf("ok") === 0) {
             waiting--;
-            line = '';
-        }
-        cmdlog("<-- " + line);
-        if (line.indexOf("ok ") === 0) {
             line = line.substring(3);
         }
         processLine(line);
@@ -88,7 +85,17 @@ process.stdin.on("line", line => {
 
 const abort = () => {
     evtlog("execution aborted");
-    buf = [];
+    // safety if buffer in play
+    if (buf.length) buf = [
+        "M104 S0 T0",   // extruder 0 heat off
+        "M104 S0 T1",   // extruder 1 heat off
+        "M140 S0 T0",   // bed heat off
+        "G91",          // relative moves
+        "G0 Z10",       // drop bed 1cm
+        "G28 X0 Y0",    // home X & Y
+        "M84"           // disable steppers
+    ];
+    processQueue();
 };
 
 const pause = () => {
