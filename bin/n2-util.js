@@ -1,4 +1,4 @@
-/** Copyright 2017-2018 Stewart Allen -- All Rights Reserved */
+/** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
 "use strict";
 
 const crc32 = require('buffer-crc32');
@@ -664,7 +664,10 @@ class N2Monitor {
 }
 
 module.exports = {
-    TCPipe: TCPipe
+    TCPipe: TCPipe,
+    N2Send: N2Send,
+    N2Print: N2Print,
+    N2Monitor: N2Monitor
 };
 
 if (!module.parent) {

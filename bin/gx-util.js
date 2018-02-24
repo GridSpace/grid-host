@@ -1,4 +1,4 @@
-/** Copyright 2014-2017 Stewart Allen -- All Rights Reserved */
+/** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
 "use strict";
 
 const lbuff = require("buffer.lines");

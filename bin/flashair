@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+
+/** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
+
+const FormData = require('form-data');
+const args = process.argv.slice(2);
+const fs = require('fs');
+
+function formPost(hostPort, data, name, onDone, onProgress) {
+console.log({host:hostPort, data:data.length, name:name});
+    const form = new FormData();
+    form.append("file", data, name);
+    form.append("submit", "submit");
+
+    const req = form.submit("http://"+hostPort+"/upload.cgi", function(err, res) {
+        if (err) console.error(err);
+        if (onDone) onDone(err);
+        console.log({code:res.statusCode, msg:res.statusMessage});
+        process.exit(err ? 1 : 0);
+    });
+}
+
+if (!args[0]) throw "missing host:port";
+if (!args[1]) throw "missing filename";
+
+const name = args[2] || (args[1].substring(args[1].lastIndexOf("/") + 1));
+
+formPost(args[0], fs.readFileSync(args[1]), name);

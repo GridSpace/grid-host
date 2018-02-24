@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
+
 function log(o) {
     if (typeof(o) === 'object') {
         console.log(JSON.stringify(o));
@@ -169,30 +171,6 @@ function tempFileName() {
     return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
 }
 
-function formPost(host, port, data, name, queueEntry, onDone) {
-    log({post:queueEntry.key, host:host, port:port});
-    queueEntry.status = "posting";
-    var form = new FormData(), req;
-    form.append("file", data, name);
-    form.append("submit", "submit");
-    var track = progress();
-    req = form.submit("http://"+host+":"+port+"/upload.cgi", function(err, res) {
-        if (res) res.resume();
-        if (err) {
-            log({key:queueEntry.key, err:err});
-            queueEntry.error = true;
-            queueEntry.status = err.toString();
-        } else {
-            log(encode({key:queueEntry.key, done:true}));
-            queueEntry.status = "complete";
-        }
-        onDone();
-    }, track);
-    track.on('progress', function(progress) {
-        queueEntry.progress = progress.percentage;
-    });
-}
-
 function finish(queueEntry) {
     if (!queueEntry.error) {
         queueEntry.status = "sent";
@@ -220,22 +198,13 @@ function processFilters(queueEntry, index) {
     const filter = Object.assign({}, queueEntry.filters[index]);
     const target = queueEntry.target;
 
-    if (filter.formPost || filter.post) {
-        var data = queueEntry.data;
-        var name = queueEntry.name;
-        formPost(filter.host, filter.port || 80, data, name, queueEntry, () => {
-            processFilters(queueEntry, index + 1);
-        });
-        return;
-    }
-
     if (filter.exec) {
         var img = '';
         var err = '';
         var out = '';
         var ext = filter.ext || '.gcode';
         var fname = filter.name || queueEntry.name;
-        var file = tempFileName();
+        var file = queueEntry.tmpFile || tempFileName();
 
         // emit file with data and add to cleanup list
         fs.writeFileSync(file, queueEntry.data);
@@ -285,10 +254,6 @@ function processFilters(queueEntry, index) {
                     queueEntry.status = err;
                     return finish(queueEntry);
                 }
-                // refresh contents of data (for formPost)
-                if (filter.refresh) {
-                    queueEntry.data = fs.readFileSync(file);
-                }
                 processFilters(queueEntry, index + 1);
             });
 
@@ -315,6 +280,7 @@ function queueTarget(queueEntry) {
     if (!filter) throw "missing filter for " + queueEntry.target;
 
     queueEntry.target = target;
+    queueEntry.tmpFile = tempFileName();
 
     if (Array.isArray(filter)) {
         queueEntry.filters = filter;
@@ -336,8 +302,6 @@ var fs = require('fs'),
     serve = require('serve-static')
     connect = require('connect'),
     spawn = require('child_process').spawn,
-    progress = require('progress-stream'),
-    FormData = require('form-data'),
     png2bmp = require('./gx-util').png2bmp,
     printSequence = 0,
     tempIndex = 0,
@@ -357,17 +321,10 @@ var fs = require('fs'),
         "config" : null,
         "targets" : { },
         "filters" : {
-            "post": {
-                "post": true
-            },
-            "x3g" : [{
+            "x3g" : {
                 "exec": "gpx",
-                "args": [ "{file}", "{file}.x3g" ],
-            }, {
-                "exec": "mv",
-                "args": [ "{file}.x3g", "{file}" ],
-                "refresh": true
-            }],
+                "args": [ "{file}", "{file}.x3g" ]
+            },
             "gx": {
                 "exec": "bin/gx-print",
                 "args": [ "{host}", "{port}", "{file}", "{print-time}", "{filament-used}", "{name}", "{image}" ],

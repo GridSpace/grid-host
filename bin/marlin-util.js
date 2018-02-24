@@ -1,3 +1,6 @@
+/** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
+"use strict";
+
 const LineBuffer = require("buffer.lines");
 const SerialPort = require('serialport');
 const opt = require('minimist')(process.argv.slice(2));
