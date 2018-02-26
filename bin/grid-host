@@ -371,9 +371,56 @@ process.argv.slice(2).forEach(v => {
     }
 });
 
-if (setup['config']) setup = Object.assign(setup, decode(fs.readFileSync(setup['config'])));
+function mergeConfig(config) {
+    for (let key in config) {
+        switch (key) {
+            case 'targets':
+            case 'filters':
+                Object.assign(setup[key], config[key]);
+                break;
+            default:
+                setup[key] = config[key];
+                break;
+        }
+    }
+    return setup;
+}
+
+if (setup['config']) setup = mergeConfig(decode(fs.readFileSync(setup['config'])));
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
+
+/** store org <> host map for auto-grid-host in kiri */
+if (setup.org) {
+    let host = setup.host || null;
+    let nif = require('os').networkInterfaces();
+    for (let key in nif) {
+        if (host) break;
+        let nic = nif[key];
+        nic.forEach(ni => {
+            if (host) return;
+            if (!ni.internal && ni.family === "IPv4") {
+                if (setup['https-port']) {
+                    host = "https://" + ni.address + ":" + setup['https-port'];
+                } else {
+                    host = "http://" + ni.address + ":" + setup['port'];
+                }
+            }
+        });
+    }
+    let args = [
+        "org=" + encodeURIComponent(setup.org),
+        "host=" + encodeURIComponent(host)
+    ].join('&');
+    https.get("https://grid.space/api/host_up?" + args, (res) => {
+        // console.log({sc: res.statusCode});
+        res.on("data", (data) => {
+            // console.log({data: data.toString()});
+        })
+    }).on("error", (error) => {
+        // console.log(error);
+    });
+}
 
 /** temp dir for filtering */
 tempDir = cwd + "/" + (setup["temp-dir"] || "tmp");
