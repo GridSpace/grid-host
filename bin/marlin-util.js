@@ -23,17 +23,30 @@ if (opt.probe) {
     return;
 }
 
-const port = opt._[0];                          // serial port name
+const port = opt.port || opt._[0];              // serial port name
 const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
 
-let   buf = [];                                 // output buffer
-let   waiting = 0;                              // unack'd output lines
+let   buf = [];                 // output buffer
+let   waiting = 0;              // unack'd output lines
 let   maxout = 0;
-let   paused = false;                           // queue processing paused
-let   processing = false;                       // queue being drained
-
-console.log({port: port, baud: baud, bufmax: bufmax});
+let   paused = false;           // queue processing paused
+let   processing = false;       // queue being drained
+let   dircache = [];            // cache of files in watched directory
+let   status = {
+    print: {
+        clear: false,           // bed is clear to print
+        filename: null          // current file name
+    },
+    temp: {                     // measured temp
+        bed: null,              // bed
+        ext: [ null ]           // extruders
+    },
+    set: {                      // set/target temp
+        bed: null,              // bed
+        ext: [ null ]           // extruders
+    }
+};
 
 const cmdlog = (line) => {
     console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
@@ -116,8 +129,14 @@ const resume = () => {
 
 const processLine = (line) => {
     if (line.length === 0) return;
-    if (line.indexOf("T:") === 0) { } // parse extruder/bed temps
-    if (line.indexOf("X:") === 0) { } // parse x/y/z/e positions
+    if (line.indexOf("T:") === 0) {
+        // parse extruder/bed temps
+        line = line.replace(/ \//g,'/').split(' ');
+        console.log(line);
+    }
+    if (line.indexOf("X:") === 0) {
+        // parse x/y/z/e positions
+    }
     if (line.indexOf("_min:") > 0) { } // parse endstop status
     if (line.indexOf("_max:") > 0) { } // parse endstop status
 };
@@ -166,5 +185,26 @@ const write = (line) => {
     client.write(line + "\n");
 }
 
+const checkDropDir = () => {
+    if (!opt.dir) return;
+    try {
+        fs.readdirSync(opt.dir).forEach(file => {
+            console.log(file);
+            console.log(fs.statSync(opt.dir + "/" + file).size);
+        });
+        if (opt.auto) {
+            setTimeout(checkDropDir, 1000);
+        }
+    } catch (e) {
+        console.log(e);
+    }
+};
+
+// -- start it up --
+
+console.log({port: port, baud: baud, bufmax: bufmax});
+
 new LineBuffer(client);
 new LineBuffer(process.stdin);
+
+checkDropDir();

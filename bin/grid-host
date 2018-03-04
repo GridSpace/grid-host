@@ -435,7 +435,7 @@ var apiroot = ["/",setup["api-root"] || 'api',"/"].join(''),
 
 if (setup['port']) {
     http.createServer(handler).listen(setup.port);
-    log("grid-print started http server on port "+setup['port']);
+    log("grid-host started http server on port "+setup['port']);
 }
 
 if (setup['https-port']) {
@@ -443,5 +443,5 @@ if (setup['https-port']) {
         key: setup['ssl-key'],
         cert: setup['ssl-cert']
     }, handler).listen(setup['https-port']);
-    log("grid-print started https server on port "+setup['https-port']);
+    log("grid-host started https server on port "+setup['https-port']);
 }
