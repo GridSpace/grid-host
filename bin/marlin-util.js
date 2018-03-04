@@ -4,30 +4,15 @@
 const LineBuffer = require("buffer.lines");
 const SerialPort = require('serialport');
 const opt = require('minimist')(process.argv.slice(2));
+const net = require('net');
 const fs = require('fs');
-
-if (opt.probe) {
-    SerialPort.list((err, ports) => {
-        ports.forEach(port => {
-            console.log([
-                port.comName,
-                port.pnpId        || null,
-                port.manufacturer || null,
-                port.vendorId     || null,
-                port.productId    || null,
-                port.serialNumber || null
-            ].join(", "));
-        });
-        process.exit(0);
-    });
-    return;
-}
 
 const port = opt.port || opt._[0];              // serial port name
 const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
 
 let   buf = [];                 // output buffer
+let   clients = [];             // connected clients
 let   waiting = 0;              // unack'd output lines
 let   maxout = 0;
 let   paused = false;           // queue processing paused
@@ -48,17 +33,27 @@ let   status = {
     }
 };
 
+// write line to all connected clients
+const emit = (line) => {
+    clients.forEach(client => {
+        client.write(line + "\n");
+    });
+}
+
 const cmdlog = (line) => {
-    console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+    // console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+    emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
 };
 
 const evtlog = (line) => {
-    console.log("*** " + line + " ***");
+    // console.log("*** " + line + " ***");
+    emit("*** " + line + " ***");
 };
 
-const client = new SerialPort(port, { baudRate: baud })
+const sport = new SerialPort(port, { baudRate: baud })
     .on('open', function() {
         evtlog("open: " + port);
+        new LineBuffer(sport);
     })
     .on('line', function(line) {
         line = line.toString().trim();
@@ -67,37 +62,66 @@ const client = new SerialPort(port, { baudRate: baud })
             waiting--;
             line = line.substring(3);
         }
-        processLine(line);
+        processPortOutput(line);
         processQueue();
     })
     .on('close', function() {
         evtlog("close");
     });
 
-process.stdin.on("line", line => {
-    line = line.toString().trim();
-    if (line.indexOf("*abort") === 0) {
-        abort();
-        return;
+const processPortOutput = (line) => {
+    if (line.length === 0) return;
+    if (line.indexOf("T:") === 0) {
+        // parse extruder/bed temps
+        line = line.replace(/ \//g,'/').split(' ');
+        console.log(line);
     }
-    if (line.indexOf("*pause") === 0) {
-        pause();
-        return;
+    if (line.indexOf("X:") === 0) {
+        // parse x/y/z/e positions
     }
-    if (line.indexOf("*resume") === 0) {
-        resume();
-        return;
+    if (line.indexOf("_min:") > 0) { } // parse endstop status
+    if (line.indexOf("_max:") > 0) { } // parse endstop status
+};
+
+const sendFile = (filename) => {
+    if (!status.print.clear) {
+        return evtlog("bed not marked clear. use *clear first");
     }
-    if (line.indexOf("*send ") === 0) {
-        evtlog("send: " + line);
-        let gcode = fs.readFileSync(line.substring(6)).toString().split("\n");
+    status.print.clear = false;
+    status.print.filename = filename;
+    evtlog("send: " + filename);
+    try {
+        let gcode = fs.readFileSync(filename).toString().split("\n");
         gcode.forEach(line => {
             queue(line);
         });
+    } catch (e) {
+        evtlog("error sending file");
+        console.log(e);
+    }
+}
+
+const processCmdLine = (line) => {
+    line = line.toString().trim();
+    switch (line) {
+        case "*auto on": return opt.auto = true;
+        case "*auto off": return opt.auto = false;
+        case "*kick": return kickNext();
+        case "*abort": return abort();
+        case "*pause": return pause();
+        case "*resume": return resume();
+        case "*clear":
+            status.print.clear = true;
+            return evtlog("bed marked clear");
+        case "*status":
+            return evtlog(JSON.stringify(status));
+    }
+    if (line.indexOf("*send ") === 0) {
+        sendFile(line.substring(6));
     } else {
         queue(line, true);
     }
-});
+};
 
 const abort = () => {
     evtlog("execution aborted");
@@ -112,6 +136,7 @@ const abort = () => {
         "M84"           // disable steppers
     ];
     processQueue();
+    status.print.clear = false;
 };
 
 const pause = () => {
@@ -125,20 +150,6 @@ const resume = () => {
     evtlog("execution resumed");
     paused = false;
     processQueue();
-};
-
-const processLine = (line) => {
-    if (line.length === 0) return;
-    if (line.indexOf("T:") === 0) {
-        // parse extruder/bed temps
-        line = line.replace(/ \//g,'/').split(' ');
-        console.log(line);
-    }
-    if (line.indexOf("X:") === 0) {
-        // parse x/y/z/e positions
-    }
-    if (line.indexOf("_min:") > 0) { } // parse endstop status
-    if (line.indexOf("_max:") > 0) { } // parse endstop status
 };
 
 const processQueue = () => {
@@ -182,29 +193,74 @@ const write = (line) => {
             break;
     }
     cmdlog("--> " + line);
-    client.write(line + "\n");
+    sport.write(line + "\n");
 }
 
 const checkDropDir = () => {
     if (!opt.dir) return;
     try {
-        fs.readdirSync(opt.dir).forEach(file => {
-            console.log(file);
-            console.log(fs.statSync(opt.dir + "/" + file).size);
+        let valid = [];
+        fs.readdirSync(opt.dir).forEach(name => {
+            if (name.indexOf(".gcode") > 0) {
+                name = opt.dir + "/" + name;
+                let stat = fs.statSync(name);
+                valid.push({name: name, size: stat.size, time: stat.mtime});
+            }
         });
-        if (opt.auto) {
-            setTimeout(checkDropDir, 1000);
+        valid.sort((a, b) => {
+            return b.mtime - a.mtime;
+        });
+        dircache = valid;
+        if (opt.auto && valid.length) {
+            kickNext();
         }
+        setTimeout(checkDropDir, 2000);
     } catch (e) {
         console.log(e);
     }
 };
 
+const kickNext = () => {
+    if (!dircache.length) return evtlog("no valid files");
+    sendFile(dircache[0].name);
+};
+
 // -- start it up --
 
-console.log({port: port, baud: baud, bufmax: bufmax});
+if (opt.probe) {
+    SerialPort.list((err, ports) => {
+        ports.forEach(port => {
+            console.log([
+                port.comName,
+                port.pnpId        || null,
+                port.manufacturer || null,
+                port.vendorId     || null,
+                port.productId    || null,
+                port.serialNumber || null
+            ].join(", "));
+        });
+        process.exit(0);
+    });
+    return;
+}
 
-new LineBuffer(client);
-new LineBuffer(process.stdin);
+if (opt.stdin) {
+    new LineBuffer(process.stdin);
+    process.stdin.on("line", line => { processCmdLine(line) });
+    clients.push(process.stdout);
+}
+
+if (opt.listen) {
+    net.createServer(socket => {
+        new LineBuffer(socket);
+        clients.push(socket);
+        socket.on("line", line => { processCmdLine(line) });
+        socket.on("close", () => {
+            clients.splice(clients.indexOf(socket),1);
+        });
+    }).listen(parseInt(opt.listen));
+}
+
+console.log({port: port, baud: baud, bufmax: bufmax});
 
 checkDropDir();
