@@ -15,6 +15,7 @@ let   buf = [];                 // output buffer
 let   clients = [];             // connected clients
 let   waiting = 0;              // unack'd output lines
 let   maxout = 0;
+let   debug = true;             // echo commands
 let   paused = false;           // queue processing paused
 let   processing = false;       // queue being drained
 let   dircache = [];            // cache of files in watched directory
@@ -41,12 +42,10 @@ const emit = (line) => {
 }
 
 const cmdlog = (line) => {
-    // console.log("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
-    emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+    if (debug || waiting <= 1) emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
 };
 
 const evtlog = (line) => {
-    // console.log("*** " + line + " ***");
     emit("*** " + line + " ***");
 };
 
@@ -106,6 +105,8 @@ const processCmdLine = (line) => {
     switch (line) {
         case "*auto on": return opt.auto = true;
         case "*auto off": return opt.auto = false;
+        case "*debug on": return debug = true;
+        case "*debug off": return debug = false;
         case "*kick": return kickNext();
         case "*abort": return abort();
         case "*pause": return pause();
@@ -211,7 +212,7 @@ const checkDropDir = () => {
             return b.mtime - a.mtime;
         });
         dircache = valid;
-        if (opt.auto && valid.length) {
+        if (opt.auto && valid.length && status.print.clear) {
             kickNext();
         }
         setTimeout(checkDropDir, 2000);
