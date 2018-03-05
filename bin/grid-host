@@ -313,6 +313,7 @@ var fs = require('fs'),
     setup = {
         "api-root": "api",
         "temp-dir": "tmp",
+        "org": "default",
         "key": null,
         "port": 8181,
         "https-port": null,
@@ -390,7 +391,10 @@ if (setup['config']) setup = mergeConfig(decode(fs.readFileSync(setup['config'])
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
-/** store org <> host map for auto-grid-host in kiri */
+/**
+ * store org <> host map for auto-grid-host in kiri
+ * if host not specified, use ip:port of grid-host server
+ */
 if (setup.org) {
     let host = setup.host || null;
     let nif = require('os').networkInterfaces();
