@@ -11,15 +11,16 @@ const port = opt.port || opt._[0];              // serial port name
 const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "4");     // max unack'd output lines
 
-let   buf = [];                 // output buffer
-let   clients = [];             // connected clients
-let   waiting = 0;              // unack'd output lines
-let   maxout = 0;
-let   debug = true;             // echo commands
-let   paused = false;           // queue processing paused
-let   processing = false;       // queue being drained
-let   dircache = [];            // cache of files in watched directory
-let   status = {
+let waiting = 0;                // unack'd output lines
+let maxout = 0;                 // high water mark for buffer
+let debug = true;               // echo commands
+let paused = false;             // queue processing paused
+let processing = false;         // queue being drained
+let dircache = [];              // cache of files in watched directory
+let clients = [];               // connected clients
+let buf = [];                   // output line buffer
+
+const status = {
     print: {
         clear: false,           // bed is clear to print
         filename: null          // current file name
@@ -161,6 +162,9 @@ const processQueue = () => {
     }
     if (buf.length === 0) {
         maxout = 0;
+        status.print.progress = "100.00";
+    } else {
+        status.print.progress = ((1.0 - (buf.length / maxout)) * 100.0).toFixed(2);
     }
     processing = false;
 };
