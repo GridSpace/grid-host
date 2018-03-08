@@ -108,6 +108,7 @@ const processCmdLine = (line) => {
         case "*auto off": return opt.auto = false;
         case "*debug on": return debug = true;
         case "*debug off": return debug = false;
+        case "*list": return evtlog(JSON.stringify(dircache));
         case "*kick": return kickNext();
         case "*abort": return abort();
         case "*pause": return pause();
@@ -209,13 +210,12 @@ const checkDropDir = () => {
             if (name.indexOf(".gcode") > 0) {
                 name = opt.dir + "/" + name;
                 let stat = fs.statSync(name);
-                valid.push({name: name, size: stat.size, time: stat.mtime});
+                valid.push({name: name, size: stat.size, time: stat.mtimeMs});
             }
         });
-        valid.sort((a, b) => {
-            return b.mtime - a.mtime;
+        dircache = valid.sort((a, b) => {
+            return b.time - a.time;
         });
-        dircache = valid;
         if (opt.auto && valid.length && status.print.clear) {
             kickNext();
         }
@@ -258,11 +258,12 @@ if (opt.stdin) {
 if (opt.listen) {
     net.createServer(socket => {
         new LineBuffer(socket);
-        clients.push(socket);
+        socket.write("*ready\n");
         socket.on("line", line => { processCmdLine(line) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
         });
+        clients.push(socket);
     }).listen(parseInt(opt.listen));
 }
 
