@@ -19,6 +19,7 @@ let processing = false;         // queue being drained
 let dircache = [];              // cache of files in watched directory
 let clients = [];               // connected clients
 let buf = [];                   // output line buffer
+let sport = null;               // bound serial port
 
 const status = {
     print: {
@@ -37,6 +38,10 @@ const status = {
 
 // write line to all connected clients
 const emit = (line) => {
+    if (clients.length === 0) {
+        console.log(line);
+        return;
+    }
     clients.forEach(client => {
         client.write(line + "\n");
     });
@@ -50,24 +55,36 @@ const evtlog = (line) => {
     emit("*** " + line + " ***");
 };
 
-const sport = new SerialPort(port, { baudRate: baud })
-    .on('open', function() {
-        evtlog("open: " + port);
-        new LineBuffer(sport);
-    })
-    .on('line', function(line) {
-        line = line.toString().trim();
-        cmdlog("<-- " + line);
-        if (line.indexOf("ok") === 0) {
-            waiting--;
-            line = line.substring(3);
-        }
-        processPortOutput(line);
-        processQueue();
-    })
-    .on('close', function() {
-        evtlog("close");
-    });
+function openSerialPort() {
+    if (sport) return;
+    sport = new SerialPort(port, { baudRate: baud })
+        .on('open', function() {
+            evtlog("open: " + port);
+            new LineBuffer(sport);
+        })
+        .on('error', function(error) {
+            sport = null;
+            console.log(error);
+            setTimeout(openSerialPort, 1000);
+        })
+        .on('line', function(line) {
+            line = line.toString().trim();
+            cmdlog("<-- " + line);
+            if (line.indexOf("ok") === 0) {
+                waiting--;
+                line = line.substring(3);
+            }
+            processPortOutput(line);
+            processQueue();
+        })
+        .on('close', function() {
+            sport = null;
+            evtlog("close");
+            setTimeout(openSerialPort, 1000);
+        });
+}
+
+openSerialPort();
 
 const processPortOutput = (line) => {
     if (line.length === 0) return;
