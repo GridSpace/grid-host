@@ -331,15 +331,25 @@ var fs = require('fs'),
     key = null,
     fn = null,
     setup = {
+        // use command-line to override
         "config" : "etc/config.json",
-        "org": "default",
+        // protect http(s) access with a shared secret key
         "key": null,
+        // kiri:moto auto-detect only works with "default" at the moment
+        "org": "default",
+        // passed to kiri:moto auto-detect as grid:host url. use url format.
         "host": null,
         "http-port": 8111,
         "https-port": 8112,
+        // provided cert/key bound to local.grid.space so can be
+        // added to your local dns or /etc/hosts to point to your
+        // grid:host server. allows kiri:moto inside Onshape to
+        // access your grid:host server without clunky workarounds.
         "ssl-cert": "etc/ssl-local-cert.pem",
         "ssl-key": "etc/ssl-local-key.pem",
+        // your config should provide these
         "targets" : { },
+        // your config filters will be added to this list
         "filters" : {
             "x3g" : {
                 "exec": "gpx",
@@ -362,33 +372,39 @@ var fs = require('fs'),
         }
     };
 
-/** handle command-line arguments */
+/** process command-line arguments */
 process.argv.slice(2).forEach(v => {
-    if (key) {
-        if (fn) v = fn(v);
-        setup[key] = v;
-        key = null;
-        fn = null;
-    } else {
-        if (v.startsWith("-")) v = v.substring(1);
-        if (v.startsWith("-")) v = v.substring(1);
-        switch (v) {
+    if (!key) {
+        let split = false;
+        if (v.startsWith("--")) {
+            v = v.substring(2).split("=");
+            key = v[0];
+            v = v[1];
+            split = true;
+        } else if (v.startsWith("-")) {
+            key = v.substring(1);
+        } else {
+            throw "invalid format: " + v;
+        }
+        switch (key) {
             case 'port':
             case 'http-port':
             case 'https-port':
-                key = v;
                 fn = parseInt;
                 break;
             case 'ssl-cert':
             case 'ssl-key':
-                key = v;
-                break;
             case 'config':
-                key = v;
                 break;
             default:
-                throw "invalid option: "+v;
+                throw "invalid option: " + key;
         }
+        if (!split) return;
+    }
+    if (key) {
+        setup[key] = fn ? fn(v) : v;
+        key = null;
+        fn = null;
     }
 });
 
