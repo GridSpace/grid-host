@@ -2,5 +2,5 @@
 config.json
 package-lock.json
 node_modules
-ssl.*
 tmp
+*.pem

@@ -1,8 +1,8 @@
 {
     "port": 8181,
     "https-port": 8443,
-    "ssl-cert": "etc/ssl.crt",
-    "ssl-key": "etc/ssl.key",
+    "ssl-cert": "etc/ssl-local-cert.pem",
+    "ssl-key": "etc/ssl-local-key.pem",
     "targets": {
         "n2": {
             "comment": "raise3d n2",
