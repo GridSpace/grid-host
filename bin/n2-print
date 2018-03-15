@@ -6,7 +6,7 @@ name=${3}
 port=${4:31625}
 
 usage() {
-    echo "usage: n2-print [host] [file] [name]"
+    echo "usage: n2-util [host] [file] [name]"
     exit
 }
 

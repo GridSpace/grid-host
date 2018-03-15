@@ -6,12 +6,12 @@ file=${3}
 time=${4:-100}
 length=${5:-100}
 name=${6:-noname.gx}
-image=${7:-bin/km.bmp}
+image=${7:-etc/km.bmp}
 
 fileout="${file}.out"
 
 usage() {
-    echo "usage: gx-print [host] [port] [file] <time> <length> <name> <image>"
+    echo "usage: gx-util [host] [port] [file] <time> <length> <name> <image>"
     exit
 }
 

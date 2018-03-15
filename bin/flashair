@@ -7,7 +7,8 @@ const args = process.argv.slice(2);
 const fs = require('fs');
 
 function formPost(hostPort, data, name, onDone, onProgress) {
-console.log({host:hostPort, data:data.length, name:name});
+    console.log({postTo:hostPort, data:data.length, name:name});
+
     const form = new FormData();
     form.append("file", data, name);
     form.append("submit", "submit");

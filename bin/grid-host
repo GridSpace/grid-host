@@ -30,6 +30,10 @@ function mkdirs(path) {
     });
 }
 
+function tempFileName() {
+    return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
+}
+
 function encode(obj) {
     return JSON.stringify(obj);
 }
@@ -38,7 +42,7 @@ function decode(str) {
     return JSON.parse(str);
 }
 
-function setCORSHeaders(req,res) {
+function setFixedHeaders(req,res) {
     res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
     res.setHeader("Access-Control-Allow-Credentials", true);
     res.setHeader("Access-Control-Allow-Headers", "X-Moto-Ajax");
@@ -51,7 +55,7 @@ function init(req, res, next) {
         query: parsed.query,
     };
     if (req.method === 'OPTIONS') {
-        setCORSHeaders(req,res);
+        setFixedHeaders(req,res);
         res.setHeader("Allow", "GET,POST,OPTIONS");
         res.end();
     } else {
@@ -60,29 +64,32 @@ function init(req, res, next) {
 }
 
 function api(req, res, next) {
-    if (!req.gs.path.startsWith(apiroot)) return next();
+    var path = req.gs.path,
+        query = req.gs.query,
+        queueEntry;
 
-    let query = req.gs.query;
+    // pass unless url starts with /api/
+    if (!path.startsWith(apiroot)) return next();
 
-    // require key
+    // require key when set in config
     if (setup.key && query.key !== setup.key) {
         res.writeHead(401);
         res.end();
         return;
     }
 
-    var queueEntry;
+    switch (path.substring(apiroot.length)) {
 
-    switch (req.gs.path.substring(apiroot.length)) {
-
+        // return list of print targets
         case "targets":
-            setCORSHeaders(req,res);
+            setFixedHeaders(req,res);
             res.end(encode(setup.targets));
             break;
 
+        // return status of queued print from unique key
         case "check":
             queueEntry = queued[query.key];
-            setCORSHeaders(req,res);
+            setFixedHeaders(req,res);
             res.end(encode(
                 queueEntry ? {
                     key: queueEntry.key,
@@ -95,17 +102,19 @@ function api(req, res, next) {
             ));
             break;
 
+        // call blocks until queue task completes (when it's running)
         case "wait":
             queueEntry = queued[query.key];
-            setCORSHeaders(req,res);
+            setFixedHeaders(req,res);
             if (queueEntry) {
-                log({wait_on:queueEntry.key});
+                log({wait_on: queueEntry.key});
                 queueEntry.waiting.push(res);
             } else {
                 res.end(encode({error:"invalid queue key"}));
             }
             break;
 
+        // queue new print job and assign a unique queue key
         case "print":
             if (req.method !== 'POST') return next();
             if (!query.filename) return next();
@@ -134,22 +143,25 @@ function api(req, res, next) {
 
             req.on('end', () => {
                 try {
+                    // if gcode is null terminated, extract the following
+                    // image buffer in base64 encoded png format
                     body = body.split("\0");
-                    var image = body[1] || null;
                     var gcode = body[0];
+                    var image = body[1] || null;
+
                     queueEntry.data = gcode;
                     queueEntry.status = "queued";
                     log({key:queueKey, size:body.length, file:queueEntry.filename, target:req.gs.query.target});
-                    setCORSHeaders(req,res);
+                    setFixedHeaders(req,res);
                     res.end(encode({key:queueKey}));
 
                     if (image) {
                         png2bmp(Buffer.from(image, "base64"), bmp => {
                             queueEntry.image = bmp;
-                            queueTarget(queueEntry);
+                            processTaskFilters(queueEntry);
                         });
                     } else {
-                        queueTarget(queueEntry);
+                        processTaskFilters(queueEntry);
                     }
                 } catch (e) {
                     console.log(e);
@@ -167,34 +179,27 @@ function api(req, res, next) {
 
 }
 
-function tempFileName() {
-    return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
-}
+function processTaskFilters(queueEntry) {
+    var target = setup.targets[queueEntry.target],
+        filter = setup.filters[target.filter],
+        proc, args;
 
-function finish(queueEntry) {
-    if (!queueEntry.error) {
-        queueEntry.status = "sent";
+    if (!target) throw "invalid target: " + queueEntry.target;
+    if (!filter) throw "missing filter for " + queueEntry.target;
+
+    queueEntry.target = target;
+    queueEntry.tmpFile = tempFileName();
+
+    if (Array.isArray(filter)) {
+        queueEntry.filters = filter;
+        processFilter(queueEntry, 0);
+    } else {
+        queueEntry.filters = [ filter ];
+        processFilter(queueEntry, 0);
     }
-    queueEntry.data = null;
-    queueEntry.done = true;
-    queueEntry.waiting.forEach(function(res) {
-        res.end(encode({
-            key: queueEntry.key,
-            status: queueEntry.status,
-            error: queueEntry.error,
-            done: queueEntry.done
-        }));
-    });
-    // expire completed entries and tmp files after 10 minutes
-    setTimeout(function() {
-        delete queued[queueEntry.key];
-        queueEntry.cleanup.forEach(filename => {
-            try { fs.unlinkSync(filename) } catch (e) { log(e) }
-        });
-    }, 600000);
 }
 
-function processFilters(queueEntry, index) {
+function processFilter(queueEntry, index) {
     const filter = Object.assign({}, queueEntry.filters[index]);
     const target = queueEntry.target;
 
@@ -246,49 +251,63 @@ function processFilters(queueEntry, index) {
                 log(error);
                 queueEntry.error = true;
                 queueEntry.status = error.toString();
-                finish(queueEntry);
+                onFilterDone(queueEntry);
             })
             .on('exit', code => {
+                if (queueEntry.error) {
+                    log({exit_on_error: code});
+                    return;
+                }
                 if (code) {
                     queueEntry.error = true;
                     queueEntry.status = err;
-                    return finish(queueEntry);
+                    onFilterDone(queueEntry);
+                    return;
                 }
-                processFilters(queueEntry, index + 1);
+                processFilter(queueEntry, index + 1);
             });
 
-        proc.stdout.on('data', data => log({
-            out: out = data.toString()
-        }));
+        new linebuf(proc.stdout);
+        new linebuf(proc.stderr);
 
-        proc.stderr.on('data', error => log({
-            err: err = error.toString()
-        }));
+        proc.stdout.on('line', line => { log({out: line}) });
+        proc.stderr.on('line', line => { log({err: line}) });
+
+        // proc.stdout.on('data', data => log({
+        //     out: out = data.toString()
+        // }));
+
+        // proc.stderr.on('data', error => log({
+        //     err: err = error.toString()
+        // }));
 
         return;
     }
 
-    finish(queueEntry);
+    onFilterDone(queueEntry);
 }
 
-function queueTarget(queueEntry) {
-    var target = setup.targets[queueEntry.target],
-        filter = setup.filters[target.filter],
-        proc, args;
-
-    if (!target) throw "invalid target: " + queueEntry.target;
-    if (!filter) throw "missing filter for " + queueEntry.target;
-
-    queueEntry.target = target;
-    queueEntry.tmpFile = tempFileName();
-
-    if (Array.isArray(filter)) {
-        queueEntry.filters = filter;
-        processFilters(queueEntry, 0);
-    } else {
-        queueEntry.filters = [ filter ];
-        processFilters(queueEntry, 0);
+function onFilterDone(queueEntry) {
+    if (!queueEntry.error) {
+        queueEntry.status = "sent";
     }
+    queueEntry.data = null;
+    queueEntry.done = true;
+    queueEntry.waiting.forEach(function(res) {
+        res.end(encode({
+            key: queueEntry.key,
+            status: queueEntry.status,
+            error: queueEntry.error,
+            done: queueEntry.done
+        }));
+    });
+    // expire completed entries and tmp files after 10 minutes
+    setTimeout(function() {
+        delete queued[queueEntry.key];
+        queueEntry.cleanup.forEach(filename => {
+            try { fs.unlinkSync(filename) } catch (e) { log(e) }
+        });
+    }, 600000);
 }
 
 /* *********************************************
@@ -301,8 +320,9 @@ var fs = require('fs'),
     https = require('https')
     serve = require('serve-static')
     connect = require('connect'),
+    linebuf = require("buffer.lines"),
     spawn = require('child_process').spawn,
-    png2bmp = require('./gx-util').png2bmp,
+    png2bmp = require('../lib/image').png2bmp,
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
@@ -311,15 +331,14 @@ var fs = require('fs'),
     key = null,
     fn = null,
     setup = {
-        "api-root": "api",
-        "temp-dir": "tmp",
+        "config" : "etc/config.json",
         "org": "default",
         "key": null,
-        "port": 8181,
-        "https-port": null,
-        "ssl-cert": null,
-        "ssl-key": null,
-        "config" : null,
+        "host": null,
+        "http-port": 8111,
+        "https-port": 8112,
+        "ssl-cert": "etc/ssl-local-cert.pem",
+        "ssl-key": "etc/ssl-local-key.pem",
         "targets" : { },
         "filters" : {
             "x3g" : {
@@ -327,12 +346,12 @@ var fs = require('fs'),
                 "args": [ "{file}", "{file}.x3g" ]
             },
             "gx": {
-                "exec": "bin/gx-print",
+                "exec": "bin/gx-util",
                 "args": [ "{host}", "{port}", "{file}", "{print-time}", "{filament-used}", "{name}", "{image}" ],
                 "ext": ".gx"
             },
             "n2": {
-                "exec": "bin/n2-print",
+                "exec": "bin/n2-util",
                 "args": [ "{host}", "{file}", "{name}" ],
                 "ext": ".gcode"
             },
@@ -355,6 +374,7 @@ process.argv.slice(2).forEach(v => {
         if (v.startsWith("-")) v = v.substring(1);
         switch (v) {
             case 'port':
+            case 'http-port':
             case 'https-port':
                 key = v;
                 fn = parseInt;
@@ -391,13 +411,46 @@ if (setup['config']) setup = mergeConfig(decode(fs.readFileSync(setup['config'])
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
+/** temp dir for filtering */
+tempDir = cwd + "/tmp";
+mkdirs([ tempDir ]);
+
+var apiroot = "/api/",
+    report = ["grid:host"],
+    wport = setup['http-port'] || setup['port'],
+    sport = setup['https-port'],
+    handler = connect()
+        .use(init)
+        .use(api)
+        .use(serve(cwd + "/web/"))
+    ;
+
+if (wport) {
+    http.createServer(handler).listen(wport);
+    report.push("http @ " + wport);
+}
+
+if (sport) {
+    https.createServer({
+        key: setup['ssl-key'],
+        cert: setup['ssl-cert']
+    }, handler).listen(sport);
+    report.push("https @ " + sport);
+}
+
+report.push(new Date().toString());
+
+/** startup report */
+log(report.join(" | "));
+
 /**
  * store org <> host map for auto-grid-host in kiri
  * if host not specified, use ip:port of grid-host server
  */
-if (setup.org) {
+if (setup.org && (setup.host || setup.autohost)) {
     let host = setup.host || null;
     let nif = require('os').networkInterfaces();
+
     for (let key in nif) {
         if (host) break;
         let nic = nif[key];
@@ -412,10 +465,14 @@ if (setup.org) {
             }
         });
     }
+
     let args = [
         "org=" + encodeURIComponent(setup.org),
         "host=" + encodeURIComponent(host)
     ].join('&');
+
+    console.log({register: host, org: setup.org});
+
     https.get("https://grid.space/api/host_up?" + args, (res) => {
         // console.log({sc: res.statusCode});
         res.on("data", (data) => {
@@ -424,28 +481,4 @@ if (setup.org) {
     }).on("error", (error) => {
         // console.log(error);
     });
-}
-
-/** temp dir for filtering */
-tempDir = cwd + "/" + (setup["temp-dir"] || "tmp");
-mkdirs([tempDir]);
-
-var apiroot = ["/",setup["api-root"] || 'api',"/"].join(''),
-    handler = connect()
-        .use(init)
-        .use(api)
-        .use(serve(cwd + "/static/"))
-    ;
-
-if (setup['port']) {
-    http.createServer(handler).listen(setup.port);
-    log("grid-host started http server on port "+setup['port']);
-}
-
-if (setup['https-port']) {
-    https.createServer({
-        key: setup['ssl-key'],
-        cert: setup['ssl-cert']
-    }, handler).listen(setup['https-port']);
-    log("grid-host started https server on port "+setup['https-port']);
 }
