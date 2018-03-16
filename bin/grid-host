@@ -270,8 +270,8 @@ function processFilter(queueEntry, index) {
         new linebuf(proc.stdout);
         new linebuf(proc.stderr);
 
-        proc.stdout.on('line', line => { log({out: line}) });
-        proc.stderr.on('line', line => { log({err: line}) });
+        proc.stdout.on('line', line => { log({out: line.toString()}) });
+        proc.stderr.on('line', line => { log({err: line.toString()}) });
 
         // proc.stdout.on('data', data => log({
         //     out: out = data.toString()
