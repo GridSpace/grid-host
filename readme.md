@@ -50,6 +50,11 @@ currently built-in filter types:
     openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout etc/ssl.key -out etc/ssl.crt
 
 
+## Generate Certs using Cerbot
+
+	certbot --text --agree-tos --email your@address -d local.grid.space --manual --preferred-challenges dns --expand --renew-by-default --manual-public-ip-logging-ok certonly
+
+
 ## Starting Grid:Host
 
     bin/grid-host -config etc/config.json
