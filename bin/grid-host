@@ -323,6 +323,7 @@ var fs = require('fs'),
     linebuf = require("buffer.lines"),
     spawn = require('child_process').spawn,
     png2bmp = require('../lib/image').png2bmp,
+    WebSocket = require('ws'),
     printSequence = 0,
     tempIndex = 0,
     tempDir = null,
@@ -442,17 +443,39 @@ var apiroot = "/api/",
     ;
 
 if (wport) {
-    http.createServer(handler).listen(wport);
+    var http_server = http.createServer(handler).listen(wport);
     report.push("http @ " + wport);
 }
 
 if (sport) {
-    https.createServer({
+    var https_server = https.createServer({
         key: setup['ssl-key'],
         cert: setup['ssl-cert']
     }, handler).listen(sport);
     report.push("https @ " + sport);
 }
+
+// start disconnected web socket server that can be shared
+if (setup['wss']) {
+    report.push("websockets");
+    const wss = new WebSocket.Server({ noServer: true });
+    const upgrade = (request, socket, head) => {
+        const pathname = url.parse(request.url).pathname;
+        if (pathname === "/ws") {
+            wss.handleUpgrade(request, socket, head, (ws) => {
+              wss.emit('connection', ws, request);
+            });
+        } else {
+            socket.destroy();
+        }
+    };
+    wss.on('connection', (ws) => {
+      ws.on('message', (message) => { });
+    });
+    if (http_server) http_server.on("upgrade", upgrade);
+    if (https_server) https_server.on("upgrade", upgrade);
+}
+
 
 report.push(new Date().toString());
 
