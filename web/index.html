@@ -2,12 +2,34 @@
     <head>
         <title>grid:host print server</title>
         <script src="index.js"></script>
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+            a {
+                text-decoration: none;
+            }
+            label {
+                font-weight: bold;
+            }
+            table {
+                border-collapse: separate;
+            }
+            tbody th {
+                text-align: left;
+            }
+            table th,td {
+                border: 2px solid white;
+                background-color: #eee;
+                padding: 5px;
+            }
+        </style>
     </head>
     <body onload="init()">
-        <a href="https://github.com/GridSpace/grid-print">
-            grid-print server
-        </a> part of <a href="https://github.com/GridSpace">
-            Grid:Space Apps
-        </a>
+        <label><a href="https://github.com/GridSpace/grid-print">grid-print server</a></label>
+        &nbsp; serves &nbsp;
+        <label><a href="https://github.com/GridSpace">grid:space apps</a></label>
+        <hr>
+        <div id="targets"></div>
     </body>
 </html>
