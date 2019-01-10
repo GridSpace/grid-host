@@ -42,6 +42,23 @@ function decode(str) {
     return JSON.parse(str);
 }
 
+function encodeQueue() {
+    const q = [];
+    queue.forEach(el => {
+        el = Object.assign({}, el);
+        delete el.waiting;
+        delete el.data;
+        delete el.image;
+        q.push(el);
+    });
+    return encode(q);
+}
+
+function saveQueue() {
+    while (queue.length > 25) queue.shift();
+    fs.writeFileSync(setup.queue, encodeQueue());
+}
+
 function setFixedHeaders(req,res) {
     res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
     res.setHeader("Access-Control-Allow-Credentials", true);
@@ -66,6 +83,7 @@ function init(req, res, next) {
 function api(req, res, next) {
     var path = req.gs.path,
         query = req.gs.query,
+        remoteIP = req.connection.remoteAddress,
         queueEntry;
 
     // pass unless url starts with /api/
@@ -84,6 +102,12 @@ function api(req, res, next) {
         case "targets":
             setFixedHeaders(req,res);
             res.end(encode(setup.targets));
+            break;
+
+        // return list of last 25 prints
+        case "queue":
+            setFixedHeaders(req,res);
+            res.end(encodeQueue());
             break;
 
         // return status of queued print from unique key
@@ -124,7 +148,11 @@ function api(req, res, next) {
             var queueKey = new Date().getTime().toString(36);
 
             queued[queueKey] = queueEntry = {
+                time: {                     // timestamps
+                    add: Date.now()
+                },
                 key:    queueKey,           // unique uid for queue entry
+                from:   remoteIP,           // client that submitted job
                 data:   null,               // gcode
                 done:   false,              // queue item completed
                 error:  false,              // an error occurred
@@ -136,6 +164,10 @@ function api(req, res, next) {
                 waiting: [],                // http clients waiting
                 cleanup: []                 // tmp file names to cleanup
             };
+
+            // create queue entry and save
+            queue.push(queueEntry);
+            saveQueue();
 
             req.on('data', data => {
                 body += data
@@ -151,6 +183,9 @@ function api(req, res, next) {
 
                     queueEntry.data = gcode;
                     queueEntry.status = "queued";
+                    queueEntry.time.queued = Date.now();
+                    saveQueue();
+
                     log({key:queueKey, size:body.length, file:queueEntry.filename, target:req.gs.query.target});
                     setFixedHeaders(req,res);
                     res.end(encode({key:queueKey}));
@@ -187,6 +222,7 @@ function processTaskFilters(queueEntry) {
     if (!target) throw "invalid target: " + queueEntry.target;
     if (!filter) throw "missing filter for " + queueEntry.target;
 
+    target.key = queueEntry.target;
     queueEntry.target = target;
     queueEntry.tmpFile = tempFileName();
 
@@ -244,6 +280,7 @@ function processFilter(queueEntry, index) {
             args[idx] = val;
         });
 
+        queueEntry.time.exec = Date.now();
         queueEntry.status = "exec " + filter.exec;
 
         proc = spawn(filter.exec, args)
@@ -251,6 +288,8 @@ function processFilter(queueEntry, index) {
                 log(error);
                 queueEntry.error = true;
                 queueEntry.status = error.toString();
+                queueEntry.time.error = Date.now();
+                saveQueue();
                 onFilterDone(queueEntry);
             })
             .on('exit', code => {
@@ -261,6 +300,8 @@ function processFilter(queueEntry, index) {
                 if (code) {
                     queueEntry.error = true;
                     queueEntry.status = err;
+                    queueEntry.time.done = Date.now();
+                    saveQueue();
                     onFilterDone(queueEntry);
                     return;
                 }
@@ -307,6 +348,7 @@ function onFilterDone(queueEntry) {
         queueEntry.cleanup.forEach(filename => {
             try { fs.unlinkSync(filename) } catch (e) { log(e) }
         });
+        saveQueue();
     }, 600000);
 }
 
@@ -328,17 +370,21 @@ var fs = require('fs'),
     tempIndex = 0,
     tempDir = null,
     queued = {},
+    queue = [],
     cwd = process.cwd(),
     key = null,
     fn = null,
     setup = {
         // use command-line to override
         "config" : "etc/config.json",
+        // persisted queue state
+        "queue" : "etc/queue.json",
         // protect http(s) access with a shared secret key
         "key": null,
         // kiri:moto auto-detect only works with "default" at the moment
         "org": "default",
-        // passed to kiri:moto auto-detect as grid:host url. use url format.
+        // passed to kiri:moto auto-detect as grid:host url. use url format
+        "autohost": false,
         "host": null,
         "http-port": 8111,
         "https-port": 8112,
@@ -396,6 +442,7 @@ process.argv.slice(2).forEach(v => {
             case 'ssl-cert':
             case 'ssl-key':
             case 'config':
+            case 'queue':
                 break;
             default:
                 throw "invalid option: " + key;
@@ -476,7 +523,10 @@ if (setup['wss']) {
     if (https_server) https_server.on("upgrade", upgrade);
 }
 
+// reload old queue state (TODO repair and delete dangling tmp files)
+if (lastmod(setup.queue)) queue = decode(fs.readFileSync(setup.queue));
 
+// output date
 report.push(new Date().toString());
 
 /** startup report */
@@ -510,7 +560,7 @@ if (setup.org && (setup.host || setup.autohost)) {
         "host=" + encodeURIComponent(host)
     ].join('&');
 
-    console.log({register: host, org: setup.org});
+    console.log({register: host || "*autohost*", org: setup.org});
 
     https.get("https://grid.space/api/host_up?" + args, (res) => {
         // console.log({sc: res.statusCode});
