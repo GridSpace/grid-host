@@ -46,9 +46,6 @@ function encodeQueue() {
     const q = [];
     queue.forEach(el => {
         el = Object.assign({}, el);
-        if (el.data) {
-            el.size = el.data.length;
-        }
         delete el.waiting;
         delete el.data;
         delete el.image;
@@ -184,6 +181,7 @@ function api(req, res, next) {
                     var gcode = body[0];
                     var image = body[1] || null;
 
+                    queueEntry.size = gcode.length;
                     queueEntry.data = gcode;
                     queueEntry.status = "queued";
                     queueEntry.time.queued = Date.now();
