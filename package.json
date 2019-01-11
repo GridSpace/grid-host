@@ -25,6 +25,7 @@
         "connect": "^3.6.6",
         "form-data": "^1.0.1",
         "minimist": "^1.2.0",
+        "moment": "^2.22.2",
         "pngjs": "^3.3.2",
         "progress-stream": "^1.2.0",
         "serialport": "^5.0.0",

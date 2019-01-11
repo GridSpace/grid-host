@@ -35,16 +35,18 @@ function queue(q) {
         cell('th', 'to'),
         cell('th', 'from'),
         cell('th', 'file'),
+        cell('th', 'size'),
         cell('th', 'status'),
         '</tr></thead><tbody>'
     ];
-    q.forEach(el => {
+    q.reverse().forEach(el => {
         let target = el.target.comment || el.target;
         html.push('<tr>');
-        html.push(cell('td', new Date((el.time || {}).add || 0)));
+        html.push(cell('td', moment((el.time || {}).add || 0).format('YYYY-MM-DD HH:MM:ss ddd')));
         html.push(cell('td', target));
         html.push(cell('td', el.from));
         html.push(cell('td', el.name));
+        html.push(cell('td', el.size || ''));
         html.push(cell('td', el.status));
         html.push('</tr>');
     });
