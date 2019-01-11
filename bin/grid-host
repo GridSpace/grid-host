@@ -46,7 +46,9 @@ function encodeQueue() {
     const q = [];
     queue.forEach(el => {
         el = Object.assign({}, el);
-        el.size = el.data ? el.data.length : '';
+        if (el.data) {
+            el.size = el.data.length;
+        }
         delete el.waiting;
         delete el.data;
         delete el.image;
