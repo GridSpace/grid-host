@@ -283,6 +283,7 @@ function processFilter(queueEntry, index) {
 
         queueEntry.time.exec = Date.now();
         queueEntry.status = "exec " + filter.exec;
+        saveQueue();
 
         proc = spawn(filter.exec, args)
             .on('error', error => {
@@ -343,6 +344,7 @@ function onFilterDone(queueEntry) {
             done: queueEntry.done
         }));
     });
+    saveQueue();
     // expire completed entries and tmp files after 10 minutes
     setTimeout(function() {
         delete queued[queueEntry.key];
