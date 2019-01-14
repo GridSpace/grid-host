@@ -1,0 +1,92 @@
+<html>
+    <head>
+        <title>grbl control</title>
+        <script src="index.js"></script>
+        <style>
+            body {
+                font-size: 14px;
+                font-family: monospace;
+                display: flex;
+                flex-direction: column;
+            }
+            button,label {
+                margin: 5px;
+                padding: 7px;
+            }
+            #log {
+                display: none;
+                position: fixed;
+                overflow-y: scroll;
+                left: 2px;
+                right: 2px;
+                bottom: 2px;
+                height: 150px;
+                border: 5px solid rgba(255,255,255,0.75);
+                border-radius: 3px;
+                background-color: rgba(0,0,0,0.90);
+                color: white;
+                font-size: 12px;
+                padding: 4px;
+                z-index: 100;
+            }
+            #actions {
+                position: fixed;
+                top: 2px;
+                right: 2px;
+                layout: flex;
+                flex-direction: column;
+                z-index: 101;
+            }
+        </style>
+    </head>
+    <body onload="init()">
+        <div>
+            <button onclick="bed_temp_lower()">&lt;<button>
+            <input id="bed" value="60" size="6"></input>
+            <button onclick="bed_temp_higher()">&gt;</button>
+            <button id="bed_toggle" onclick="bed_toggle()">on</button>
+        </div>
+        <div>
+            <button onclick="nozzle_temp_lower()">&lt;<button>
+            <input id="nozzle" value="220" size="6"></input>
+            <button onclick="nozzle_temp_higher()">&gt;</button>
+            <button id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
+        </div>
+        <div>
+            <button onclick="gr('X-5')">x-</button>
+            <button onclick="gr('X5')">x+</button>
+            <button onclick="gr('Y-5')">y-</button>
+            <button onclick="gr('Y5')">y+</button>
+            <button onclick="gr('Z-5')">z-</button>
+            <button onclick="gr('Z5')">z+</button>
+        </div>
+        <div>
+            <button onclick="home()">home</button>
+            <button onclick="extrude(5)">extrude 5mm</button>
+            <button onclick="retract(5)">retract 5mm</button>
+        </div>
+        <div>
+            <button onclick="disable_motors()">disable motors</button>
+            <button onclick="clear_bed()">clear bed</button>
+            <button onclick="kick_next()">kick next</button>
+            <button onclick="abort()">abort</button>
+        </div>
+        <div>
+            <button onclick="update()">update</button>
+            <label>bed</label><input disabled="true" id="bed_temp" size="6"></input>
+            <label>nozzle</label><input disabled="true" id="nozzle_temp" size="6"></input>
+        </div>
+        <div>
+            <label>file</label><input id="filename" disabled="true" size="30"></input>
+            <label>progress</label><input id="progress" disabled="true" size="8"></input>
+        </div>
+        <div id="actions">
+            <button id="reload" onclick="reload()">reload</button>
+            <button id="reboot" onclick="reboot()">reboot</button>
+            <button id="shutdown" onclick="shutdown()">shutdown</button>
+            <button id="console" onclick="console()">console</button>
+            <button id="log_toggle" onclick="log_toggle()">log</button>
+        </div>
+        <div id="log"></div>
+    </body>
+</html>

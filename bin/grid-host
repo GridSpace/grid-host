@@ -489,7 +489,7 @@ var apiroot = "/api/",
     handler = connect()
         .use(init)
         .use(api)
-        .use(serve(cwd + "/web/"))
+        .use(serve(cwd + "/web/host/"))
     ;
 
 if (wport) {
