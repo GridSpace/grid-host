@@ -31,18 +31,25 @@
     </head>
     <body onload="init()">
         <div>
-            <button onclick="jog('X-5')">x-</button>
-            <button onclick="jog('X5')">x+</button>
-            <button onclick="jog('Y-5')">y-</button>
-            <button onclick="jog('Y5')">y+</button>
-            <button onclick="jog('Z-5')">z-</button>
-            <button onclick="jog('Z5')">z+</button>
+            <button onclick="jog('X',-1)">x-</button>
+            <button onclick="jog('X',1)">x+</button>
+            <button onclick="jog('Y',-1)">y-</button>
+            <button onclick="jog('Y',1)">y+</button>
+            <button onclick="jog('Z',-1)">z-</button>
+            <button onclick="jog('Z',1)">z+</button>
         </div>
         <div>
+            <input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input>
+            <input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input>
+            <input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input>
+            <input type="radio" name="jog" onclick="set_jog(2.0)">2.0</input>
+            <input type="radio" name="jog" onclick="set_jog(5.0)">5.0</input>
+        </div>
+        <div>
+            <button onclick="zero_pos()">zero pos</button>
             <label>x</label><input id="xpos" disabled="true" size="5"></input>
             <label>Y</label><input id="ypos" disabled="true" size="5"></input>
             <label>z</label><input id="zpos" disabled="true" size="5"></input>
-            <button onclick="zero_pos()">zero pos</button>
             <button onclick="goto_zero()">goto zero</button>
         </div>
         <div>

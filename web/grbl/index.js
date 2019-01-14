@@ -3,6 +3,7 @@ let queue = [];
 let logs = [];
 let ready = false;
 let sock = null;
+let jog_val = 1.0;
 let last_update = 0;
 let status = {
     wco: {x:0, y:0, z:0}
@@ -74,8 +75,12 @@ function grbl_reset() {
     send(String.fromCharCode(0x18));
 }
 
-function jog(msg) {
-    send(`$J=G91 F300 ${msg}`);
+function set_jog(val) {
+    jog_val = val;
+}
+
+function jog(axis, dir) {
+    send(`$J=G91 F300 ${axis}${dir * jog_val}`);
 }
 
 function send(message, force) {
