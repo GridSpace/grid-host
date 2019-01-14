@@ -4,14 +4,20 @@
         <script src="index.js"></script>
         <style>
             body {
-                font-size: 14px;
+                font-size: 16px;
                 font-family: monospace;
                 display: flex;
                 flex-direction: column;
             }
-            button,label {
+            label {
                 margin: 5px;
-                padding: 7px;
+            }
+            input {
+                padding: 10px;
+            }
+            button {
+                margin: 7px;
+                padding: 10px;
             }
             #actions {
                 position: fixed;
@@ -19,12 +25,6 @@
                 right: 2px;
                 layout: flex;
                 flex-direction: column;
-                z-index: 101;
-            }
-            #update {
-                position: fixed;
-                bottom: 2px;
-                right: 2px;
                 z-index: 101;
             }
         </style>
@@ -62,12 +62,9 @@
             <button onclick="kick_next()">kick next</button>
         </div>
         <div>
-            <button id="update" onclick="update()">update</button>
-        </div>
-        <div>
-            <label>status</label><input id="status" disabled="true" size="10"></input>
-            <label>file</label><input id="filename" disabled="true" size="30"></input>
-            <label>progress</label><input id="progress" disabled="true" size="8"></input>
+            <label>status</label><input id="status" disabled="true" size="8"></input>
+            <label>file</label><input id="filename" disabled="true" size="25"></input>
+            <label>progress</label><input id="progress" disabled="true" size="6"></input>
             <button onclick="abort()">abort</button>
         </div>
         <div id="actions">
