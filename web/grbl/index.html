@@ -39,22 +39,29 @@
             <button onclick="jog('Z5')">z+</button>
         </div>
         <div>
+            <label>x</label><input id="xpos" disabled="true" size="5"></input>
+            <label>Y</label><input id="ypos" disabled="true" size="5"></input>
+            <label>z</label><input id="zpos" disabled="true" size="5"></input>
+            <button onclick="zero_pos()">zero pos</button>
+            <button onclick="goto_zero()">goto zero</button>
+        </div>
+        <div>
             <button onclick="grbl_hold()">hold</button>
             <button onclick="grbl_resume()">resume</button>
             <button onclick="grbl_reset()">reset</button>
         </div>
         <div>
-            <button onclick="disable_motors()">disable motors</button>
             <button onclick="clear_bed()">clear bed</button>
             <button onclick="kick_next()">kick next</button>
-            <button onclick="abort()">abort</button>
         </div>
         <div>
             <button id="update" onclick="update()">update</button>
         </div>
         <div>
+            <label>status</label><input id="status" disabled="true" size="10"></input>
             <label>file</label><input id="filename" disabled="true" size="30"></input>
             <label>progress</label><input id="progress" disabled="true" size="8"></input>
+            <button onclick="abort()">abort</button>
         </div>
         <div id="actions">
             <button id="reload" onclick="reload()">reload</button>

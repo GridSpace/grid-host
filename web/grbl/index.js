@@ -4,6 +4,9 @@ let logs = [];
 let ready = false;
 let sock = null;
 let last_update = 0;
+let status = {
+    wco: {x:0, y:0, z:0}
+};
 
 function reload() {
     document.location = document.location;
@@ -29,10 +32,6 @@ function log(msg) {
     console.log(msg);
 }
 
-function disable_motors() {
-    send('M18');
-}
-
 function clear_bed() {
     send('*clear');
 }
@@ -45,9 +44,18 @@ function abort() {
     send('*abort');
 }
 
+function zero_pos() {
+    send('G92 X0Y0Z0');
+    send('?');
+}
+
+function goto_zero() {
+    send('G0 X0Y0Z0');
+}
+
 function update() {
     let now = Date.now();
-    if (now - last_update > 1000) {
+    if (now - last_update >= 400) {
         send('?');
         last_update = now;
     }
@@ -58,7 +66,8 @@ function grbl_hold() {
 }
 
 function grbl_resume() {
-    send('~');
+    send('~', true);
+    send('?', true);
 }
 
 function grbl_reset() {
@@ -69,8 +78,12 @@ function jog(msg) {
     send(`$J=G91 F300 ${msg}`);
 }
 
-function send(message) {
+function send(message, force) {
     if (ready) {
+        if (!force && status.hold && (message.length > 1 || message === '?')) {
+            //console.log(`skip sending "${message}" during hold`);
+            return;
+        }
         // log({send: message});
         sock.send(message);
     } else {
@@ -119,12 +132,61 @@ function init() {
         let msg = unescape(evt.data);
         let match;
         // drop echo of send or oks
-        // if (pos(msg, '--> ') || pos(msg, '<-- ok')) {
-        //     return;
-        // }
+        if (pos(msg, '--> ') || pos(msg, '<-- ok')) {
+            return;
+        }
         if (match = pos(msg, '<-- [GC:')) {
             match = match.substring(0, match.lastIndexOf(']'));
             console.log({gc: match});
+        } else if (match = pos(msg, '<-- <')) {
+            match = match.substring(0, match.lastIndexOf('>')).split('|');
+            // console.log({status: match.join(', ')});
+            status.state = match.shift();
+            status.hold = status.state.indexOf('Hold') === 0;
+            $('status').value = status.state;
+            match.reverse().forEach(tok => {
+                tok = tok.split(':');
+                let key = tok[0];
+                let val = tok[1];
+                let pos = false;
+                switch (key) {
+                    case 'WCO':
+                        val = val.split(',').map(v => parseFloat(v));
+                        status.wco = {
+                            x: val[0],
+                            y: val[1],
+                            z: val[2]
+                        };
+                        break;
+                    case 'WPos':
+                        pos = true;
+                        val = val.split(',').map(v => parseFloat(v));
+                        status.pos = {
+                            x: val[0] + status.wco.x,
+                            y: val[1] + status.wco.y,
+                            z: val[2] + status.wco.z
+                        };
+                        break;
+                    case 'MPos':
+                        pos = true;
+                        val = val.split(',').map(v => parseFloat(v));
+                        status.pos = {
+                            x: val[0] - status.wco.x,
+                            y: val[1] - status.wco.y,
+                            z: val[2] - status.wco.z
+                        };
+                        break;
+                }
+                if (pos) {
+                    $('xpos').value = status.pos.x;
+                    $('ypos').value = status.pos.y;
+                    $('zpos').value = status.pos.z;
+                }
+            });
+        } else if (match = pos(msg, '<-- Grbl')) {
+            status.hold = false;
+            status.state = 'init';
+            $('status').value = status.state;
         } else if (match = pos(msg, '<-- error:')) {
             console.log({error: match});
         } else if (msg.indexOf("*** {") >= 0) {
@@ -145,5 +207,5 @@ function init() {
             }
         }
     };
-    //setInterval(update, 5000);
+    setInterval(update, 500);
 }
