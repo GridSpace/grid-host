@@ -388,6 +388,7 @@ var fs = require('fs'),
         "org": "default",
         // passed to kiri:moto auto-detect as grid:host url. use url format
         "autohost": false,
+        // instead of 'autohost' provide the host name passed to grid.space
         "host": null,
         "http-port": 8111,
         "https-port": 8112,
@@ -418,6 +419,10 @@ var fs = require('fs'),
             "scp": {
                 "exec": "scp",
                 "args": [ "{file}", "{user}@{host}:{dir}/{name}" ]
+            },
+            "cp": {
+                "exec": "cp",
+                "args": [ "{file}", "{dir}/{name}" ]
             }
         }
     };
