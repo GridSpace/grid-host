@@ -21,90 +21,12 @@ function shutdown() {
     }
 }
 
-function console() {
-    if (confirm("kill ui?")) {
-        send("*exec killall openbox");
-    }
-}
-
 function $(id) {
     return document.getElementById(id);
 }
 
 function log(msg) {
-    if (typeof(msg) === 'object') {
-        msg = JSON.stringify(msg);
-    }
-    logs.push(msg);
-    while (logs.length > 100) {
-        logs.shift();
-    }
-    let el = $('log');
-    el.innerHTML = logs.join('<br>');
-    el.scrollTop = el.scrollHeight;
-}
-
-function log_toggle() {
-    let el = $('log');
-    if (el.style.display === '') {
-        el.style.display = 'block';
-    } else {
-        el.style.display = '';
-    }
-}
-
-function bed_toggle() {
-    let toggle = $('bed_toggle');
-    if (toggle.innerText === 'on') {
-        toggle.innerText = 'off';
-        send('M140 S' + bed_temp());
-    } else {
-        toggle.innerText = 'on';
-        send('M140 S0');
-    }
-}
-
-function bed_temp() {
-    return parseInt($('bed').value || '0');
-}
-
-function bed_temp_lower() {
-    $('bed').value = Math.max(0, bed_temp() - 5);
-    send('M140 S' + bed_temp());
-}
-
-function bed_temp_higher() {
-    $('bed').value = Math.min(100, bed_temp() + 5);
-    send('M140 S' + bed_temp());
-}
-
-function nozzle_toggle() {
-    let toggle = $('nozzle_toggle');
-    if (toggle.innerText === 'on') {
-        toggle.innerText = 'off';
-        send('M104 S' + nozzle_temp());
-    } else {
-        toggle.innerText = 'on';
-        send('M104 S0');
-    }
-}
-
-function nozzle_temp() {
-    return parseInt($('nozzle').value || '0');
-}
-
-function nozzle_temp_lower() {
-    $('nozzle').value = Math.max(0, nozzle_temp() - 5);
-    send('M104 S' + nozzle_temp());
-}
-
-function nozzle_temp_higher() {
-    $('nozzle').value = Math.min(300, nozzle_temp() + 5);
-    send('M104 S' + nozzle_temp());
-}
-
-function home() {
-    send('G28');
+    console.log(msg);
 }
 
 function disable_motors() {
@@ -123,26 +45,28 @@ function abort() {
     send('*abort');
 }
 
-function extrude(v) {
-    gr(`E${v}`);
-}
-
-function retract(v) {
-    gr(`E-${v}`);
-}
-
 function update() {
     let now = Date.now();
-    if (now - last_update > 5000) {
+    if (now - last_update > 1000) {
         send('?');
         last_update = now;
     }
 }
 
-function gr(msg) {
-    send('G91');
-    send(`G0 ${msg}`);
-    send('G90');
+function grbl_hold() {
+    send('!');
+}
+
+function grbl_resume() {
+    send('~');
+}
+
+function grbl_reset() {
+    send(String.fromCharCode(0x18));
+}
+
+function jog(msg) {
+    send(`$J=G91 F300 ${msg}`);
 }
 
 function send(message) {
@@ -155,10 +79,12 @@ function send(message) {
     }
 }
 
+function pos(msg, str) {
+    let off = msg.indexOf(str);
+    return off >= 0 ? msg.substring(off + str.length) : null;
+}
+
 function init() {
-    // log({wss_init: true, ready});
-    // sock = new WebSocket('ws://localhost:4080/ws');
-    //sock = new WebSocket('ws://192.168.86.248:4080');
     sock = new WebSocket(`ws://${document.location.hostname}:4080`);
     sock.onopen = (evt) => {
         if (ready) {
@@ -191,17 +117,16 @@ function init() {
     };
     sock.onmessage = (evt) => {
         let msg = unescape(evt.data);
-        if (msg.indexOf('ok T:') > 0) {
-            msg = msg.split(' ');
-            $('nozzle_temp').value = msg[3].substring(2);
-            $('bed_temp').value = msg[5].substring(2);
-            last_update = Date.now();
-            send('*status');
-        } else if (msg.indexOf('<-- T:') > 0) {
-            msg = msg.split(' ');
-            $('nozzle_temp').value = msg[2].substring(2);
-            $('bed_temp').value = msg[4].substring(2);
-            last_update = Date.now();
+        let match;
+        // drop echo of send or oks
+        // if (pos(msg, '--> ') || pos(msg, '<-- ok')) {
+        //     return;
+        // }
+        if (match = pos(msg, '<-- [GC:')) {
+            match = match.substring(0, match.lastIndexOf(']'));
+            console.log({gc: match});
+        } else if (match = pos(msg, '<-- error:')) {
+            console.log({error: match});
         } else if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(4,msg.length-4));
             if (status.print) {
@@ -211,7 +136,8 @@ function init() {
             log(status);
         } else if (msg.indexOf("*** [") >= 0) {
             log(JSON.parse(msg.substring(4,msg.length-4)));
-        } else if (msg.indexOf("***") >= 0) {
+        // } else if (msg.indexOf("***") >= 0) {
+        } else {
             try {
                 log({wss_msg: msg});
             } catch (e) {
@@ -219,5 +145,5 @@ function init() {
             }
         }
     };
-    setInterval(update, 5000);
+    //setInterval(update, 5000);
 }
