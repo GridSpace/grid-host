@@ -45,12 +45,12 @@ function abort() {
     send('*abort');
 }
 
-function zero_pos() {
+function set_home() {
     send('G92 X0Y0Z0');
     send('?');
 }
 
-function goto_zero() {
+function goto_home() {
     send('G0 X0Y0Z0');
 }
 

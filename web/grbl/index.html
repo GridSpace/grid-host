@@ -2,72 +2,63 @@
     <head>
         <title>grbl control</title>
         <script src="index.js"></script>
-        <style>
-            body {
-                font-size: 16px;
-                font-family: monospace;
-                display: flex;
-                flex-direction: column;
-            }
-            label {
-                margin: 5px;
-            }
-            input {
-                padding: 10px;
-            }
-            button {
-                margin: 7px;
-                padding: 10px;
-            }
-            #actions {
-                position: fixed;
-                top: 2px;
-                right: 2px;
-                layout: flex;
-                flex-direction: column;
-                z-index: 101;
-            }
-        </style>
+        <link rel="stylesheet" type="text/css" href="index.css">
     </head>
-    <body onload="init()">
-        <div>
-            <button onclick="jog('X',-1)">x-</button>
-            <button onclick="jog('X',1)">x+</button>
-            <button onclick="jog('Y',-1)">y-</button>
-            <button onclick="jog('Y',1)">y+</button>
-            <button onclick="jog('Z',-1)">z-</button>
-            <button onclick="jog('Z',1)">z+</button>
+    <body onload="init()" class="row">
+        <div class="col">
+            <div class="row" id="top">
+                <div class="col center" id="jog_set">
+                    <span><input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(2.0)">2.0</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(5.0)">5.0</input></span>
+                </div>
+                <table>
+                    <tr>
+                        <td></td>
+                        <td><button onclick="jog('Y',-1)">y-</button></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><button onclick="jog('X',-1)">x-</button></td>
+                        <td><button onclick="goto_home">home</button></td>
+                        <td><button onclick="jog('X',1)">x+</button></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td><button onclick="jog('Y',1)">y+</button></td>
+                        <td></td>
+                    </tr>
+                </table>
+                <div class="col">
+                    <button onclick="jog('Z',-1)">z-</button>
+                    <button onclick="set_home()">zero</button>
+                    <button onclick="jog('Z',1)">z+</button>
+                </div>
+                <div class="col center" id="pos">
+                    <span><label>x</label><input id="xpos" disabled="true" size="5"></input></span>
+                    <span><label>Y</label><input id="ypos" disabled="true" size="5"></input></span>
+                    <span><label>z</label><input id="zpos" disabled="true" size="5"></input></span>
+                </div>
+                <div class="col">
+                    <button onclick="grbl_hold()">hold</button>
+                    <button onclick="grbl_resume()">resume</button>
+                    <button onclick="grbl_reset()">reset</button>
+                </div>
+                <div class="col">
+                    <button onclick="clear_bed()">clear bed</button>
+                    <button onclick="kick_next()">kick next</button>
+                    <button onclick="abort()">abort</button>
+                </div>
+            </div>
+            <div class="row middle" id="status">
+                <label>status</label><input id="status" disabled="true" size="8"></input>
+                <label>file</label><input id="filename" disabled="true" size="25"></input>
+                <label>progress</label><input id="progress" disabled="true" size="6"></input>
+            </div>
         </div>
-        <div>
-            <input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input>
-            <input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input>
-            <input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input>
-            <input type="radio" name="jog" onclick="set_jog(2.0)">2.0</input>
-            <input type="radio" name="jog" onclick="set_jog(5.0)">5.0</input>
-        </div>
-        <div>
-            <button onclick="zero_pos()">zero pos</button>
-            <label>x</label><input id="xpos" disabled="true" size="5"></input>
-            <label>Y</label><input id="ypos" disabled="true" size="5"></input>
-            <label>z</label><input id="zpos" disabled="true" size="5"></input>
-            <button onclick="goto_zero()">goto zero</button>
-        </div>
-        <div>
-            <button onclick="grbl_hold()">hold</button>
-            <button onclick="grbl_resume()">resume</button>
-            <button onclick="grbl_reset()">reset</button>
-        </div>
-        <div>
-            <button onclick="clear_bed()">clear bed</button>
-            <button onclick="kick_next()">kick next</button>
-        </div>
-        <div>
-            <label>status</label><input id="status" disabled="true" size="8"></input>
-            <label>file</label><input id="filename" disabled="true" size="25"></input>
-            <label>progress</label><input id="progress" disabled="true" size="6"></input>
-            <button onclick="abort()">abort</button>
-        </div>
-        <div id="actions">
+        <div class="col" id="actions">
             <button id="reload" onclick="reload()">reload</button>
             <button id="reboot" onclick="reboot()">reboot</button>
             <button id="shutdown" onclick="shutdown()">shutdown</button>
