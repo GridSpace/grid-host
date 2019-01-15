@@ -42,7 +42,7 @@ function cell(type, text, opt) {
 function from_tag(v) {
     let ktag = `tag-${v}`;
     let otag = localStorage[ktag]
-    let ntag = prompt(`rename "${v}"`, v);
+    let ntag = prompt(`rename "${v}"`, otag || v);
     if (ntag === '') {
         delete localStorage[ktag];
     } else if (ntag !== null) {
