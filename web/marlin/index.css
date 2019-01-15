@@ -1,34 +1,94 @@
 body {
-    font-size: 14px;
+    font-size: 16px;
     font-family: monospace;
     display: flex;
     flex-direction: column;
 }
-button,label {
-    margin: 5px;
-    padding: 7px;
+td {
+    text-align: center;
 }
-#log {
-    display: none;
-    position: fixed;
-    overflow-y: scroll;
-    left: 2px;
-    right: 2px;
-    bottom: 2px;
-    height: 150px;
-    border: 5px solid rgba(255,255,255,0.75);
+label {
+    margin: 5px;
+}
+input {
+    padding: 10px;
+    background-color: #ffe;
     border-radius: 3px;
-    background-color: rgba(0,0,0,0.90);
-    color: white;
-    font-size: 12px;
-    padding: 4px;
-    z-index: 100;
+    border: 1px solid #ddd;
+}
+button {
+    margin: 7px;
+    padding: 10px;
+    background-color: #eee;
+    border-radius: 5px;
+}
+.row {
+    display: flex;
+    flex-direction: row;
+}
+.col {
+    display: flex;
+    flex-direction: column;
+}
+#top div,table {
+    padding-right: 4px;
+    padding-left: 4px;
+}
+#jog_set {
+    justify-content: center;
+}
+#jog_set input {
+    margin: 6px;
+}
+#pos input {
+    margin: 5px;
+}
+#pos label {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-right: 1px solid #ddd;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 5px;
+    margin-left: 0;
+    background-color: #f5f5f5;
+}
+#pos input {
+    margin-right: 0;
+}
+#temp > label {
+    font-size: 10px;
+    text-align: center;
+    background-color: #ddd;
+    border-radius: 3px;
+    padding: 3px;
+}
+#temp input {
+    margin: 0;
+}
+#temp button.dn {
+    margin-top: 0;
+    margin-right: 0;
+}
+#temp button.up {
+    margin-top: 0;
+    margin-left: 0;
+}
+#status {
+    padding-right: 4px;
+    padding-left: 4px;
+    align-items: center;
+}
+#status input {
+    padding: 5px;
+    margin-right: 6px;
+}
+#filename {
+    flex-grow: 1;
 }
 #actions {
     position: fixed;
     top: 2px;
     right: 2px;
-    layout: flex;
-    flex-direction: column;
     z-index: 101;
 }

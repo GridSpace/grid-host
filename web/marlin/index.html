@@ -4,54 +4,76 @@
         <script src="index.js"></script>
         <link rel="stylesheet" type="text/css" href="index.css">
     </head>
-    <body onload="init()">
-        <div>
-            <button onclick="bed_temp_lower()">&lt;<button>
-            <input id="bed" value="60" size="6"></input>
-            <button onclick="bed_temp_higher()">&gt;</button>
-            <button id="bed_toggle" onclick="bed_toggle()">on</button>
+    <body onload="init()" class="row">
+        <div class="col">
+            <div class="row" id="top">
+                <div class="col" id="jog_set">
+                    <span><input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(2.0)">2.0</input></span>
+                    <span><input type="radio" name="jog" onclick="set_jog(5.0)">5.0</input></span>
+                </div>
+                <table>
+                    <tr>
+                        <td></td>
+                        <td><button onclick="jog('Y',-1)">Y-</button></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><button onclick="jog('X',-1)">X-</button></td>
+                        <td><button onclick="goto_home()">home</button></td>
+                        <td><button onclick="jog('X',1)">X+</button></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td><button onclick="jog('Y',1)">Y+</button></td>
+                        <td></td>
+                    </tr>
+                </table>
+                <div class="col">
+                    <button onclick="jog('Z',-1)">Z-</button>
+                    <button onclick="disable_motors()">M18</button>
+                    <button onclick="jog('Z',1)">Z+</button>
+                </div>
+                <div class="col">
+                    <button onclick="retract(5)">E-</button>
+                    <button onclick="extrude(5)">E+</button>
+                </div>
+                <div id="temp" class="col">
+                    <label>bed</label>
+                    <div>
+                        <button class="dn" onclick="bed_temp_lower()">&lt;</button>
+                        <input id="bed" value="60" size="3"></input>
+                        <button class="up" onclick="bed_temp_higher()">&gt;</button>
+                        <input disabled="true" id="bed_temp" size="3"></input>
+                        <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
+                    </div>
+                    <label>nozzle</label>
+                    <div>
+                        <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
+                        <input id="nozzle" value="220" size="3"></input>
+                        <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
+                        <input disabled="true" id="nozzle_temp" size="3"></input>
+                        <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <button onclick="clear_bed()">clear bed</button>
+                    <button onclick="kick_next()">kick next</button>
+                    <button onclick="abort()">abort</button>
+                </div>
+            </div>
+            <div class="row" id="status">
+                <label>file</label><input id="filename" disabled="true" size="30"></input>
+                <label>progress</label><input id="progress" disabled="true" size="8"></input>
+            </div>
         </div>
-        <div>
-            <button onclick="nozzle_temp_lower()">&lt;<button>
-            <input id="nozzle" value="220" size="6"></input>
-            <button onclick="nozzle_temp_higher()">&gt;</button>
-            <button id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
-        </div>
-        <div>
-            <button onclick="gr('X-5')">x-</button>
-            <button onclick="gr('X5')">x+</button>
-            <button onclick="gr('Y-5')">y-</button>
-            <button onclick="gr('Y5')">y+</button>
-            <button onclick="gr('Z-5')">z-</button>
-            <button onclick="gr('Z5')">z+</button>
-        </div>
-        <div>
-            <button onclick="home()">home</button>
-            <button onclick="extrude(5)">extrude 5mm</button>
-            <button onclick="retract(5)">retract 5mm</button>
-        </div>
-        <div>
-            <button onclick="disable_motors()">disable motors</button>
-            <button onclick="clear_bed()">clear bed</button>
-            <button onclick="kick_next()">kick next</button>
-            <button onclick="abort()">abort</button>
-        </div>
-        <div>
+        <div id="actions" class="col">
             <button onclick="update()">update</button>
-            <label>bed</label><input disabled="true" id="bed_temp" size="6"></input>
-            <label>nozzle</label><input disabled="true" id="nozzle_temp" size="6"></input>
-        </div>
-        <div>
-            <label>file</label><input id="filename" disabled="true" size="30"></input>
-            <label>progress</label><input id="progress" disabled="true" size="8"></input>
-        </div>
-        <div id="actions">
             <button id="reload" onclick="reload()">reload</button>
             <button id="reboot" onclick="reboot()">reboot</button>
             <button id="shutdown" onclick="shutdown()">shutdown</button>
-            <button id="console" onclick="console()">console</button>
-            <button id="log_toggle" onclick="log_toggle()">log</button>
         </div>
-        <div id="log"></div>
     </body>
 </html>

@@ -4,6 +4,7 @@ let logs = [];
 let ready = false;
 let sock = null;
 let last_update = 0;
+let jog_val = 1.0;
 
 function reload() {
     document.location = document.location;
@@ -21,36 +22,12 @@ function shutdown() {
     }
 }
 
-function console() {
-    if (confirm("kill ui?")) {
-        send("*exec killall openbox");
-    }
-}
-
 function $(id) {
     return document.getElementById(id);
 }
 
 function log(msg) {
-    if (typeof(msg) === 'object') {
-        msg = JSON.stringify(msg);
-    }
-    logs.push(msg);
-    while (logs.length > 100) {
-        logs.shift();
-    }
-    let el = $('log');
-    el.innerHTML = logs.join('<br>');
-    el.scrollTop = el.scrollHeight;
-}
-
-function log_toggle() {
-    let el = $('log');
-    if (el.style.display === '') {
-        el.style.display = 'block';
-    } else {
-        el.style.display = '';
-    }
+    console.log({msg});
 }
 
 function bed_toggle() {
@@ -103,7 +80,7 @@ function nozzle_temp_higher() {
     send('M104 S' + nozzle_temp());
 }
 
-function home() {
+function goto_home() {
     send('G28');
 }
 
@@ -137,6 +114,16 @@ function update() {
         send('M105');
         last_update = now;
     }
+}
+
+function set_jog(val) {
+    jog_val = val;
+}
+
+function jog(axis, dir) {
+    send('G91');
+    send(`G0 ${axis}${dir * jog_val}`);
+    send('G90');
 }
 
 function gr(msg) {
