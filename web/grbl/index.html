@@ -7,7 +7,7 @@
     <body onload="init()" class="row">
         <div class="col">
             <div class="row" id="top">
-                <div class="col center" id="jog_set">
+                <div class="col" id="jog_set">
                     <span><input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input></span>
                     <span><input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input></span>
                     <span><input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input></span>
@@ -36,7 +36,7 @@
                     <button onclick="set_home()">zero</button>
                     <button onclick="jog('Z',1)">z+</button>
                 </div>
-                <div class="col center" id="pos">
+                <div class="col" id="pos">
                     <span><label>x</label><input id="xpos" disabled="true" size="5"></input></span>
                     <span><label>Y</label><input id="ypos" disabled="true" size="5"></input></span>
                     <span><label>z</label><input id="zpos" disabled="true" size="5"></input></span>
@@ -52,7 +52,7 @@
                     <button onclick="abort()">abort</button>
                 </div>
             </div>
-            <div class="row middle" id="status">
+            <div class="row" id="status">
                 <label>status</label><input id="status" disabled="true" size="8"></input>
                 <label>file</label><input id="filename" disabled="true" size="25"></input>
                 <label>progress</label><input id="progress" disabled="true" size="6"></input>

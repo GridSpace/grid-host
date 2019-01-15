@@ -1,0 +1,57 @@
+body {
+    font-size: 16px;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+}
+td {
+    text-align: center;
+}
+label {
+    margin: 5px;
+}
+input {
+    padding: 10px;
+}
+button {
+    margin: 7px;
+    padding: 10px;
+}
+.row {
+    display: flex;
+    flex-direction: row;
+}
+.col {
+    display: flex;
+    flex-direction: column;
+}
+#top div,table {
+    padding-right: 4px;
+    padding-left: 4px;
+}
+#jog_set input {
+    justify-content: center;
+    margin: 6px;
+}
+#pos input {
+    justify-content: center;
+    margin: 5px;
+}
+#status {
+    padding-right: 4px;
+    padding-left: 4px;
+    align-items: center;
+}
+#status input {
+    padding: 5px;
+    margin-right: 6px;
+}
+#filename {
+    flex-grow: 1;
+}
+#actions {
+    position: fixed;
+    top: 2px;
+    right: 2px;
+    z-index: 101;
+}
