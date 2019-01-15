@@ -29,12 +29,13 @@ button {
     padding-right: 4px;
     padding-left: 4px;
 }
-#jog_set input {
+#jog_set {
     justify-content: center;
+}
+#jog_set input {
     margin: 6px;
 }
 #pos input {
-    justify-content: center;
     margin: 5px;
 }
 #status {
