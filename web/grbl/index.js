@@ -46,12 +46,15 @@ function abort() {
 }
 
 function set_home() {
-    send('G92 X0Y0Z0');
-    send('?');
+    if (confirm("set current position to home?")) {
+        send('G92 X0Y0Z0');
+    }
 }
 
 function goto_home() {
-    send('G0 X0Y0Z0');
+    if (confirm("go to home position?")) {
+        send('G0 X0Y0Z0');
+    }
 }
 
 function update() {
