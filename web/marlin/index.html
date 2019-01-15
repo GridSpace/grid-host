@@ -8,11 +8,11 @@
         <div class="col">
             <div class="row" id="top">
                 <div class="col" id="jog_set">
-                    <span><input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(2.0)">2.0</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(5.0)">5.0</input></span>
+                    <button onclick="set_jog(0.1,this)">0.1</button>
+                    <button onclick="set_jog(0.5,this)">0.5</button>
+                    <button onclick="set_jog(1.0,this)">1.0</button>
+                    <button onclick="set_jog(2.0,this)">2.0</button>
+                    <button onclick="set_jog(5.0,this)">5.0</button>
                 </div>
                 <table>
                     <tr>
@@ -46,7 +46,7 @@
                         <button class="dn" onclick="bed_temp_lower()">&lt;</button>
                         <input id="bed" value="60" size="3"></input>
                         <button class="up" onclick="bed_temp_higher()">&gt;</button>
-                        <input disabled="true" id="bed_temp" size="3"></input>
+                        <input disabled="true" id="bed_temp" size="5"></input>
                         <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
                     </div>
                     <label>nozzle</label>
@@ -54,7 +54,7 @@
                         <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
                         <input id="nozzle" value="220" size="3"></input>
                         <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
-                        <input disabled="true" id="nozzle_temp" size="3"></input>
+                        <input disabled="true" id="nozzle_temp" size="5"></input>
                         <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
                     </div>
                 </div>
@@ -68,12 +68,13 @@
                 <label>file</label><input id="filename" disabled="true" size="30"></input>
                 <label>progress</label><input id="progress" disabled="true" size="8"></input>
             </div>
-        </div>
-        <div id="actions" class="col">
-            <button onclick="update()">update</button>
-            <button id="reload" onclick="reload()">reload</button>
-            <button id="reboot" onclick="reboot()">reboot</button>
-            <button id="shutdown" onclick="shutdown()">shutdown</button>
+            <div class="grow"></div>
+            <div id="actions" class="row">
+                <button onclick="update()">update</button>
+                <button id="reload" onclick="reload()">reload</button>
+                <button id="reboot" onclick="reboot()">reboot</button>
+                <button id="shutdown" onclick="shutdown()">shutdown</button>
+            </div>
         </div>
     </body>
 </html>

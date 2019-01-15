@@ -8,16 +8,16 @@
         <div class="col">
             <div class="row" id="top">
                 <div class="col" id="jog_set">
-                    <span><input type="radio" name="jog" onclick="set_jog(0.1)">0.1</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(0.5)">0.5</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(1.0)" checked>1.0</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(2.0)">2.0</input></span>
-                    <span><input type="radio" name="jog" onclick="set_jog(5.0)">5.0</input></span>
+                    <button onclick="set_jog(0.1,this)">0.1</button>
+                    <button onclick="set_jog(0.5,this)">0.5</button>
+                    <button onclick="set_jog(1.0,this)">1.0</button>
+                    <button onclick="set_jog(2.0,this)">2.0</button>
+                    <button onclick="set_jog(5.0,this)">5.0</button>
                 </div>
                 <table>
                     <tr>
                         <td></td>
-                        <td><button onclick="jog('Y',-1)">Y-</button></td>
+                        <td><button onclick="jog('Y',1)">Y+</button></td>
                         <td></td>
                     </tr>
                     <tr>
@@ -27,14 +27,14 @@
                     </tr>
                     <tr>
                         <td></td>
-                        <td><button onclick="jog('Y',1)">Y+</button></td>
+                        <td><button onclick="jog('Y',-1)">Y-</button></td>
                         <td></td>
                     </tr>
                 </table>
                 <div class="col">
-                    <button onclick="jog('Z',-1)">Z-</button>
-                    <button onclick="set_home()">zero</button>
                     <button onclick="jog('Z',1)">Z+</button>
+                    <button onclick="set_home()">zero</button>
+                    <button onclick="jog('Z',-1)">Z-</button>
                 </div>
                 <div class="col" id="pos">
                     <span><input id="xpos" disabled="true" size="5"></input><label>x</label></span>
@@ -57,11 +57,12 @@
                 <label>file</label><input id="filename" disabled="true" size="25"></input>
                 <label>progress</label><input id="progress" disabled="true" size="6"></input>
             </div>
-        </div>
-        <div class="col" id="actions">
-            <button id="reload" onclick="reload()">reload</button>
-            <button id="reboot" onclick="reboot()">reboot</button>
-            <button id="shutdown" onclick="shutdown()">shutdown</button>
+            <div class="grow"></div>
+            <div class="row" id="actions">
+                <button id="reload" onclick="reload()">reload</button>
+                <button id="reboot" onclick="reboot()">reboot</button>
+                <button id="shutdown" onclick="shutdown()">shutdown</button>
+            </div>
         </div>
     </body>
 </html>

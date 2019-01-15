@@ -3,8 +3,9 @@ let queue = [];
 let logs = [];
 let ready = false;
 let sock = null;
-let jog_val = 1.0;
+let jog_val = 0.0;
 let last_update = 0;
+let last_jog = null;
 let status = {
     wco: {x:0, y:0, z:0}
 };
@@ -78,8 +79,13 @@ function grbl_reset() {
     send(String.fromCharCode(0x18));
 }
 
-function set_jog(val) {
+function set_jog(val,el) {
     jog_val = val;
+    if (last_jog) {
+        last_jog.classList.remove('selected');
+    }
+    el.classList.add('selected');
+    last_jog = el;
 }
 
 function jog(axis, dir) {

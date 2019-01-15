@@ -15,12 +15,14 @@ input {
     background-color: #ffe;
     border-radius: 3px;
     border: 1px solid #ddd;
+    outline: none;
 }
 button {
     margin: 7px;
     padding: 10px;
     background-color: #eee;
     border-radius: 5px;
+    outline: none;
 }
 .row {
     display: flex;
@@ -30,6 +32,9 @@ button {
     display: flex;
     flex-direction: column;
 }
+.grow {
+    flex-grow: 1;
+}
 #top div,table {
     padding-right: 4px;
     padding-left: 4px;
@@ -37,8 +42,18 @@ button {
 #jog_set {
     justify-content: center;
 }
+#jog_set button {
+    margin: 2px;
+    padding: 2px;
+    font-size: 12px;
+    width: 50px;
+}
 #jog_set input {
     margin: 6px;
+}
+.selected {
+    color: white;
+    background-color: #888;
 }
 #pos input {
     margin: 5px;
@@ -69,8 +84,5 @@ button {
     flex-grow: 1;
 }
 #actions {
-    position: fixed;
-    top: 2px;
-    right: 2px;
-    z-index: 101;
+    justify-content: center;
 }

@@ -4,7 +4,8 @@ let logs = [];
 let ready = false;
 let sock = null;
 let last_update = 0;
-let jog_val = 1.0;
+let last_jog = null;
+let jog_val = 0.0;
 
 function reload() {
     document.location = document.location;
@@ -116,14 +117,17 @@ function update() {
     }
 }
 
-function set_jog(val) {
+function set_jog(val, el) {
     jog_val = val;
+    if (last_jog) {
+        last_jog.classList.remove('selected');
+    }
+    el.classList.add('selected');
+    last_jog = el;
 }
 
 function jog(axis, dir) {
-    send('G91');
-    send(`G0 ${axis}${dir * jog_val}`);
-    send('G90');
+    gr(`${axis}${dir * jog_val}`);
 }
 
 function gr(msg) {
