@@ -91,14 +91,19 @@ function disable_motors() {
 
 function clear_bed() {
     send('*clear');
+    send('*status');
 }
 
 function kick_next() {
     send('*kick');
+    send('*status');
 }
 
 function abort() {
-    send('*abort');
+    if (confirm('abort print job?')) {
+        send('*abort');
+        send('*status');
+    }
 }
 
 function extrude(v) {

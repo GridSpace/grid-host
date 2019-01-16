@@ -43,7 +43,9 @@ function kick_next() {
 }
 
 function abort() {
-    send('*abort');
+    if (confirm('abort job?')) {
+        send('*abort');
+    }
 }
 
 function set_home() {
