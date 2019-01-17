@@ -3,33 +3,14 @@
         <title>grid:host print server</title>
         <script src="moment.js"></script>
         <script src="index.js"></script>
-        <style>
-            body {
-                font-family: sans-serif;
-            }
-            a {
-                text-decoration: none;
-            }
-            label {
-                font-weight: bold;
-            }
-            table {
-                border-collapse: separate;
-            }
-            tbody th {
-                text-align: left;
-            }
-            table th,td {
-                border: 2px solid white;
-                background-color: #eee;
-                padding: 5px;
-            }
-        </style>
+        <link rel="stylesheet" type="text/css" href="index.css">
     </head>
     <body onload="init()">
-        <label><a href="https://github.com/GridSpace/grid-print">grid-print server</a></label>
-        &nbsp; serves &nbsp;
-        <label><a href="https://github.com/GridSpace">grid:space apps</a></label>
+        <div id="top">
+            <label><a href="https://github.com/GridSpace/grid-print">grid:print server</a></label>
+            <span>works with</span>
+            <label><a href="https://github.com/GridSpace">grid:space apps</a></label>
+        </div>
         <hr>
         <div id="targets"></div>
         <hr>

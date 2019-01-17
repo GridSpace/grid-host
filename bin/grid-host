@@ -2,6 +2,8 @@
 
 /** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
 
+const GX = require('../lib/gx.js');
+
 function log(o) {
     if (typeof(o) === 'object') {
         console.log(JSON.stringify(o));
@@ -101,12 +103,28 @@ function api(req, res, next) {
         // return list of print targets
         case "targets":
             setFixedHeaders(req,res);
-            res.end(encode(setup.targets));
+            scanTargets().then(() => {
+                res.end(encode(setup.targets));
+            });
             break;
 
         // return list of last 25 prints
         case "queue":
             setFixedHeaders(req,res);
+            res.end(encodeQueue());
+            break;
+
+        // delete entry queued at given time
+        case "queue.del":
+            let time = parseInt(query.time);
+            let clone = queue.slice();
+            for (let i=0; clone && i<clone.length; i++) {
+                if (clone[i].time.add === time) {
+                    queue.splice(i,1);
+                    saveQueue();
+                    clone = null;
+                }
+            }
             res.end(encodeQueue());
             break;
 
@@ -355,6 +373,58 @@ function onFilterDone(queueEntry) {
     }, 600000);
 }
 
+let lastScan = 0;
+let scanning = null;
+
+function scanTargets() {
+    return new Promise((resolve, reject) => {
+        let running = 0;
+        if (Date.now() - lastScan < 2000) {
+            resolve();
+            return;
+        }
+        if (scanning) {
+            scanning.push(resolve);
+        }
+        scanning = [ resolve ];
+        const dec = (val) => {
+            running = running - val;
+            if (running === 0) {
+                lastScan = Date.now();
+                scanning.forEach(rf => {
+                    rf();
+                })
+                scanning = null;
+                // resolve();
+            }
+        };
+        for (let key in setup.targets) {
+            let rec = setup.targets[key];
+            if (rec.filter === 'gx' && rec.host) {
+                running++;
+                let ctrl = new GX.Control();
+                ctrl
+                    .connect(rec.host, rec.port || 8899)
+                    .then(ctrl => {
+                        return ctrl.getStatus()
+                    })
+                    .then(status => {
+                        rec.status = status;
+                        return ctrl.close();
+                    })
+                    .then(() => {
+                        dec(1);
+                    })
+                    .catch(error => {
+                        console.log({scan_fail: error});
+                        dec(1);
+                    });
+            }
+        }
+        dec(0);
+    });
+}
+
 /* *********************************************
  * Start it up
  ********************************************* */
@@ -539,6 +609,9 @@ report.push(new Date().toString());
 
 /** startup report */
 log(report.join(" | "));
+
+// initial scan of targets
+scanTargets();
 
 /**
  * store org <> host map for auto-grid-host in kiri

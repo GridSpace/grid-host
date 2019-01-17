@@ -9,23 +9,38 @@ function targets(t) {
     lastT = Object.assign({}, t);
     let html = [
         '<table><thead><tr>',
-        cell('th', 'target'),
-        cell('th', 'info'),
-        cell('th', 'filter'),
+        cell('th', div('target')),
+        cell('th', div('info')),
+        cell('th', div('filter')),
+        cell('th', div('status')),
+        cell('th', div('file')),
+        cell('th', div('nozzle')),
+        cell('th', div('bed')),
         '</tr></thead><tbody>'
     ];
     for (let k in t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
+            let stat = v.status;
             html.push('<tr>');
             html.push(cell('th', k));
             html.push(cell('td', v.comment || ''));
             html.push(cell('td', v.filter || ''));
+            if (stat) {
+                html.push(cell('td', stat.print));
+                html.push(cell('td', ''));
+                html.push(cell('td', stat.temps.T0.join(' / ')));
+                html.push(cell('td', stat.temps.B.join(' / ')));
+            }
             html.push('</tr>');
         }
     }
     html.push('</tbody></table>');
     $('targets').innerHTML = html.join('');
+}
+
+function div(text) {
+    return ['<div>',text,'</div>'].join('');
 }
 
 function cell(type, text, opt) {
@@ -52,23 +67,33 @@ function from_tag(v) {
     queue(lastQ);
 }
 
+function queue_del(time) {
+    if (!confirm('delete entry?')) {
+        return;
+    }
+    fetch(`/api/queue.del?time=${time}`)
+        .then(r => r.json())
+        .then(q => queue(q));
+}
+
 function queue(q) {
     lastQ = q.slice();
     let html = [
         '<table><thead><tr>',
-        cell('th', 'date'),
-        cell('th', 'to'),
-        cell('th', 'from'),
-        cell('th', 'file'),
-        cell('th', 'size'),
-        cell('th', 'status'),
+        cell('th', div('date')),
+        cell('th', div('to')),
+        cell('th', div('from')),
+        cell('th', div('file')),
+        cell('th', div('size')),
+        cell('th', div('status')),
         '</tr></thead><tbody>'
     ];
     q.reverse().forEach(el => {
-        let target = el.target.comment || el.target;
+        let target = el.target.comment || el.target.key || el.target;
         let tag = localStorage[`tag-${el.from}`] || el.from;
+        let time = el.time || {};
         html.push('<tr>');
-        html.push(cell('td', moment((el.time || {}).add || 0).format('YYYY-MM-DD HH:MM:ss ddd')));
+        html.push(cell('td', moment(time.add || 0).format('YYYY-MM-DD HH:MM:ss ddd'), { onclick:`queue_del(${time.add})` } ));
         html.push(cell('td', target));
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
