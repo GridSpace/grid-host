@@ -28,8 +28,10 @@ function targets(t) {
             html.push(cell('td', v.comment || ''));
             html.push(cell('td', v.filter || ''));
             if (stat) {
-                html.push(cell('td', stat.print));
-                html.push(cell('td', ''));
+                let pct = stat.print.split(' ');
+                pct = pct[pct.length-1].split('/')[0];
+                html.push(cell('td', stat.status.MachineStatus));
+                html.push(cell('td', `${pct}%`));
                 html.push(cell('td', stat.temps.T0.join(' / ')));
                 html.push(cell('td', stat.temps.B.join(' / ')));
                 html.push(cell('td', 'cancel', {onclick: `print_cancel('${k}')`}));
