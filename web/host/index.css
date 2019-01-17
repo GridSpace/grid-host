@@ -1,0 +1,38 @@
+body {
+    font-family: sans-serif;
+}
+a {
+    text-decoration: none;
+}
+hr {
+    height: 0;
+    width: 100%;
+    margin: 10px 0 10px 0;
+    border-top: 1px solid #555;
+}
+#top {
+    padding: 0 8px 0 8px;
+    text-align: center;
+}
+#top label {
+    padding: 0 10px 0 10px;
+}
+label {
+    font-weight: bold;
+}
+thead th {
+    background-color: #ddd !important;
+    padding: 0 !important;
+}
+thead div {
+    border-bottom: 1px solid black;
+    padding: 5px;
+}
+tbody th {
+    text-align: left;
+}
+table th,td {
+    border: 2px solid white;
+    background-color: #eee;
+    padding: 5px;
+}
