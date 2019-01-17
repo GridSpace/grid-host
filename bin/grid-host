@@ -108,6 +108,27 @@ function api(req, res, next) {
             });
             break;
 
+        case "print.cancel":
+            let rec = setup.targets[query.target];
+            if (rec && rec.filter === 'gx') {
+                let ctrl = new GX.Control();
+                ctrl
+                    .connect(rec.host, rec.port || 8899)
+                    .then(ctrl => {
+                        return ctrl.cancel()
+                    })
+                    .then(cancel => {
+                        res.end(encode({cancel}));
+                        return ctrl.close();
+                    })
+                    .catch(error => {
+                        res.end(encode({cancel: false, error}));
+                    });
+            } else {
+                res.end(encode({cancel:false}));
+            }
+            break;
+
         // return list of last 25 prints
         case "queue":
             setFixedHeaders(req,res);

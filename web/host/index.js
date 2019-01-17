@@ -16,6 +16,7 @@ function targets(t) {
         cell('th', div('file')),
         cell('th', div('nozzle')),
         cell('th', div('bed')),
+        cell('th', div('action')),
         '</tr></thead><tbody>'
     ];
     for (let k in t) {
@@ -31,6 +32,7 @@ function targets(t) {
                 html.push(cell('td', ''));
                 html.push(cell('td', stat.temps.T0.join(' / ')));
                 html.push(cell('td', stat.temps.B.join(' / ')));
+                html.push(cell('td', 'cancel', {onclick: `print_cancel('${k}')`}));
             }
             html.push('</tr>');
         }
@@ -65,6 +67,16 @@ function from_tag(v) {
     }
     console.log({from_tag: v || "ok", ktag, otag, ntag, lastQ});
     queue(lastQ);
+}
+
+function print_cancel(target) {
+    if (confirm(`cancel print on "${target}?"`)) {
+        fetch(`/api/print.cancel?target=${target}`)
+            .then(r => r.json())
+            .then(c => {
+                console.log({cancel: c});
+            });
+    }
 }
 
 function queue_del(time) {
