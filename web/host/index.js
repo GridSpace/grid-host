@@ -29,7 +29,8 @@ function targets(t) {
             html.push(cell('td', v.filter || ''));
             if (stat) {
                 let pct = stat.print.split(' ');
-                pct = pct[pct.length-1].split('/')[0];
+                pct = pct[pct.length-1].split('/').map(v => parseFloat(v));
+                pct = ((pct[0]/pct[1]) * 100).toFixed(1);
                 html.push(cell('td', stat.status.MachineStatus));
                 html.push(cell('td', `${pct}%`));
                 html.push(cell('td', stat.temps.T0.join(' / ')));

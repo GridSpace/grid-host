@@ -118,6 +118,7 @@ function api(req, res, next) {
         case "print.cancel":
             let rec = setup.targets[query.target];
             if (rec && rec.filter === 'gx') {
+                console.log({cancel_print_on: rec});
                 let ctrl = new GX.Control();
                 ctrl
                     .connect(rec.host, rec.port || 8899)
@@ -125,10 +126,12 @@ function api(req, res, next) {
                         return ctrl.cancel()
                     })
                     .then(cancel => {
+                        console.log({cancel_print: true});
                         res.end(encode({cancel}));
                         return ctrl.close();
                     })
                     .catch(error => {
+                        console.log({cancel_print: false, error});
                         res.end(encode({cancel: false, error}));
                     });
             } else {
