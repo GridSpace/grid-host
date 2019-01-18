@@ -105,14 +105,22 @@ function api(req, res, next) {
 
         // return list of print targets
         case "targets":
+            let sent = false;
             setFixedHeaders(req,res);
             scanTargets()
                 .then(() => {
+                    let sent = true;
                     res.end(encode(setup.targets));
                 })
                 .catch(error => {
+                    let sent = true;
                     res.end(encode(setup.targets));
                 });
+            setTimeout(() => {
+                if (!sent) {
+                    res.end(encode(setup.targets));
+                }
+            }, 2000);
             break;
 
         case "print.cancel":
