@@ -3,6 +3,7 @@
 /** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
 
 const GX = require('../lib/gx.js');
+const MaxHistory = 100;
 
 function log(o) {
     if (typeof(o) === 'object') {
@@ -57,7 +58,9 @@ function encodeQueue() {
 }
 
 function saveQueue() {
-    while (queue.length > 25) queue.shift();
+    while (queue.length > MaxHistory) {
+        queue.shift();
+    }
     fs.writeFileSync(setup.queue, encodeQueue());
 }
 
@@ -103,9 +106,13 @@ function api(req, res, next) {
         // return list of print targets
         case "targets":
             setFixedHeaders(req,res);
-            scanTargets().then(() => {
-                res.end(encode(setup.targets));
-            });
+            scanTargets()
+                .then(() => {
+                    res.end(encode(setup.targets));
+                })
+                .catch(error => {
+                    res.end(encode(setup.targets));
+                });
             break;
 
         case "print.cancel":
@@ -129,7 +136,7 @@ function api(req, res, next) {
             }
             break;
 
-        // return list of last 25 prints
+        // return list of last MaxHistory prints
         case "queue":
             setFixedHeaders(req,res);
             res.end(encodeQueue());
@@ -406,6 +413,7 @@ function scanTargets() {
         }
         if (scanning) {
             scanning.push(resolve);
+            return;
         }
         scanning = [ resolve ];
         const dec = (val) => {
@@ -416,11 +424,12 @@ function scanTargets() {
                     rf();
                 })
                 scanning = null;
-                // resolve();
             }
         };
         for (let key in setup.targets) {
             let rec = setup.targets[key];
+            let host = rec.host;
+            let port = rec.port || 8899;
             if (rec.filter === 'gx' && rec.host) {
                 running++;
                 let ctrl = new GX.Control();
