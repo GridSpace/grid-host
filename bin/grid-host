@@ -5,412 +5,381 @@
 const GX = require('../lib/gx.js');
 const MaxHistory = 100;
 
-function log(o) {
-    if (typeof(o) === 'object') {
-        console.log(JSON.stringify(o));
-    } else {
-        console.log(o);
-    }
-}
+/** Common Utilities */
 
-function lastmod(path) {
-    try {
-        return fs.statSync(path).mtime.getTime();
-    } catch (e) {
-        return 0;
-    }
-}
-
-function mkdirs(path) {
-    var root = "";
-    path.forEach(seg => {
-        if (root) {
-            root = root + "/" + seg;
+const Util = {
+    log: (o) => {
+        if (typeof(o) === 'object') {
+            console.log(JSON.stringify(o));
         } else {
-            root = seg;
+            console.log(o);
         }
-        lastmod(root) || fs.mkdirSync(root);
-    });
-}
+    },
 
-function tempFileName() {
-    return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
-}
-
-function encode(obj) {
-    return JSON.stringify(obj);
-}
-
-function decode(str) {
-    return JSON.parse(str);
-}
-
-function encodeQueue() {
-    const q = [];
-    queue.forEach(el => {
-        el = Object.assign({}, el);
-        delete el.waiting;
-        delete el.data;
-        delete el.image;
-        q.push(el);
-    });
-    return encode(q);
-}
-
-function saveQueue() {
-    while (queue.length > MaxHistory) {
-        queue.shift();
-    }
-    fs.writeFileSync(setup.queue, encodeQueue());
-}
-
-function setFixedHeaders(req,res) {
-    res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
-    res.setHeader("Access-Control-Allow-Credentials", true);
-    res.setHeader("Access-Control-Allow-Headers", "X-Moto-Ajax");
-}
-
-function init(req, res, next) {
-    var parsed = url.parse(req.url, true);
-    req.gs = {
-        path: parsed.pathname,
-        query: parsed.query,
-    };
-    if (req.method === 'OPTIONS') {
-        setFixedHeaders(req,res);
-        res.setHeader("Allow", "GET,POST,OPTIONS");
-        res.end();
-    } else {
-        next();
-    }
-}
-
-function api(req, res, next) {
-    var path = req.gs.path,
-        query = req.gs.query,
-        remoteIP = req.connection.remoteAddress,
-        queueEntry;
-
-    // pass unless url starts with /api/
-    if (!path.startsWith(apiroot)) return next();
-
-    // require key when set in config
-    if (setup.key && query.key !== setup.key) {
-        res.writeHead(401);
-        res.end();
-        return;
-    }
-
-    switch (path.substring(apiroot.length)) {
-
-        // return list of print targets
-        case "targets":
-            let sent = false;
-            setFixedHeaders(req,res);
-            scanTargets()
-                .then(() => {
-                    let sent = true;
-                    res.end(encode(setup.targets));
-                })
-                .catch(error => {
-                    let sent = true;
-                    res.end(encode(setup.targets));
-                });
-            setTimeout(() => {
-                if (!sent) {
-                    res.end(encode(setup.targets));
-                }
-            }, 2000);
-            break;
-
-        case "print.cancel":
-            let rec = setup.targets[query.target];
-            if (rec && rec.filter === 'gx') {
-                console.log({cancel_print_on: rec});
-                let ctrl = new GX.Control();
-                ctrl
-                    .connect(rec.host, rec.port || 8899)
-                    .then(ctrl => {
-                        return ctrl.cancel()
-                    })
-                    .then(cancel => {
-                        console.log({cancel_print: true});
-                        res.end(encode({cancel}));
-                        return ctrl.close();
-                    })
-                    .catch(error => {
-                        console.log({cancel_print: false, error});
-                        res.end(encode({cancel: false, error}));
-                    });
-            } else {
-                res.end(encode({cancel:false}));
-            }
-            break;
-
-        // return list of last MaxHistory prints
-        case "queue":
-            setFixedHeaders(req,res);
-            res.end(encodeQueue());
-            break;
-
-        // delete entry queued at given time
-        case "queue.del":
-            let time = parseInt(query.time);
-            let clone = queue.slice();
-            for (let i=0; clone && i<clone.length; i++) {
-                if (clone[i].time.add === time) {
-                    queue.splice(i,1);
-                    saveQueue();
-                    clone = null;
-                }
-            }
-            res.end(encodeQueue());
-            break;
-
-        // return status of queued print from unique key
-        case "check":
-            queueEntry = queued[query.key];
-            setFixedHeaders(req,res);
-            res.end(encode(
-                queueEntry ? {
-                    key: queueEntry.key,
-                    status: queueEntry.status,
-                    error: queueEntry.error,
-                    done: queueEntry.done
-                } : {
-                    error: "invalid key"
-                }
-            ));
-            break;
-
-        // call blocks until queue task completes (when it's running)
-        case "wait":
-            queueEntry = queued[query.key];
-            setFixedHeaders(req,res);
-            if (queueEntry) {
-                log({wait_on: queueEntry.key});
-                queueEntry.waiting.push(res);
-            } else {
-                res.end(encode({error:"invalid queue key"}));
-            }
-            break;
-
-        // queue new print job and assign a unique queue key
-        case "print":
-            if (req.method !== 'POST') return next();
-            if (!query.filename) return next();
-            if (!query.target) return next();
-
-            var body = '';
-            var queueKey = new Date().getTime().toString(36);
-
-            queued[queueKey] = queueEntry = {
-                time: {                     // timestamps
-                    add: Date.now()
-                },
-                key:    queueKey,           // unique uid for queue entry
-                from:   remoteIP,           // client that submitted job
-                data:   null,               // gcode
-                done:   false,              // queue item completed
-                error:  false,              // an error occurred
-                status: "queueing",
-                target: query.target,
-                name:   query.filename || "gprint",
-                estime: query.time || 0,    // estimated print time
-                fused:  query.length || 0,  // filament used
-                waiting: [],                // http clients waiting
-                cleanup: []                 // tmp file names to cleanup
-            };
-
-            // create queue entry and save
-            queue.push(queueEntry);
-            saveQueue();
-
-            req.on('data', data => {
-                body += data
-            });
-
-            req.on('end', () => {
-                try {
-                    // if gcode is null terminated, extract the following
-                    // image buffer in base64 encoded png format
-                    body = body.split("\0");
-                    var gcode = body[0];
-                    var image = body[1] || null;
-
-                    queueEntry.size = gcode.length;
-                    queueEntry.data = gcode;
-                    queueEntry.status = "queued";
-                    queueEntry.time.queued = Date.now();
-                    saveQueue();
-
-                    log({key:queueKey, size:body.length, file:queueEntry.filename, target:req.gs.query.target});
-                    setFixedHeaders(req,res);
-                    res.end(encode({key:queueKey}));
-
-                    if (image) {
-                        png2bmp(Buffer.from(image, "base64"), bmp => {
-                            queueEntry.image = bmp;
-                            processTaskFilters(queueEntry);
-                        });
-                    } else {
-                        processTaskFilters(queueEntry);
-                    }
-                } catch (e) {
-                    console.log(e);
-                    log(e);
-                    res.writeHead(500);
-                    res.end(encode({error:e.toString()}));
-                }
-            });
-
-            break;
-
-        default:
-            next();
-    }
-
-}
-
-function processTaskFilters(queueEntry) {
-    var target = setup.targets[queueEntry.target],
-        filter = setup.filters[target.filter],
-        proc, args;
-
-    if (!target) throw "invalid target: " + queueEntry.target;
-    if (!filter) throw "missing filter for " + queueEntry.target;
-
-    target.key = queueEntry.target;
-    queueEntry.target = target;
-    queueEntry.tmpFile = tempFileName();
-
-    if (Array.isArray(filter)) {
-        queueEntry.filters = filter;
-        processFilter(queueEntry, 0);
-    } else {
-        queueEntry.filters = [ filter ];
-        processFilter(queueEntry, 0);
-    }
-}
-
-function processFilter(queueEntry, index) {
-    const filter = Object.assign({}, queueEntry.filters[index]);
-    const target = queueEntry.target;
-
-    if (filter.exec) {
-        var img = '';
-        var err = '';
-        var out = '';
-        var ext = filter.ext || '.gcode';
-        var fname = filter.name || queueEntry.name;
-        var file = queueEntry.tmpFile || tempFileName();
-
-        // emit file with data and add to cleanup list
-        fs.writeFileSync(file, queueEntry.data);
-        queueEntry.cleanup.push(file);
-
-        // storge image, if present, and add to cleanup list
-        if (queueEntry.image) {
-            img = tempFileName();
-            fs.writeFileSync(img, queueEntry.image.data);
-            queueEntry.cleanup.push(img);
+    lastmod: (path) => {
+        try {
+            return fs.statSync(path).mtime.getTime();
+        } catch (e) {
+            return 0;
         }
+    },
 
-        // add missing file name extension
-        if (fname.indexOf(ext) < 0) {
-            fname = fname + ext;
-         }
-
-        fname = fname.replace("{seq}", printSequence++);
-        fname = fname.replace("{name}", queueEntry.name);
-
-        args = (filter.args || []).slice();
-        args.forEach((val,idx) => {
-            // replace any provided key/values from target
-            for (var tkey in target) {
-                val = val.replace("{" + tkey + "}", target[tkey]);
+    mkdirs: (path) => {
+        let root = "";
+        path.forEach(seg => {
+            if (root) {
+                root = root + "/" + seg;
+            } else {
+                root = seg;
             }
-            val = val.replace("{file}", file);
-            val = val.replace("{print-time}", queueEntry.estime);
-            val = val.replace("{filament-used}", queueEntry.fused);
-            val = val.replace("{name}", fname);
-            val = val.replace("{image}", img);
-            args[idx] = val;
+            Util.lastmod(root) || fs.mkdirSync(root);
         });
+    },
 
-        queueEntry.time.exec = Date.now();
-        queueEntry.status = "exec " + filter.exec;
-        saveQueue();
+    encode: (obj,indent) => {
+        return JSON.stringify(obj,undefined,indent);
+    },
 
-        proc = spawn(filter.exec, args)
-            .on('error', error => {
-                log(error);
-                queueEntry.error = true;
-                queueEntry.status = error.toString();
-                queueEntry.time.error = Date.now();
-                saveQueue();
-                onFilterDone(queueEntry);
-            })
-            .on('exit', code => {
-                if (queueEntry.error) {
-                    log({exit_on_error: code});
-                    return;
-                }
-                if (code) {
-                    queueEntry.error = true;
-                    queueEntry.status = err;
-                    queueEntry.time.done = Date.now();
-                    saveQueue();
-                    onFilterDone(queueEntry);
-                    return;
-                }
-                processFilter(queueEntry, index + 1);
-            });
-
-        new linebuf(proc.stdout);
-        new linebuf(proc.stderr);
-
-        proc.stdout.on('line', line => { log({out: line.toString()}) });
-        proc.stderr.on('line', line => { log({err: line.toString()}) });
-
-        // proc.stdout.on('data', data => log({
-        //     out: out = data.toString()
-        // }));
-
-        // proc.stderr.on('data', error => log({
-        //     err: err = error.toString()
-        // }));
-
-        return;
+    decode: (str) => {
+        return JSON.parse(str);
     }
+};
 
-    onFilterDone(queueEntry);
-}
+/** Driver Utilities */
 
-function onFilterDone(queueEntry) {
-    if (!queueEntry.error) {
-        queueEntry.status = "sent";
+const Driver = {
+    cache: {},
+
+    get: (name) => {
+        if (Driver.cache[name]) {
+            return Driver.cache[name];
+        }
+        let driver = require(`../lib/driver-${name}.js`);
+        if (driver && driver.name === name && driver.init) {
+            Driver.cache[name] = driver;
+            driver.init({ Queue, Util, filters: setup.filters });
+            return driver;
+        }
+        Util.log({invalid_or_missing_driver: name});
+        return null;
     }
-    queueEntry.data = null;
-    queueEntry.done = true;
-    queueEntry.waiting.forEach(function(res) {
-        res.end(encode({
-            key: queueEntry.key,
-            status: queueEntry.status,
-            error: queueEntry.error,
-            done: queueEntry.done
-        }));
-    });
-    saveQueue();
-    // expire completed entries and tmp files after 10 minutes
-    setTimeout(function() {
-        delete queued[queueEntry.key];
-        queueEntry.cleanup.forEach(filename => {
+};
+
+/** Print Queue Utilities */
+
+const Queue = {
+
+    keyed: {},
+
+    ordered: [],
+
+    encode: () => {
+        const eq = [];
+        Queue.ordered.forEach(el => {
+            el = Object.assign({}, el);
+            delete el.promises;
+            delete el.waiting;
+            delete el.data;
+            delete el.image;
+            eq.push(el);
+        });
+        return Util.encode(eq,4);
+    },
+
+    load: (queue) => {
+        Queue.keyed = {};
+        Queue.ordered = queue;
+        queue.forEach(entry => {
+            Queue.keyed[entry.key] = entry;
+            // legacy import
+            if (entry.cleanup) entry.files = entry.cleanup;
+        });
+    },
+
+    save: () => {
+        const queue = Queue.ordered;
+        while (queue.length > MaxHistory) {
+            Queue.cleanup(queue.shift());
+        }
+        fs.writeFileSync(setup.queue, Queue.encode());
+    },
+
+    add: (key, entry) => {
+        Util.log({queue_add: entry.key, entry});
+        Queue.keyed[key] = entry;
+        Queue.ordered.push(entry);
+        Queue.save();
+    },
+
+    get: (key) => {
+        return Queue.keyed[key];
+    },
+
+    cleanup: (entry) => {
+        Util.log({queue_del: entry.key});
+        // remove temp files
+        entry.files.forEach(filename => {
             try { fs.unlinkSync(filename) } catch (e) { log(e) }
         });
-        saveQueue();
-    }, 600000);
-}
+    },
+
+    delete: (time) => {
+        const queue = Queue.ordered;
+        let qclone = queue.slice();
+        for (let i=0; qclone && i<qclone.length; i++) {
+            let entry = qclone[i];
+            if (entry.time.add === time) {
+                Queue.cleanup(entry);
+                // remove entry from queue
+                queue.splice(i,1);
+                // terminate for loop
+                qclone = null;
+                // update persisted queue
+                Queue.save();
+            }
+        }
+        return qclone === null;
+    }
+};
+
+/** Web Request Helpers */
+
+const Web = {
+
+    serve: require('serve-static'),
+
+    allowCORS: (req,res) => {
+        res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
+        res.setHeader("Access-Control-Allow-Credentials", true);
+        res.setHeader("Access-Control-Allow-Headers", "X-Moto-Ajax");
+    },
+
+    init: (req, res, next) => {
+        let parsed = url.parse(req.url, true);
+        req.gs = {
+            path: parsed.pathname,
+            query: parsed.query,
+        };
+        if (req.method === 'OPTIONS') {
+            Web.allowCORS(req,res);
+            res.setHeader("Allow", "GET,POST,OPTIONS");
+            res.end();
+        } else {
+            next();
+        }
+    },
+
+    api: (req, res, next) => {
+        let path = req.gs.path,
+            query = req.gs.query,
+            remoteIP = req.connection.remoteAddress,
+            queueEntry;
+
+        // pass unless url starts with /api/
+        if (!path.startsWith(apiroot)) return next();
+
+        // require key when set in config
+        if (setup.key && query.key !== setup.key) {
+            res.writeHead(401);
+            res.end();
+            return;
+        }
+
+        Web.allowCORS(req,res);
+
+        switch (path.substring(apiroot.length)) {
+
+            // return list of print targets
+            case "targets":
+                let sent = false;
+                scanTargets()
+                    .then(() => {
+                        let sent = true;
+                        res.end(Util.encode(setup.targets));
+                    })
+                    .catch(error => {
+                        let sent = true;
+                        res.end(Util.encode(setup.targets));
+                    });
+                setTimeout(() => {
+                    if (!sent) {
+                        res.end(Util.encode(setup.targets));
+                    }
+                }, 500);
+                break;
+
+            case "print.cancel":
+                let rec = setup.targets[query.target];
+                if (rec && rec.filter === 'gx') {
+                    console.log({cancel_print_on: rec});
+                    let ctrl = new GX.Control();
+                    ctrl
+                        .connect(rec.host, rec.port || 8899)
+                        .then(ctrl => {
+                            return ctrl.cancel()
+                        })
+                        .then(cancel => {
+                            console.log({cancel_print: true});
+                            res.end(Util.encode({cancel}));
+                            return ctrl.close();
+                        })
+                        .catch(error => {
+                            console.log({cancel_print: false, error});
+                            res.end(Util.encode({cancel: false, error}));
+                        });
+                } else {
+                    res.end(Util.encode({cancel:false}));
+                }
+                break;
+
+            // return list of last MaxHistory prints
+            case "queue":
+                res.end(Queue.encode());
+                break;
+
+            // delete entry queued at given time
+            case "queue.del":
+                Queue.delete(parseInt(query.time));
+                res.end(Queue.encode());
+                break;
+
+            // return status of queued print from unique key
+            case "check":
+                queueEntry = Queue.get(query.key);
+                res.end(Util.encode(
+                    queueEntry ? {
+                        key: queueEntry.key,
+                        status: queueEntry.status,
+                        error: queueEntry.error,
+                        done: queueEntry.done
+                    } : {
+                        error: "invalid key"
+                    }
+                ));
+                break;
+
+            // call blocks until queue task completes (when it's running)
+            case "wait":
+                queueEntry = Queue.get(query.key);
+                if (queueEntry) {
+                    Util.log({wait_on: queueEntry.key});
+                    queueEntry.waiting.push(res);
+                } else {
+                    res.end(Util.encode({error:"invalid queue key"}));
+                }
+                break;
+
+            // queue new print job and assign a unique queue key
+            case "print":
+                if (req.method !== 'POST') return next();
+                if (!query.filename) return next();
+                if (!query.target) return next();
+
+                let target = setup.targets[query.target];
+                if (!target) {
+                    res.writeHead(404);
+                    res.end(Util.encode({error:"invalid device", device: query.target}));
+                    return;
+                }
+
+                let driver = Driver.get(target.driver || "exec");
+                if (!driver) {
+                    res.writeHead(404);
+                    res.end(Util.encode({error:"misconfigured device", device: query.target}));
+                    return;
+                }
+
+                let body = '';
+                let queueKey = new Date().getTime().toString(36);
+                let filename = query.filename || "gprint";
+                let estime = parseInt(query.time || 0);
+                let fused = parseInt(query.length || 0);
+
+                queueEntry = {
+                    time: {                     // timestamps
+                        add: Date.now(),        // queue entry creation
+                        queued: null,           // file fully received
+                        spooled: null           // file sent to target
+                    },
+                    key:    queueKey,           // unique uid for queue entry
+                    from:   remoteIP,           // client that submitted job
+                    data:   null,               // raw gcode or file
+                    done:   false,              // queue item completed
+                    error:  false,              // an error occurred
+                    status: "queueing",         // human readable status
+                    target: query.target,       // named device target
+                    name:   filename,           // filename as seen by device
+                    estime: estime,             // estimated print time
+                    fused:  fused,              // filament used
+                    waiting: [],                // http clients waiting
+                    files: []                   // tmp file names to cleanup
+                };
+
+                // create queue entry and save
+                Queue.add(queueKey, queueEntry);
+
+                // accumulate post data
+                req.on('data', data => {
+                    body += data
+                });
+
+                // file receive completed
+                req.on('end', () => {
+                    try {
+                        // if gcode is null terminated, extract the following
+                        // image buffer in base64 encoded png format
+                        body = body.split("\0");
+                        let gcode = body[0];
+                        let image = body[1] || null;
+
+                        queueEntry.size = gcode.length;
+                        queueEntry.data = gcode;
+                        queueEntry.status = "queued";
+                        queueEntry.time.queued = Date.now();
+
+                        Queue.save();
+
+                        res.end(Util.encode({key:queueKey}));
+
+                        Util.log({
+                            key: queueKey,
+                            size: body.length,
+                            file: queueEntry.filename,
+                            target: query.target
+                        });
+
+                        let promse;
+                        if (image) {
+                            promise = png2bmp(Buffer.from(image, "base64"))
+                                .then(bmp => {
+                                    queueEntry.image = bmp;
+                                    return driver.send(target, queueEntry);
+                                });
+                        } else {
+                            promise = driver.send(target, queueEntry);
+                        }
+                        promise
+                            .then(sent => {
+                                console.log({sent});
+                            })
+                            .catch(error => {
+                                console.log({send_error: error});
+                            });
+                    } catch (e) {
+                        console.log(e);
+                        Util.log(e);
+                        res.writeHead(500);
+                        res.end(Util.encode({error:e.toString()}));
+                    }
+                });
+
+                break;
+
+            default:
+                next();
+        }
+    }
+};
 
 let lastScan = 0;
 let scanning = null;
@@ -474,17 +443,14 @@ var fs = require('fs'),
     url = require('url'),
     http = require('http'),
     https = require('https')
-    serve = require('serve-static')
     connect = require('connect'),
     linebuf = require("buffer.lines"),
-    spawn = require('child_process').spawn,
     png2bmp = require('../lib/image').png2bmp,
     WebSocket = require('ws'),
+    http_server = null,
+    https_server = null,
     printSequence = 0,
     tempIndex = 0,
-    tempDir = null,
-    queued = {},
-    queue = [],
     cwd = process.cwd(),
     key = null,
     fn = null,
@@ -575,6 +541,7 @@ process.argv.slice(2).forEach(v => {
     }
 });
 
+/** overlay file-based config onto system defaults */
 function mergeConfig(config) {
     for (let key in config) {
         switch (key) {
@@ -590,38 +557,36 @@ function mergeConfig(config) {
     return setup;
 }
 
-if (setup['config']) setup = mergeConfig(decode(fs.readFileSync(setup['config'])));
+if (setup['config']) setup = mergeConfig(Util.decode(fs.readFileSync(setup['config'])));
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
-
-/** temp dir for filtering */
-tempDir = cwd + "/tmp";
-mkdirs([ tempDir ]);
 
 var apiroot = "/api/",
     report = ["grid:host"],
     wport = setup['http-port'] || setup['port'],
     sport = setup['https-port'],
     handler = connect()
-        .use(init)
-        .use(api)
-        .use(serve(cwd + "/web/host/"))
+        .use(Web.init)
+        .use(Web.api)
+        .use(Web.serve(cwd + "/web/host/"))
     ;
 
+/** open http port when specified */
 if (wport) {
-    var http_server = http.createServer(handler).listen(wport);
+    http_server = http.createServer(handler).listen(wport);
     report.push("http @ " + wport);
 }
 
+/** open https port when specified */
 if (sport) {
-    var https_server = https.createServer({
+    https_server = https.createServer({
         key: setup['ssl-key'],
         cert: setup['ssl-cert']
     }, handler).listen(sport);
     report.push("https @ " + sport);
 }
 
-// start disconnected web socket server that can be shared
+/** start disconnected web socket server that can be shared */
 if (setup['wss']) {
     report.push("websockets");
     const wss = new WebSocket.Server({ noServer: true });
@@ -642,16 +607,16 @@ if (setup['wss']) {
     if (https_server) https_server.on("upgrade", upgrade);
 }
 
-// reload old queue state (TODO repair and delete dangling tmp files)
-if (lastmod(setup.queue)) queue = decode(fs.readFileSync(setup.queue));
+/** reload saved queue state (TODO repair and delete dangling tmp files) */
+if (Util.lastmod(setup.queue)) Queue.load(Util.decode(fs.readFileSync(setup.queue)));
 
-// output date
+/** output date */
 report.push(new Date().toString());
 
 /** startup report */
-log(report.join(" | "));
+Util.log(report.join(" | "));
 
-// initial scan of targets
+/** initial scan of targets */
 scanTargets();
 
 /**
