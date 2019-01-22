@@ -11,7 +11,6 @@ function targets(t) {
         '<table><thead><tr>',
         cell('th', div('target')),
         cell('th', div('info')),
-        cell('th', div('filter')),
         cell('th', div('status')),
         cell('th', div('file')),
         cell('th', div('nozzle')),
@@ -26,7 +25,6 @@ function targets(t) {
             html.push('<tr>');
             html.push(cell('th', k));
             html.push(cell('td', v.comment || ''));
-            html.push(cell('td', v.filter || ''));
             if (stat) {
                 let pct = stat.print.split(' ');
                 pct = pct[pct.length-1].split('/').map(v => parseFloat(v));

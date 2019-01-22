@@ -65,6 +65,27 @@ const Driver = {
     }
 };
 
+/** Active Devices */
+
+const Devices = {
+    map: {},
+
+    get: (name) => {
+        return Devices.map[name];
+    },
+
+    encode: () => {
+        const out = {};
+        const map = Devices.map;
+        for (let key in map) {
+            let el = Object.assign({}, map[key]);
+            delete el.driver;
+            out[key] = el;
+        }
+        return Util.encode(out,4);
+    }
+};
+
 /** Print Queue Utilities */
 
 const Queue = {
@@ -173,7 +194,8 @@ const Web = {
         let path = req.gs.path,
             query = req.gs.query,
             remoteIP = req.connection.remoteAddress,
-            queueEntry;
+            queueEntry,
+            device;
 
         // pass unless url starts with /api/
         if (!path.startsWith(apiroot)) return next();
@@ -189,47 +211,9 @@ const Web = {
 
         switch (path.substring(apiroot.length)) {
 
-            // return list of print targets
+            // return list of print Devices
             case "targets":
-                let sent = false;
-                scanTargets()
-                    .then(() => {
-                        let sent = true;
-                        res.end(Util.encode(setup.targets));
-                    })
-                    .catch(error => {
-                        let sent = true;
-                        res.end(Util.encode(setup.targets));
-                    });
-                setTimeout(() => {
-                    if (!sent) {
-                        res.end(Util.encode(setup.targets));
-                    }
-                }, 500);
-                break;
-
-            case "print.cancel":
-                let rec = setup.targets[query.target];
-                if (rec && rec.filter === 'gx') {
-                    console.log({cancel_print_on: rec});
-                    let ctrl = new GX.Control();
-                    ctrl
-                        .connect(rec.host, rec.port || 8899)
-                        .then(ctrl => {
-                            return ctrl.cancel()
-                        })
-                        .then(cancel => {
-                            console.log({cancel_print: true});
-                            res.end(Util.encode({cancel}));
-                            return ctrl.close();
-                        })
-                        .catch(error => {
-                            console.log({cancel_print: false, error});
-                            res.end(Util.encode({cancel: false, error}));
-                        });
-                } else {
-                    res.end(Util.encode({cancel:false}));
-                }
+                res.end(Devices.encode());
                 break;
 
             // return list of last MaxHistory prints
@@ -275,14 +259,14 @@ const Web = {
                 if (!query.filename) return next();
                 if (!query.target) return next();
 
-                let target = setup.targets[query.target];
-                if (!target) {
+                device = Devices.get[query.target];
+                if (!device) {
                     res.writeHead(404);
                     res.end(Util.encode({error:"invalid device", device: query.target}));
                     return;
                 }
 
-                let driver = Driver.get(target.driver || "exec");
+                let driver = device.driver;
                 if (!driver) {
                     res.writeHead(404);
                     res.end(Util.encode({error:"misconfigured device", device: query.target}));
@@ -308,6 +292,7 @@ const Web = {
                     error:  false,              // an error occurred
                     status: "queueing",         // human readable status
                     target: query.target,       // named device target
+                    device: device,             // device record
                     name:   filename,           // filename as seen by device
                     estime: estime,             // estimated print time
                     fused:  fused,              // filament used
@@ -353,10 +338,10 @@ const Web = {
                             promise = png2bmp(Buffer.from(image, "base64"))
                                 .then(bmp => {
                                     queueEntry.image = bmp;
-                                    return driver.send(target, queueEntry);
+                                    return driver.send(device, queueEntry);
                                 });
                         } else {
-                            promise = driver.send(target, queueEntry);
+                            promise = driver.send(device, queueEntry);
                         }
                         promise
                             .then(sent => {
@@ -375,64 +360,60 @@ const Web = {
 
                 break;
 
+            case "print.cancel":
+                device = Devices.get(query.target);
+                if (!device) {
+                    res.end(Util.encode({cancel: false, error: "invalid device"}));
+                } else {
+                    if (device.driver.cancel) {
+                        device.driver.cancel(device)
+                            .then(ok => {
+                                res.end(Util.encode({cancel: true}));
+                            })
+                            .catch(error => {
+                                res.end(Util.encode({cancel: false, error}));
+                            })
+                    } else {
+                        res.end(Util.encode({cancel: false, error: "device no cancel"}));
+                    }
+                }
+                break;
+
             default:
                 next();
         }
     }
 };
 
-let lastScan = 0;
-let scanning = null;
-
-function scanTargets() {
-    return new Promise((resolve, reject) => {
-        let running = 0;
-        if (Date.now() - lastScan < 6000) {
-            resolve();
-            return;
+/** turn target setup records in active records */
+function resolveDevices() {
+    const resolved = {};
+    for (let name in setup.targets) {
+        let device = setup.targets[name];
+        let type = device.driver || "exec";
+        let driver = Driver.get(type);
+        if (!driver) {
+            Util.log({missing_driver_for: name, type});
+            continue;
         }
-        if (scanning) {
-            scanning.push(resolve);
-            return;
-        }
-        scanning = [ resolve ];
-        const dec = (val) => {
-            running = running - val;
-            if (running === 0) {
-                lastScan = Date.now();
-                scanning.forEach(rf => {
-                    rf();
+        let active = Object.assign({}, device);
+        active.name = name;
+        active.driver = driver;
+        resolved[name] = active;
+        Util.log({activated: name, type});
+        if (driver.status) {
+            driver
+                .status(active)
+                .then(status => {
+                    active.status = status;
+                    // Util.log({name, status});
                 })
-                scanning = null;
-            }
-        };
-        for (let key in setup.targets) {
-            let rec = setup.targets[key];
-            let host = rec.host;
-            let port = rec.port || 8899;
-            if (rec.filter === 'gx' && rec.host) {
-                running++;
-                let ctrl = new GX.Control();
-                ctrl
-                    .connect(rec.host, rec.port || 8899)
-                    .then(ctrl => {
-                        return ctrl.getStatus()
-                    })
-                    .then(status => {
-                        rec.status = status;
-                        return ctrl.close();
-                    })
-                    .then(() => {
-                        dec(1);
-                    })
-                    .catch(error => {
-                        console.log({scan_fail: error});
-                        dec(1);
-                    });
-            }
+                .catch(error => {
+                    Util.log({name, error});
+                });
         }
-        dec(0);
-    });
+    }
+    Devices.map = resolved;
 }
 
 /* *********************************************
@@ -476,7 +457,7 @@ var fs = require('fs'),
         "ssl-cert": "etc/ssl-local-cert.pem",
         "ssl-key": "etc/ssl-local-key.pem",
         // your config should provide these
-        "targets" : { },
+        "Devices" : { },
         // your config filters will be added to this list
         "filters" : {
             "x3g" : {
@@ -545,7 +526,7 @@ process.argv.slice(2).forEach(v => {
 function mergeConfig(config) {
     for (let key in config) {
         switch (key) {
-            case 'targets':
+            case 'Devices':
             case 'filters':
                 Object.assign(setup[key], config[key]);
                 break;
@@ -616,8 +597,8 @@ report.push(new Date().toString());
 /** startup report */
 Util.log(report.join(" | "));
 
-/** initial scan of targets */
-scanTargets();
+/** resolve Devices from config records */
+resolveDevices();
 
 /**
  * store org <> host map for auto-grid-host in kiri
