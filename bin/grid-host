@@ -2,7 +2,6 @@
 
 /** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
 
-const GX = require('../lib/gx.js');
 const MaxHistory = 100;
 
 /** Common Utilities */
@@ -54,14 +53,19 @@ const Driver = {
         if (Driver.cache[name]) {
             return Driver.cache[name];
         }
-        let driver = require(`../lib/driver-${name}.js`);
-        if (driver && driver.name === name && driver.init) {
-            Driver.cache[name] = driver;
-            driver.init({ Queue, Util, filters: setup.filters });
-            return driver;
+        try {
+            let driver = require(`../lib/driver-${name}.js`);
+            if (driver && driver.name === name && driver.init) {
+                Driver.cache[name] = driver;
+                driver.init({ Queue, Util, filters: setup.filters });
+                return driver;
+            }
+            console.log({invalid_driver: name});
+            return null;
+        } catch (error) {
+            console.log({missing_driver: name, error});
+            return null;
         }
-        Util.log({invalid_or_missing_driver: name});
-        return null;
     }
 };
 
@@ -366,7 +370,8 @@ const Web = {
                     res.end(Util.encode({cancel: false, error: "invalid device"}));
                 } else {
                     if (device.driver.cancel) {
-                        device.driver.cancel(device)
+                        device.driver
+                            .cancel(device)
                             .then(ok => {
                                 res.end(Util.encode({cancel: true}));
                             })
@@ -385,6 +390,25 @@ const Web = {
     }
 };
 
+/** update active device status */
+function updateActive() {
+    for (let name in Devices.map) {
+        let active = Devices.map[name];
+        let driver = active.driver;
+        if (driver.status) {
+            driver
+                .status(active)
+                .then(status => {
+                    active.status = status;
+                    Util.log({name, status});
+                })
+                .catch(error => {
+                    Util.log({name, error});
+                });
+        }
+    }
+}
+
 /** turn target setup records in active records */
 function resolveDevices() {
     const resolved = {};
@@ -393,7 +417,7 @@ function resolveDevices() {
         let type = device.driver || "exec";
         let driver = Driver.get(type);
         if (!driver) {
-            Util.log({missing_driver_for: name, type});
+            // Util.log({missing_driver_for: name, type});
             continue;
         }
         let active = Object.assign({}, device);
@@ -401,19 +425,9 @@ function resolveDevices() {
         active.driver = driver;
         resolved[name] = active;
         Util.log({activated: name, type});
-        if (driver.status) {
-            driver
-                .status(active)
-                .then(status => {
-                    active.status = status;
-                    // Util.log({name, status});
-                })
-                .catch(error => {
-                    Util.log({name, error});
-                });
-        }
     }
     Devices.map = resolved;
+    setTimeout(updateActive, 1000);
 }
 
 /* *********************************************
