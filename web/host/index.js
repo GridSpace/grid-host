@@ -12,7 +12,7 @@ function targets(t) {
         cell('th', div('target')),
         cell('th', div('info')),
         cell('th', div('status')),
-        cell('th', div('file')),
+        cell('th', div('%')),
         cell('th', div('nozzle')),
         cell('th', div('bed')),
         cell('th', div('action')),
@@ -26,13 +26,13 @@ function targets(t) {
             html.push(cell('th', k));
             html.push(cell('td', v.comment || ''));
             if (stat) {
-                let pct = stat.print.split(' ');
+                let pct = (stat.print || "nothing 0/100").split(' ');
                 pct = pct[pct.length-1].split('/').map(v => parseFloat(v));
                 pct = ((pct[0]/pct[1]) * 100).toFixed(1);
                 html.push(cell('td', stat.state));
                 html.push(cell('td', `${pct}%`));
-                html.push(cell('td', stat.temps.T0.join(' / ')));
-                html.push(cell('td', stat.temps.B.join(' / ')));
+                html.push(cell('td', stat.temps ? stat.temps.T0.join(' / ') : ''));
+                html.push(cell('td', stat.temps ? stat.temps.B.join(' / ') : ''));
                 html.push(cell('td', 'cancel', {onclick: `print_cancel('${k}')`}));
             }
             html.push('</tr>');
@@ -118,11 +118,22 @@ function queue(q) {
     $('queue').innerHTML = html.join('');
 }
 
-function init() {
+function updateTargets() {
     fetch("/api/targets")
         .then(r => r.json())
         .then(t => targets(t));
+}
+
+function updateQueue() {
     fetch("/api/queue")
         .then(r => r.json())
         .then(q => queue(q));
+}
+
+function init() {
+    setInterval(updateTargets, 1000);
+    setInterval(updateQueue, 5000);
+
+    updateTargets();
+    updateQueue();
 }

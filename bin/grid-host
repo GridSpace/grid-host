@@ -41,6 +41,10 @@ const Util = {
 
     decode: (str) => {
         return JSON.parse(str);
+    },
+
+    tempFileName: () => {
+        return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
     }
 };
 
@@ -102,6 +106,7 @@ const Queue = {
         const eq = [];
         Queue.ordered.forEach(el => {
             el = Object.assign({}, el);
+            delete el.device;
             delete el.promises;
             delete el.waiting;
             delete el.data;
@@ -130,7 +135,7 @@ const Queue = {
     },
 
     add: (key, entry) => {
-        Util.log({queue_add: entry.key, entry});
+        Util.log({queue_add: entry.key, file: entry.name, target: entry.target, from: entry.from});
         Queue.keyed[key] = entry;
         Queue.ordered.push(entry);
         Queue.save();
@@ -138,6 +143,35 @@ const Queue = {
 
     get: (key) => {
         return Queue.keyed[key];
+    },
+
+    done: (entry, error) => {
+        Util.log({queue_done: entry.key, file: entry.name, error});
+
+        if (error) {
+            entry.error = true;
+            entry.status = Util.encode(error);
+            entry.time.error = Date.now();
+        } else {
+            entry.status = "done";
+            entry.time.spooled = Date.now();
+        }
+
+        entry.data = null;
+        entry.done = true;
+
+        // notify waiters
+        entry.waiting.forEach(function(res) {
+            res.end(Util.encode({
+                key: entry.key,
+                status: entry.status,
+                error: entry.error,
+                done: entry.done
+            }));
+        });
+
+        // update queue
+        Queue.save();
     },
 
     cleanup: (entry) => {
@@ -250,7 +284,7 @@ const Web = {
             case "wait":
                 queueEntry = Queue.get(query.key);
                 if (queueEntry) {
-                    Util.log({wait_on: queueEntry.key});
+                    // Util.log({wait_on: queueEntry.key});
                     queueEntry.waiting.push(res);
                 } else {
                     res.end(Util.encode({error:"invalid queue key"}));
@@ -263,7 +297,7 @@ const Web = {
                 if (!query.filename) return next();
                 if (!query.target) return next();
 
-                device = Devices.get[query.target];
+                device = Devices.get(query.target);
                 if (!device) {
                     res.writeHead(404);
                     res.end(Util.encode({error:"invalid device", device: query.target}));
@@ -291,13 +325,15 @@ const Web = {
                     },
                     key:    queueKey,           // unique uid for queue entry
                     from:   remoteIP,           // client that submitted job
+                    name:   filename,           // filename as seen by device
                     data:   null,               // raw gcode or file
+                    size:   0,                  // size of raw gcode
+                    image:  null,               // screenshot of platform
                     done:   false,              // queue item completed
                     error:  false,              // an error occurred
                     status: "queueing",         // human readable status
-                    target: query.target,       // named device target
-                    device: device,             // device record
-                    name:   filename,           // filename as seen by device
+                    target: query.target,       // device name
+                    device: device,             // device structure
                     estime: estime,             // estimated print time
                     fused:  fused,              // filament used
                     waiting: [],                // http clients waiting
@@ -318,11 +354,12 @@ const Web = {
                         // if gcode is null terminated, extract the following
                         // image buffer in base64 encoded png format
                         body = body.split("\0");
-                        let gcode = body[0];
-                        let image = body[1] || null;
+                        let gcode = Buffer.from(body[0]);
+                        let image = body[1] ? Buffer.from(body[1], 'base64') : null;
 
                         queueEntry.size = gcode.length;
                         queueEntry.data = gcode;
+                        queueEntry.image = image;
                         queueEntry.status = "queued";
                         queueEntry.time.queued = Date.now();
 
@@ -331,28 +368,21 @@ const Web = {
                         res.end(Util.encode({key:queueKey}));
 
                         Util.log({
-                            key: queueKey,
-                            size: body.length,
+                            print: queueKey,
                             file: queueEntry.filename,
+                            size: gcode.length,
                             target: query.target
                         });
 
-                        let promse;
-                        if (image) {
-                            promise = png2bmp(Buffer.from(image, "base64"))
-                                .then(bmp => {
-                                    queueEntry.image = bmp;
-                                    return driver.send(device, queueEntry);
-                                });
-                        } else {
-                            promise = driver.send(device, queueEntry);
-                        }
-                        promise
+                        driver
+                            .send(device, queueEntry)
                             .then(sent => {
-                                console.log({sent});
+                                console.log({send_ok: sent});
+                                Queue.done(queueEntry);
                             })
                             .catch(error => {
                                 console.log({send_error: error});
+                                Queue.done(queueEntry, error);
                             });
                     } catch (e) {
                         console.log(e);
@@ -400,10 +430,9 @@ function updateActive() {
                 .status(active)
                 .then(status => {
                     active.status = status;
-                    Util.log({name, status});
                 })
                 .catch(error => {
-                    Util.log({name, error});
+                    // Util.log({name, error});
                 });
         }
     }
@@ -423,11 +452,12 @@ function resolveDevices() {
         let active = Object.assign({}, device);
         active.name = name;
         active.driver = driver;
+        active.status = { state: "offline" };
         resolved[name] = active;
         Util.log({activated: name, type});
     }
     Devices.map = resolved;
-    setTimeout(updateActive, 1000);
+    setInterval(updateActive, 1000);
 }
 
 /* *********************************************
@@ -440,13 +470,12 @@ var fs = require('fs'),
     https = require('https')
     connect = require('connect'),
     linebuf = require("buffer.lines"),
-    png2bmp = require('../lib/image').png2bmp,
     WebSocket = require('ws'),
     http_server = null,
     https_server = null,
-    printSequence = 0,
     tempIndex = 0,
     cwd = process.cwd(),
+    tempDir = cwd + "/tmp";
     key = null,
     fn = null,
     setup = {
@@ -551,6 +580,8 @@ function mergeConfig(config) {
     }
     return setup;
 }
+
+Util.mkdirs([ tempDir ]);
 
 if (setup['config']) setup = mergeConfig(Util.decode(fs.readFileSync(setup['config'])));
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
