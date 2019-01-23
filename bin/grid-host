@@ -284,8 +284,17 @@ const Web = {
             case "wait":
                 queueEntry = Queue.get(query.key);
                 if (queueEntry) {
-                    // Util.log({wait_on: queueEntry.key});
-                    queueEntry.waiting.push(res);
+                    if (queueEntry.done) {
+                        res.end(Util.encode({
+                            key: queueEntry.key,
+                            status: queueEntry.status,
+                            error: queueEntry.error,
+                            done: queueEntry.done
+                        }));
+                    } else {
+                        // Util.log({wait_on: queueEntry.key});
+                        queueEntry.waiting.push(res);
+                    }
                 } else {
                     res.end(Util.encode({error:"invalid queue key"}));
                 }
