@@ -17,9 +17,8 @@ hr {
     margin: 10px 0 10px 0;
     border-top: 1px solid #555;
 }
-img {
-    max-height: 100%;
-    width: auto;
+th,td {
+    white-space: nowrap;
 }
 #top {
     padding: 0 8px 0 8px;
@@ -29,15 +28,25 @@ img {
     padding: 0 10px 0 10px;
 }
 #middle {
+    position: relative;
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    align-items: flex-start;
+    min-height: 30%;
     height: 30%;
     overflow: auto;
 }
 #cam {
+    display: flex;
+    flex-direction: row;
     flex-grow: 1;
     margin-left: 20px;
+    width: 100%;
+}
+#cam img {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
 }
 #bottom {
     display: flex;
