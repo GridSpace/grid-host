@@ -55,11 +55,18 @@ function targets(t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
             let d = $(`device-${k}`);
+            let time = Date.now().toString(36);
             d.onmouseover = () => {
-                $('cam').innerHTML = `<img src="${v.image || '' }" />`;
+                $('image').src = `${v.image || ""}?${time}`;
+                // if (v.image) {
+                //     $('cam').innerHTML = `<img src="${v.image}?${time}" />`;
+                // } else {
+                //     $('cam').innerHTML = "";
+                // }
             };
             d.onmouseout = () => {
-                $('cam').innerHTML = '';
+                $('image').src = "";
+                // $('cam').innerHTML = '';
             };
         }
     }
