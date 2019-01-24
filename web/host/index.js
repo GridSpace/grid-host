@@ -58,15 +58,9 @@ function targets(t) {
             let time = Date.now().toString(36);
             d.onmouseover = () => {
                 $('image').src = `${v.image || ""}?${time}`;
-                // if (v.image) {
-                //     $('cam').innerHTML = `<img src="${v.image}?${time}" />`;
-                // } else {
-                //     $('cam').innerHTML = "";
-                // }
             };
             d.onmouseout = () => {
                 $('image').src = "";
-                // $('cam').innerHTML = '';
             };
         }
     }
