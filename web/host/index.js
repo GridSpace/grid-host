@@ -13,7 +13,8 @@ function targets(t) {
         cell('th', div('info')),
         cell('th', div('status')),
         cell('th', div('%')),
-        cell('th', div('nozzle')),
+        cell('th', div('nozzle 0')),
+        cell('th', div('nozzle 1')),
         cell('th', div('bed')),
         cell('th', div('action')),
         '</tr></thead><tbody>'
@@ -22,17 +23,27 @@ function targets(t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
             let stat = v.status;
-            html.push('<tr>');
+            html.push(`<tr id="device-${k}">`);
             html.push(cell('th', k));
             html.push(cell('td', v.comment || ''));
             if (stat) {
-                let pct = (stat.print || "nothing 0/100").split(' ');
-                pct = pct[pct.length-1].split('/').map(v => parseFloat(v));
-                pct = ((pct[0]/pct[1]) * 100).toFixed(1);
-                html.push(cell('td', stat.state));
-                html.push(cell('td', `${pct}%`));
-                html.push(cell('td', stat.temps ? stat.temps.T0.join(' / ') : ''));
-                html.push(cell('td', stat.temps ? stat.temps.B.join(' / ') : ''));
+                html.push(cell('td', stat.state || '-'));
+                html.push(cell('td', `${stat.progress || 0}%`));
+                if (stat.temps && stat.temps.T0) {
+                    html.push(cell('td', stat.temps.T0.join(' / ')));
+                } else {
+                    html.push(cell('td', '-'));
+                }
+                if (stat.temps && stat.temps.T1) {
+                    html.push(cell('td', stat.temps.T1.join(' / ')));
+                } else {
+                    html.push(cell('td', '-'));
+                }
+                if (stat.temps && stat.temps.B) {
+                    html.push(cell('td', stat.temps.B.join(' / ')));
+                } else {
+                    html.push(cell('td', '-'));
+                }
                 html.push(cell('td', 'cancel', {onclick: `print_cancel('${k}')`}));
             }
             html.push('</tr>');
@@ -40,6 +51,18 @@ function targets(t) {
     }
     html.push('</tbody></table>');
     $('targets').innerHTML = html.join('');
+    for (let k in t) {
+        if (t.hasOwnProperty(k)) {
+            let v = t[k];
+            let d = $(`device-${k}`);
+            d.onmouseover = () => {
+                $('cam').innerHTML = `<img src="${v.image || '' }" />`;
+            };
+            d.onmouseout = () => {
+                $('cam').innerHTML = '';
+            };
+        }
+    }
 }
 
 function div(text) {
@@ -131,8 +154,8 @@ function updateQueue() {
 }
 
 function init() {
-    setInterval(updateTargets, 1000);
-    setInterval(updateQueue, 5000);
+    // setInterval(updateTargets, 1000);
+    // setInterval(updateQueue, 5000);
 
     updateTargets();
     updateQueue();

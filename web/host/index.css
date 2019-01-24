@@ -17,12 +17,38 @@ hr {
     margin: 10px 0 10px 0;
     border-top: 1px solid #555;
 }
+img {
+    max-height: 100%;
+    width: auto;
+}
 #top {
     padding: 0 8px 0 8px;
     text-align: center;
 }
 #top label {
     padding: 0 10px 0 10px;
+}
+#middle {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: 30%;
+    overflow: auto;
+}
+#cam {
+    flex-grow: 1;
+    margin-left: 20px;
+}
+#bottom {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    flex-grow: 1;
+    overflow: auto;
+}
+#preview {
+    flex-grow: 1;
+    margin-left: 20px;
 }
 label {
     font-weight: bold;
@@ -51,7 +77,9 @@ td[onclick]:hover {
     cursor: pointer;
     background-color: #f5f5f5;
 }
-#queue {
-    flex-grow: 1;
-    overflow: auto;
+tr:hover th {
+    background-color: #fee;
+}
+tr:hover td {
+    background-color: #fee;
 }
