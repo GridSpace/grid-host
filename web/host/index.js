@@ -5,6 +5,10 @@ function $(id) {
     return document.getElementById(id);
 }
 
+function browse(url) {
+    window.open(url, "_web_control_");
+}
+
 function targets(t) {
     lastT = Object.assign({}, t);
     let html = [
@@ -24,7 +28,9 @@ function targets(t) {
             let v = t[k];
             let stat = v.status;
             html.push(`<tr id="device-${k}">`);
-            html.push(cell('th', k));
+            html.push(cell('th', k, {
+                onclick: `browse('${v.web}')`
+            }));
             html.push(cell('td', v.comment || ''));
             if (stat) {
                 html.push(cell('td', stat.state || '-'));
@@ -142,13 +148,19 @@ function queue(q) {
     $('queue').innerHTML = html.join('');
 }
 
-function updateTargets() {
+function updateTargets(force) {
+    if (!force && localStorage.stop === 'true') {
+        return;
+    }
     fetch("/api/targets")
         .then(r => r.json())
         .then(t => targets(t));
 }
 
-function updateQueue() {
+function updateQueue(force) {
+    if (!force && localStorage.stop === 'true') {
+        return;
+    }
     fetch("/api/queue")
         .then(r => r.json())
         .then(q => queue(q));
@@ -158,6 +170,6 @@ function init() {
     setInterval(updateTargets, 1000);
     setInterval(updateQueue, 5000);
 
-    updateTargets();
-    updateQueue();
+    updateTargets(true);
+    updateQueue(true);
 }
