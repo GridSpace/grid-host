@@ -154,8 +154,8 @@ function updateQueue() {
 }
 
 function init() {
-    // setInterval(updateTargets, 1000);
-    // setInterval(updateQueue, 5000);
+    setInterval(updateTargets, 1000);
+    setInterval(updateQueue, 5000);
 
     updateTargets();
     updateQueue();
