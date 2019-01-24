@@ -178,7 +178,7 @@ const Queue = {
         Util.log({queue_del: entry.key});
         // remove temp files
         entry.files.forEach(filename => {
-            try { fs.unlinkSync(filename) } catch (e) { log(e) }
+            try { fs.unlinkSync(filename) } catch (e) { console.log(e) }
         });
     },
 
@@ -395,7 +395,6 @@ const Web = {
                             });
                     } catch (e) {
                         console.log(e);
-                        Util.log(e);
                         res.writeHead(500);
                         res.end(Util.encode({error:e.toString()}));
                     }
