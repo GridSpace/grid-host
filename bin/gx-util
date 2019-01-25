@@ -20,8 +20,8 @@ usage() {
 (
     date
     echo "gx-util ${host} ${port} ${file} ${time} ${length} ${name} ${image}"
-    node lib/gx.js make "${fileout}" "${file}" "${image}" "${time}" "${length}"
-    node lib/gx.js send "${fileout}" "${host}" "${port}" "${name}"
+    node lib/lib-gx.js make "${fileout}" "${file}" "${image}" "${time}" "${length}"
+    node lib/lib-gx.js send "${fileout}" "${host}" "${port}" "${name}"
     code=$?
     echo "cleanup tmp ${fileout}" && rm -f "${fileout}"
     exit $code

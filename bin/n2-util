@@ -15,7 +15,7 @@ usage() {
 (
     date
     echo "n2-util ${host} ${file}"
-    node lib/n2.js print "${file}" "${host}" "${port}" "${name}"
+    node lib/lib-n2.js print "${file}" "${host}" "${port}" "${name}"
     code=$?
     exit $code
 ) || exit 1
