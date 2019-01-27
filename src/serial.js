@@ -37,6 +37,7 @@ let maxout = 0;                 // high water mark for buffer
 let debug = true;               // echo commands
 let paused = false;             // queue processing paused
 let processing = false;         // queue being drained
+let sdspool = true;             // spool to sd for printing
 let dircache = [];              // cache of files in watched directory
 let clients = [];               // connected clients
 let buf = [];                   // output line buffer
@@ -154,9 +155,19 @@ const sendFile = (filename) => {
     evtlog("send: " + filename);
     try {
         let gcode = fs.readFileSync(filename).toString().split("\n");
-        gcode.forEach(line => {
-            queue(line);
-        });
+        if (sdspool) {
+            evtlog(`spooling "${filename} to SD"`);
+            sport.write(`M28 ${filename}`);
+            sport.write(line + "\n");
+            sport.write(`M29`);
+            evtlog(`printing "${filename} from SD"`);
+            sport.write(`M23 ${filename}`);
+            sport.write(`M24`);
+        } else {
+            gcode.forEach(line => {
+                queue(line);
+            });
+        }
     } catch (e) {
         evtlog("error sending file");
         console.log(e);

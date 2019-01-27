@@ -58,7 +58,7 @@ const Driver = {
             return Driver.cache[name];
         }
         try {
-            let driver = require(`../lib/driver-${name}.js`);
+            let driver = require(`../src/driver-${name}.js`);
             if (driver && driver.name === name && driver.init) {
                 Driver.cache[name] = driver;
                 driver.init({ Queue, Util, filters: setup.filters });
