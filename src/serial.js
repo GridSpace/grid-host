@@ -37,7 +37,7 @@ let maxout = 0;                 // high water mark for buffer
 let debug = true;               // echo commands
 let paused = false;             // queue processing paused
 let processing = false;         // queue being drained
-let sdspool = true;             // spool to sd for printing
+let sdspool = false;            // spool to sd for printing
 let dircache = [];              // cache of files in watched directory
 let clients = [];               // connected clients
 let buf = [];                   // output line buffer
@@ -61,8 +61,8 @@ const status = {
 };
 
 // write line to all connected clients
-const emit = (line) => {
-    if (clients.length === 0) {
+const emit = (line, debug) => {
+    if (clients.length === 0 || debug) {
         console.log(line);
         return;
     }
@@ -77,6 +77,10 @@ const cmdlog = (line) => {
 
 const evtlog = (line) => {
     emit("*** " + line + " ***");
+};
+
+const evtdebug = (line, debug) => {
+    emit("*** " + line + " ***", true);
 };
 
 function openSerialPort() {
@@ -156,13 +160,15 @@ const sendFile = (filename) => {
     try {
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
-            evtlog(`spooling "${filename} to SD"`);
-            sport.write(`M28 ${filename}`);
-            sport.write(line + "\n");
-            sport.write(`M29`);
-            evtlog(`printing "${filename} from SD"`);
-            sport.write(`M23 ${filename}`);
-            sport.write(`M24`);
+            evtdebug(`spooling "${filename} to SD"`);
+            queue(`M28 print.gco`);
+            gcode.forEach(line => {
+                queue(line);
+            });
+            queue(`M29`);
+            evtdebug(`printing "${filename} from SD"`);
+            queue(`M23 print.gco`);
+            queue(`M24`);
         } else {
             gcode.forEach(line => {
                 queue(line);
