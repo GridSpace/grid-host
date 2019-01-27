@@ -107,7 +107,7 @@ function onExecDone(entry, error) {
 
 const fs = require('fs');
 const spawn = require('child_process').spawn;
-const png2bmp = require('../lib/image').png2bmp;
+const png2bmp = require('../src/image').png2bmp;
 
 const driver = {
     name: "exec",

@@ -1,5 +1,5 @@
-const GX = require('../lib/lib-gx.js');
-const png2bmp = require('../lib/image').png2bmp;
+const GX = require('../src/lib-gx.js');
+const png2bmp = require('../src/image').png2bmp;
 
 /** target <-> connection cache */
 const cache = {};

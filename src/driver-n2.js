@@ -1,4 +1,4 @@
-const N2 = require('../lib/lib-n2.js');
+const N2 = require('../src/lib-n2.js');
 
 const cache = {};
 
