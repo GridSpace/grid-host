@@ -4,14 +4,17 @@
 
 const MaxHistory = 100;
 
+const moment = require('moment');
+
 /** Common Utilities */
 
 const Util = {
     log: (o) => {
+        let mark = moment().format('YYMMDD-hhmmss');
         if (typeof(o) === 'object') {
-            console.log(JSON.stringify(o));
+            console.log(mark, JSON.stringify(o));
         } else {
-            console.log(o);
+            console.log(mark, o);
         }
     },
 
@@ -64,10 +67,10 @@ const Driver = {
                 driver.init({ Queue, Util, filters: setup.filters });
                 return driver;
             }
-            console.log({invalid_driver: name});
+            Util.log({invalid_driver: name});
             return null;
         } catch (error) {
-            console.log({missing_driver: name, error});
+            Util.log({missing_driver: name, error});
             return null;
         }
     }
@@ -386,11 +389,11 @@ const Web = {
                         driver
                             .send(device, queueEntry)
                             .then(sent => {
-                                console.log({send_ok: sent});
+                                Util.log({send_ok: sent});
                                 Queue.done(queueEntry);
                             })
                             .catch(error => {
-                                console.log({send_error: error});
+                                Util.log({send_error: error});
                                 Queue.done(queueEntry, error);
                             });
                     } catch (e) {
@@ -454,7 +457,7 @@ function resolveDevices() {
         let type = device.driver || "exec";
         let driver = Driver.get(type);
         if (!driver) {
-            // Util.log({missing_driver_for: name, type});
+            Util.log({missing_driver_for: name, type});
             continue;
         }
         let active = Object.assign({}, device);
@@ -596,7 +599,7 @@ if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
 var apiroot = "/api/",
-    report = ["grid:host"],
+    report = { starting: "grid:host" };
     wport = setup['http-port'] || setup['port'],
     sport = setup['https-port'],
     handler = connect()
@@ -608,7 +611,7 @@ var apiroot = "/api/",
 /** open http port when specified */
 if (wport) {
     http_server = http.createServer(handler).listen(wport);
-    report.push("http @ " + wport);
+    report.http = wport;
 }
 
 /** open https port when specified */
@@ -617,12 +620,12 @@ if (sport) {
         key: setup['ssl-key'],
         cert: setup['ssl-cert']
     }, handler).listen(sport);
-    report.push("https @ " + sport);
+    report.https = sport;
 }
 
 /** start disconnected web socket server that can be shared */
 if (setup['wss']) {
-    report.push("websockets");
+    report.websockets = true;
     const wss = new WebSocket.Server({ noServer: true });
     const upgrade = (request, socket, head) => {
         const pathname = url.parse(request.url).pathname;
@@ -644,11 +647,9 @@ if (setup['wss']) {
 /** reload saved queue state (TODO repair and delete dangling tmp files) */
 if (Util.lastmod(setup.queue)) Queue.load(Util.decode(fs.readFileSync(setup.queue)));
 
-/** output date */
-report.push(new Date().toString());
-
 /** startup report */
-Util.log(report.join(" | "));
+Util.log("---------------------------------------------------------------");
+Util.log(report);
 
 /** resolve Devices from config records */
 resolveDevices();
@@ -681,14 +682,14 @@ if (setup.org && (setup.host || setup.autohost)) {
         "host=" + encodeURIComponent(host)
     ].join('&');
 
-    console.log({register: host || "*autohost*", org: setup.org});
+    Util.log({register: host || "*autohost*", org: setup.org});
 
     https.get("https://grid.space/api/host_up?" + args, (res) => {
-        // console.log({sc: res.statusCode});
+        // Util.log({sc: res.statusCode});
         res.on("data", (data) => {
-            // console.log({data: data.toString()});
+            // Util.log({data: data.toString()});
         })
     }).on("error", (error) => {
-        // console.log(error);
+        // Util.log(error);
     });
 }
