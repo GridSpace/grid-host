@@ -319,6 +319,9 @@ class N2Send {
         const fbuf = isbuf ? file : fs.readFileSync(file);
         fileName = (fileName || file).split('/');
         fileName = fileName[fileName.length-1];
+        if (fileName.indexOf(".gcode") < 0) {
+            fileName = fileName + ".gcode";
+        }
         if (!isbuf) {
             console.log({sending: fileName, to: host, port: this.port});
         }
