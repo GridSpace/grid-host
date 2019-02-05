@@ -201,8 +201,9 @@ class FFControl {
         return this.state === State.Disconnected;
     }
 
-    connect(host, port) {
+    connect(host, port, retryMax) {
         return new Promise((resolve, reject) => {
+            let retries = retryMax || 5;
             let timeout = 2000;
             let retry = 0;
             let attempt = () => {
@@ -212,7 +213,7 @@ class FFControl {
                         resolve(this);
                     })
                     .catch(error => {
-                        if (++retry >= 5) {
+                        if (++retry >= retries) {
                             reject(error);
                         } else {
                             debug({retry, error, timeout})

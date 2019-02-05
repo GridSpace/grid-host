@@ -42,7 +42,7 @@ class Connection {
             }
             let ctrl = this.ctrl;
             ctrl
-                .connect(this.host, this.port || 8899)
+                .connect(this.host, this.port || 8899, 1000000)
                 .then(ctrl => {
                     this.connecting = false;
                     driver.api.Util.log({connected: this.device.name});
