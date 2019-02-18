@@ -23,7 +23,7 @@ const { exec } = require('child_process');
 
 const port = opt.port || opt._[0];              // serial port name
 const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
-const bufmax = parseInt(opt.buflen || "3");     // max unack'd output lines
+const bufmax = parseInt(opt.buflen || "10");     // max unack'd output lines
 
 const url = require('url');
 const http = require('http');
@@ -224,6 +224,7 @@ const abort = () => {
             "M104 S0 T0",   // extruder 0 heat off
             "M104 S0 T1",   // extruder 1 heat off
             "M140 S0 T0",   // bed heat off
+            "M107",         // shut off cooling fan
             "G91",          // relative moves
             "G0 Z10",       // drop bed 1cm
             "G28 X0 Y0",    // home X & Y
