@@ -204,6 +204,20 @@ function init() {
                 $('filename').value = status.print.filename;
                 $('progress').value = status.print.progress + '%';
             }
+            if (status.set) {
+                if (status.set.bed) {
+                    $('bed').value = status.set.bed;
+                    $('bed_toggle').innerText = 'off';
+                } else {
+                    $('bed_toggle').innerText = 'on';
+                }
+                if (status.set.ext[0]) {
+                    $('nozzle').value = status.set.ext[0];
+                    $('nozzle_toggle').innerText = 'off';
+                } else {
+                    $('nozzle_toggle').innerText = 'on';
+                }
+            }
             log(status);
         } else if (msg.indexOf("*** [") >= 0) {
             log(JSON.parse(msg.substring(4,msg.length-4)));
@@ -213,6 +227,18 @@ function init() {
             } catch (e) {
                 log({wss_msg: evt, err: e});
             }
+        }
+    };
+    $('bed').onkeyup = ev => {
+        if (ev.keyCode === 13) {
+            send('M140 S' + bed_temp());
+            $('bed_toggle').innerText = 'off';
+        }
+    };
+    $('nozzle').onkeyup = ev => {
+        if (ev.keyCode === 13) {
+            send('M104 S' + nozzle_temp());
+            $('nozzle_toggle').innerText = 'off';
         }
     };
     setInterval(update, 5000);
