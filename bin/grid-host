@@ -164,6 +164,7 @@ const Queue = {
         entry.done = true;
 
         // notify waiters
+        if (entry.waiting)
         entry.waiting.forEach(function(res) {
             res.end(Util.encode({
                 key: entry.key,
@@ -303,6 +304,35 @@ const Web = {
                 }
                 break;
 
+            case "resend":
+                if (req.method !== 'GET') return next();
+                if (!query.key) return next();
+
+                queueEntry = Queue.get(query.key);
+                device = Devices.get(queueEntry.target);
+
+                queueEntry.data = fs.readFileSync(tempDir + "/" + queueEntry.data_file);
+                queueEntry.image = fs.readFileSync(tempDir + "/" + queueEntry.image_file);
+
+                Util.log({
+                    resend: query.key,
+                    file: queueEntry.filename,
+                    size: queueEntry.data.length,
+                    target: query.target
+                });
+
+                device.driver
+                    .send(device, queueEntry)
+                    .then(sent => {
+                        Util.log({send_ok: sent});
+                        Queue.done(queueEntry);
+                    })
+                    .catch(error => {
+                        Util.log({send_error: error});
+                        Queue.done(queueEntry, error);
+                    });
+                break;
+
             // queue new print job and assign a unique queue key
             case "print":
                 if (req.method !== 'POST') return next();
@@ -382,11 +412,13 @@ const Web = {
                             let tmp_data = Util.tempFileName('gcode');
                             fs.writeFileSync(tmp_data, queueEntry.data);
                             queueEntry.files.push(tmp_data);
+                            queueEntry.data_file = tmp_data.substring(tmp_data.lastIndexOf('/') + 1);
                         }
                         if (queueEntry.image) {
                             let tmp_image = Util.tempFileName('png');
                             fs.writeFileSync(tmp_image, queueEntry.image);
                             queueEntry.files.push(tmp_image);
+                            queueEntry.image_file = tmp_image.substring(tmp_image.lastIndexOf('/') + 1);
                         }
 
                         res.end(Util.encode({key:queueKey}));
@@ -618,6 +650,7 @@ var apiroot = "/api/",
         .use(Web.init)
         .use(Web.api)
         .use(Web.serve(cwd + "/web/host/"))
+        .use(Web.serve(tempDir))
     ;
 
 /** open http port when specified */

@@ -56,8 +56,9 @@ th,td {
     overflow: auto;
 }
 #preview {
-    flex-grow: 1;
-    margin-left: 20px;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
 }
 label {
     font-weight: bold;

@@ -135,17 +135,44 @@ function queue(q) {
         let target = el.target.comment || el.target.key || el.target;
         let tag = localStorage[`tag-${el.from}`] || el.from;
         let time = el.time || {};
-        html.push('<tr>');
+        html.push(`<tr id="q-${el.key}">`);
         html.push(cell('td', moment(time.add || 0).format('YYYY-MM-DD HH:MM:ss ddd'), { onclick:`queue_del(${time.add})` } ));
         html.push(cell('td', target));
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
         html.push(cell('td', el.size || ''));
-        html.push(cell('td', el.status));
+        html.push(cell('td', el.status, {id: `q-${el.key}-kick`}));
         html.push('</tr>');
     });
     html.push('</tbody></table>');
     $('queue').innerHTML = html.join('');
+    q.forEach(el => {
+        $(`q-${el.key}-kick`).onclick = () => {
+            if (confirm(`resend file ${el.name} to ${el.target}`)) {
+                console.log({rekick: el.key});
+                fetch(`/api/resend?key=${el.key}`).then(v => console.log({kicked: v}));
+            }
+        };
+        let d = $(`q-${el.key}`);
+        d.onmouseover = () => {
+            // fetch(el.data_file)
+            //     .then(v => {
+            //         console.log({v});
+            //         return v.text();
+            //     })
+            //     .then(t => {
+            //         console.log({t});
+            //         $('gcode').innerText = t;
+            //     });
+            $('preview').src = el.image_file;
+        };
+        d.onmouseout = () => {
+            d.onmouseout = () => {
+                $('preview').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+                // $('gcode').innerText = '';
+            };
+        };
+    });
 }
 
 function updateTargets(force) {
