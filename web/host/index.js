@@ -66,7 +66,7 @@ function targets(t) {
                 $('image').src = `${v.image || ""}?${time}`;
             };
             d.onmouseout = () => {
-                $('image').src = "";
+                $('image').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
             };
         }
     }
@@ -141,7 +141,7 @@ function queue(q) {
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
         html.push(cell('td', el.size || ''));
-        html.push(cell('td', el.status, {id: `q-${el.key}-kick`}));
+        html.push(cell('td', el.status, {id: `q-${el.key}-kick`, onclick: ""}));
         html.push('</tr>');
     });
     html.push('</tbody></table>');
