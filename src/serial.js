@@ -156,6 +156,7 @@ const sendFile = (filename) => {
     status.print.run = true;
     status.print.clear = false;
     status.print.filename = filename;
+    status.print.start = Date.now();
     evtlog("send: " + filename);
     try {
         let gcode = fs.readFileSync(filename).toString().split("\n");
@@ -256,10 +257,16 @@ const processQueue = () => {
     }
     if (buf.length === 0) {
         maxout = 0;
-        status.print.run = false;
-        status.print.progress = "100.00";
+        if (status.print.run) {
+            status.print.end = Date.now();
+            status.print.run = false;
+            status.print.progress = "100.00";
+            evtlog("print done " + ((status.print.end - status.print.start) / 60000) + " min");
+        }
     } else {
-        status.print.progress = ((1.0 - (buf.length / maxout)) * 100.0).toFixed(2);
+        if (status.print.run) {
+            status.print.progress = ((1.0 - (buf.length / maxout)) * 100.0).toFixed(2);
+        }
     }
     processing = false;
 };
