@@ -46,8 +46,8 @@ const Util = {
         return JSON.parse(str);
     },
 
-    tempFileName: () => {
-        return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + ".tmp";
+    tempFileName: (ext) => {
+        return tempDir + "/" + (new Date().getTime().toString(36)) + "-" + (tempIndex++) + "." + (ext || "tmp");
     }
 };
 
@@ -376,6 +376,18 @@ const Web = {
                         queueEntry.time.queued = Date.now();
 
                         Queue.save();
+
+                        // store file artifacts
+                        if (queueEntry.data) {
+                            let tmp_data = Util.tempFileName('gcode');
+                            fs.writeFileSync(tmp_data, queueEntry.data);
+                            queueEntry.files.push(tmp_data);
+                        }
+                        if (queueEntry.image) {
+                            let tmp_image = Util.tempFileName('png');
+                            fs.writeFileSync(tmp_image, queueEntry.image);
+                            queueEntry.files.push(tmp_image);
+                        }
 
                         res.end(Util.encode({key:queueKey}));
 
