@@ -3,6 +3,7 @@ body {
     font-family: monospace;
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 td {
     text-align: center;
@@ -24,6 +25,7 @@ button {
     border-radius: 5px;
     outline: none;
 }
+
 .row {
     display: flex;
     flex-direction: row;
@@ -35,10 +37,26 @@ button {
 .grow {
     flex-grow: 1;
 }
-#top div,table {
+.selected {
+    color: white;
+    background-color: #888;
+}
+.heating {
+    background-color: #fdd;
+}
+.panel {
+    padding :2px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    margin: 3px;
+    justify-content: space-around;
+}
+
+#pos div,table {
     padding-right: 4px;
     padding-left: 4px;
 }
+
 #jog_set {
     justify-content: center;
     font-family: monospace;
@@ -53,38 +71,25 @@ button {
     font-size: 12px;
     width: 50px;
 }
-.selected {
-    color: white;
-    background-color: #888;
+
+#temp {
+    flex-direction: row;
 }
-.heating {
-    background-color: #fdd;
-}
-#pos input {
-    margin: 5px;
-}
-#pos label {
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
-    border-right: 1px solid #ddd;
-    border-top: 1px solid #ddd;
-    border-bottom: 1px solid #ddd;
-    padding: 5px;
-    margin-left: 0;
-    background-color: #f5f5f5;
-}
-#pos input {
-    margin-right: 0;
-}
-#temp > label {
-    font-size: 10px;
+#temp > div {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     text-align: center;
-    background-color: #ddd;
+}
+#temp label {
+    font-size: 10px;
+    background-color: #eee;
     border-radius: 3px;
-    padding: 3px;
+    padding: 2px;
 }
 #temp input {
     margin: 0;
+    text-align: center;
 }
 #temp button.dn {
     margin-top: 0;
@@ -94,10 +99,9 @@ button {
     margin-top: 0;
     margin-left: 0;
 }
+
 #status {
-    padding-right: 4px;
-    padding-left: 4px;
-    align-items: center;
+    padding: 6px;
 }
 #status input {
     padding: 5px;

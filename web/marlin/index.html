@@ -6,8 +6,8 @@
     </head>
     <body onload="init()" class="row">
         <div class="col">
-            <div class="row" id="top">
-                <div class="col" id="jog_set">
+            <div id="pos" class="row panel">
+                <div id="jog_set" class="col">
                     <button onclick="set_jog(0.1,this)">0.1</button>
                     <button onclick="set_jog(0.5,this)">0.5</button>
                     <button onclick="set_jog(1.0,this)">1.0</button>
@@ -40,36 +40,40 @@
                     <button onclick="retract(5)">E-</button>
                     <button onclick="extrude(5)">E+</button>
                 </div>
-                <div id="temp" class="col">
-                    <label>bed</label>
-                    <div>
-                        <button class="dn" onclick="bed_temp_lower()">&lt;</button>
-                        <input id="bed" value="60" size="3"></input>
-                        <button class="up" onclick="bed_temp_higher()">&gt;</button>
-                        <input disabled="true" id="bed_temp" size="5"></input>
-                        <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
-                    </div>
-                    <label>nozzle</label>
-                    <div>
-                        <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
-                        <input id="nozzle" value="220" size="3"></input>
-                        <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
-                        <input disabled="true" id="nozzle_temp" size="5"></input>
-                        <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
-                    </div>
-                </div>
                 <div class="col">
                     <button onclick="clear_bed()">clear bed</button>
                     <button onclick="kick_next()">kick next</button>
                     <button onclick="abort()">abort</button>
                 </div>
             </div>
-            <div class="row" id="status">
+            <div id="temp" class="col panel">
+                <div>
+                    <label>bed</label>
+                    <div>
+                        <button class="dn" onclick="bed_temp_lower()">&lt;</button>
+                        <input id="bed" value="60" size="3"></input>
+                        <button class="up" onclick="bed_temp_higher()">&gt;</button>
+                        <input disabled="true" id="bed_temp" size="6"></input>
+                        <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
+                    </div>
+                </div>
+                <div>
+                    <label>nozzle</label>
+                    <div>
+                        <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
+                        <input id="nozzle" value="220" size="3"></input>
+                        <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
+                        <input disabled="true" id="nozzle_temp" size="6"></input>
+                        <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
+                    </div>
+                </div>
+            </div>
+            <div id="status" class="row panel">
                 <label>file</label><input id="filename" disabled="true" size="30"></input>
                 <label>progress</label><input id="progress" disabled="true" size="8"></input>
             </div>
             <div class="grow"></div>
-            <div id="actions" class="row">
+            <div id="actions" class="row panel">
                 <button onclick="update()">update</button>
                 <button id="reload" onclick="reload()">reload</button>
                 <button id="reboot" onclick="reboot()">reboot</button>
