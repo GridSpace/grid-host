@@ -45,6 +45,12 @@ let mode = 'marlin';            // operating mode
 
 // marlin-centric, to be fixed
 const status = {
+    device: {
+        boot: 0,                // time of last boot
+        connect: 0,             // time port was opened successfully
+        close: 0,               // time of last close
+        line: 0                 // time of last line output
+    },
     print: {
         run: false,             // print running
         clear: false,           // bed is clear to print
@@ -113,13 +119,16 @@ function openSerialPort() {
         .on('open', function() {
             evtlog("open: " + port);
             new LineBuffer(sport);
+            status.device.connect = Date.now();
         })
         .on('error', function(error) {
             sport = null;
             console.log(error);
             setTimeout(openSerialPort, 1000);
+            status.device.connect = 0;
         })
         .on('line', function(line) {
+            status.device.line = Date.now();
             line = line.toString().trim();
             cmdlog("<-- " + line);
             if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
@@ -137,6 +146,7 @@ function openSerialPort() {
             sport = null;
             evtlog("close");
             setTimeout(openSerialPort, 1000);
+            status.device.close = Date.now();
         });
 }
 
@@ -145,7 +155,7 @@ function processPortOutput(line) {
     let update = false;
     if (line === "start") {
         update = true;
-        status.boot = Date.now();
+        status.device.boot = Date.now();
         status.print.clear = false;
         waiting = 0;
         buf = [];
