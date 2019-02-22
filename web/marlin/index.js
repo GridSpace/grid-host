@@ -206,15 +206,19 @@ function init() {
             }
             if (status.target) {
                 if (status.target.bed) {
+                    $('bed').classList.add('heating');
                     $('bed').value = status.target.bed;
                     $('bed_toggle').innerText = 'off';
                 } else {
+                    $('bed').classList.remove('heating');
                     $('bed_toggle').innerText = 'on';
                 }
                 if (status.target.ext[0]) {
+                    $('nozzle').classList.add('heating');
                     $('nozzle').value = status.target.ext[0];
                     $('nozzle_toggle').innerText = 'off';
                 } else {
+                    $('nozzle').classList.remove('heating');
                     $('nozzle_toggle').innerText = 'on';
                 }
             }

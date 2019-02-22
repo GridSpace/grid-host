@@ -51,6 +51,10 @@ const status = {
         close: 0,               // time of last close
         line: 0                 // time of last line output
     },
+    error: {
+        time: 0,                // time of last error
+        cause: null             // last error message
+    },
     print: {
         run: false,             // print running
         clear: false,           // bed is clear to print
@@ -230,6 +234,14 @@ function processPortOutput(line) {
             status.settings[code] = map;
         }
         update = true;
+    }
+    // catch fatal errors and reboot
+    if (line.indexOf("Error:") === 0) {
+        status.error = {
+            time: Date.now(),
+            cause: line.substring(6)
+        };
+        sport.close();
     }
     if (update) {
         status.update = true;
