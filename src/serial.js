@@ -48,7 +48,8 @@ const status = {
     print: {
         run: false,             // print running
         clear: false,           // bed is clear to print
-        filename: null          // current file name
+        filename: null,         // current file name
+        progress: 0.0
     },
     target: {                   // target temp
         bed: null,              // bed
