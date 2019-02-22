@@ -204,15 +204,15 @@ function init() {
                 $('filename').value = status.print.filename;
                 $('progress').value = status.print.progress + '%';
             }
-            if (status.set) {
-                if (status.set.bed) {
-                    $('bed').value = status.set.bed;
+            if (status.target) {
+                if (status.target.bed) {
+                    $('bed').value = status.target.bed;
                     $('bed_toggle').innerText = 'off';
                 } else {
                     $('bed_toggle').innerText = 'on';
                 }
-                if (status.set.ext[0]) {
-                    $('nozzle').value = status.set.ext[0];
+                if (status.target.ext[0]) {
+                    $('nozzle').value = status.target.ext[0];
                     $('nozzle_toggle').innerText = 'off';
                 } else {
                     $('nozzle_toggle').innerText = 'on';

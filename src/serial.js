@@ -50,18 +50,26 @@ const status = {
         clear: false,           // bed is clear to print
         filename: null          // current file name
     },
+    target: {                   // target temp
+        bed: null,              // bed
+        ext: [ null ]           // extruders
+    },
     temp: {                     // measured temp
         bed: null,              // bed
         ext: [ null ]           // extruders
     },
-    set: {                      // set/target temp
-        bed: null,              // bed
-        ext: [ null ]           // extruders
-    }
+    estop: {                    // endstop status
+        min: {},
+        max: {}
+    },
+    settings: {},               // map of active settings
 };
 
 // write line to all connected clients
 function emit(line, debug) {
+    if (typeof(line) === 'object') {
+        line = JSON.stringify(line);
+    }
     if (clients.length === 0 || debug) {
         console.log(line);
         return;
@@ -72,14 +80,27 @@ function emit(line, debug) {
 }
 
 function cmdlog(line) {
-    if (debug || waiting <= 1) emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+    if (typeof(line) === 'object') {
+        line = JSON.stringify(line);
+    }
+    if (debug || waiting <= 1) {
+        emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+    }
 };
 
+// send *** message *** to all clients (not stdout unless stdin specified)
 function evtlog(line) {
+    if (typeof(line) === 'object') {
+        line = JSON.stringify(line);
+    }
     emit("*** " + line + " ***");
 };
 
+// send *** message *** to stdout and any connected clients
 function evtdebug(line, debug) {
+    if (typeof(line) === 'object') {
+        line = JSON.stringify(line);
+    }
     emit("*** " + line + " ***", true);
 };
 
@@ -103,6 +124,10 @@ function openSerialPort() {
             if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
                 waiting = Math.max(waiting - 1, 0);
                 line = line.substring(3);
+                if (status.update) {
+                    status.update = false;
+                    evtdebug(status);
+                }
             }
             processPortOutput(line);
             processQueue();
@@ -116,37 +141,88 @@ function openSerialPort() {
 
 function processPortOutput(line) {
     if (line.length === 0) return;
+    let update = false;
     if (line === "start") {
-        evtlog("firmware reset");
+        update = true;
+        status.boot = Date.now();
         status.print.clear = false;
         waiting = 0;
         buf = [];
+        queue('M105'); // get temps
+        queue('M114'); // get position
+        queue('M119'); // get endstops
     }
+    // parse M105 temperature updates
     if (line.indexOf("T:") === 0) {
-        // parse extruder/bed temps
+        // eliminate spaces before slashes " /"
         line = line.replace(/ \//g,'/').split(' ');
+        // parse extruder/bed temps
         line.forEach(tok => {
             tok = tok.split(":");
             switch (tok[0]) {
                 case 'T':
                     tok = tok[1].split("/");
                     status.temp.ext[0] = parseFloat(tok[0]);
-                    status.set.ext[0] = parseFloat(tok[1]);
+                    status.target.ext[0] = parseFloat(tok[1]);
+                    update = true;
                     break;
                 case 'B':
                     tok = tok[1].split("/");
                     status.temp.bed = parseFloat(tok[0]);
-                    status.set.bed = parseFloat(tok[1]);
+                    status.target.bed = parseFloat(tok[1]);
+                    update = true;
                     break;
             }
         });
-        console.log(line);
     }
+    // parse M114 x/y/z/e positions
     if (line.indexOf("X:") === 0) {
-        // parse x/y/z/e positions
+        let pos = status.pos = {};
+        line.split(' ').forEach(tok => {
+            tok = tok.split(':');
+            if (tok.length === 2) {
+                pos[tok[0]] = parseFloat(tok[1]);
+                update = true;
+            }
+        });
     }
-    if (line.indexOf("_min:") > 0) { } // parse endstop status
-    if (line.indexOf("_max:") > 0) { } // parse endstop status
+    // parse M119 endstop status
+    if (line.indexOf("_min:") > 0) {
+        status.estop.min[line.substring(0,1)] = line.substring(6);
+        update = true;
+    }
+    if (line.indexOf("_max:") > 0) {
+        status.estop.max[line.substring(0,1)] = line.substring(6);
+        update = true;
+    }
+    // parse M503 settings status
+    if (line.indexOf("echo:  M") === 0) {
+        line = line.substring(7).split(' ');
+        let code = {
+            // M149: "temp_units",
+            // M200: "filament",
+            M92:  "steps_per",
+            M203: "feedrate_max",
+            M201: "accel_max",
+            M204: "accel",
+            M205: "advanced",
+            M206: "offset",
+            // M145: "heatup",
+            M301: "pid",
+            M900: "lin_advance"
+        }[line.shift()] || null;
+        let map = {};
+        line.forEach(tok => {
+            map[tok.substring(0,1)] = parseFloat(tok.substring(1));
+        });
+        if (code) {
+            status.settings[code] = map;
+        }
+        update = true;
+    }
+    if (update) {
+        status.update = true;
+    }
 };
 
 function sendFile(filename) {
