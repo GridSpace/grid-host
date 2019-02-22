@@ -11,7 +11,6 @@
  * TODO
  *
  * different abort per device or type (fdm vs cnc)
- * serial port service via raw port, websocket and http
  */
 
 const LineBuffer = require("buffer.lines");
@@ -21,9 +20,9 @@ const net = require('net');
 const fs = require('fs');
 const { exec } = require('child_process');
 
-const port = opt.port || opt._[0];              // serial port name
-const baud = parseInt(opt.baud || "250000");    // baud rate for serial port
-const bufmax = parseInt(opt.buflen || "10");     // max unack'd output lines
+const port = opt.device || opt.port || opt._[0]; // serial port device path
+const baud = parseInt(opt.baud || "250000");     // baud rate for serial port
+const bufmax = parseInt(opt.buflen || "8");      // max unack'd output lines
 
 const url = require('url');
 const http = require('http');
@@ -44,6 +43,7 @@ let buf = [];                   // output line buffer
 let sport = null;               // bound serial port
 let mode = 'marlin';            // operating mode
 
+// marlin-centric, to be fixed
 const status = {
     print: {
         run: false,             // print running
@@ -61,7 +61,7 @@ const status = {
 };
 
 // write line to all connected clients
-const emit = (line, debug) => {
+function emit(line, debug) {
     if (clients.length === 0 || debug) {
         console.log(line);
         return;
@@ -71,15 +71,15 @@ const emit = (line, debug) => {
     });
 }
 
-const cmdlog = (line) => {
+function cmdlog(line) {
     if (debug || waiting <= 1) emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
 };
 
-const evtlog = (line) => {
+function evtlog(line) {
     emit("*** " + line + " ***");
 };
 
-const evtdebug = (line, debug) => {
+function evtdebug(line, debug) {
     emit("*** " + line + " ***", true);
 };
 
@@ -114,7 +114,7 @@ function openSerialPort() {
         });
 }
 
-const processPortOutput = (line) => {
+function processPortOutput(line) {
     if (line.length === 0) return;
     if (line === "start") {
         evtlog("firmware reset");
@@ -149,7 +149,7 @@ const processPortOutput = (line) => {
     if (line.indexOf("_max:") > 0) { } // parse endstop status
 };
 
-const sendFile = (filename) => {
+function sendFile(filename) {
     if (!status.print.clear) {
         return evtlog("bed not marked clear. use *clear first");
     }
@@ -181,7 +181,7 @@ const sendFile = (filename) => {
     }
 }
 
-const processCmdLine = (line) => {
+function processCmdLine(line) {
     line = line.toString().trim();
     if (line.indexOf("*exec ") === 0) {
         let cmd = line.substring(6);
@@ -213,7 +213,7 @@ const processCmdLine = (line) => {
     }
 };
 
-const abort = () => {
+function abort() {
     evtlog("execution aborted");
     if (mode === 'grbl') {
         buf = [];
@@ -236,20 +236,20 @@ const abort = () => {
     status.print.clear = false;
 };
 
-const pause = () => {
+function pause() {
     if (paused) return;
     evtlog("execution paused");
     paused = true;
 };
 
-const resume = () => {
+function resume() {
     if (!paused) return;
     evtlog("execution resumed");
     paused = false;
     processQueue();
 };
 
-const processQueue = () => {
+function processQueue() {
     if (processing) return;
     processing = true;
     while (waiting < bufmax && buf.length && !paused) {
@@ -271,7 +271,7 @@ const processQueue = () => {
     processing = false;
 };
 
-const queue = (line, priority) => {
+function queue(line, priority) {
     line = line.trim();
     if (line.length === 0) {
         return;
@@ -288,7 +288,7 @@ const queue = (line, priority) => {
     }
 };
 
-const write = (line) => {
+function write(line) {
     if (line.indexOf("M2000") === 0) {
         pause();
         return;
@@ -312,13 +312,14 @@ const write = (line) => {
     }
 }
 
-const checkDropDir = () => {
-    if (!opt.dir) return;
+function checkDropDir() {
+    const dir = (opt.dir || opt.filedir);
+    if (!dir) return;
     try {
         let valid = [];
-        fs.readdirSync(opt.dir).forEach(name => {
+        fs.readdirSync(dir).forEach(name => {
             if (name.indexOf(".gcode") > 0 || name.indexOf(".nc") > 0) {
-                name = opt.dir + "/" + name;
+                name = dir + "/" + name;
                 let stat = fs.statSync(name);
                 valid.push({name: name, size: stat.size, time: stat.mtimeMs});
             }
@@ -335,7 +336,7 @@ const checkDropDir = () => {
     }
 };
 
-const kickNext = () => {
+function kickNext() {
     if (!dircache.length) return evtlog("no valid files");
     sendFile(dircache[0].name);
 };
@@ -348,6 +349,21 @@ function headers(req, res, next) {
 }
 
 // -- start it up --
+
+if (opt.help) {
+    console.log([
+        "usage: serial [options]",
+        "   device  <dev>  : path to serial port device",
+        "   baud    <rate> : baud rate for serial device",
+        "   listen  <port> : port for command interface",
+        "   webport <port> : port to listen for web connections",
+        "   webdir  <dir>  : directory to serve on <webport>",
+        "   filedir <dir>  : directory to watch for gcode",
+        "   stdin          : enable stdin as command interface",
+        "   grbl           : enable grbl command mode"
+    ].join("\n"));
+    process.exit(0);
+}
 
 if (opt.grbl) {
     mode = 'grbl';
