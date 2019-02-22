@@ -45,6 +45,11 @@ let mode = 'marlin';            // operating mode
 
 // marlin-centric, to be fixed
 const status = {
+    clients: {
+        ws: 0,                  // web socket client count
+        net: 0,                 // direct network clients
+        stdin: 0                // 1 of stdin active
+    },
     device: {
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully
@@ -489,15 +494,18 @@ if (opt.stdin) {
     new LineBuffer(process.stdin);
     process.stdin.on("line", line => { processCmdLine(line) });
     clients.push(process.stdout);
+    status.clients.stdin = 1;
 }
 
 if (opt.listen) {
     net.createServer(socket => {
+        status.clients.net++;
         new LineBuffer(socket);
         socket.write("*ready\n");
         socket.on("line", line => { processCmdLine(line) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
+            status.clients.net--;
         });
         clients.push(socket);
     }).listen(parseInt(opt.listen));
@@ -512,9 +520,11 @@ if (opt.webport) {
     const server = http.createServer(handler).listen(webport);
     const wss = new WebSocket.Server({ server });
     wss.on('connection', (ws) => {
+        status.clients.ws++;
         ws
             .on('close', () => {
                 clients.splice(clients.indexOf(ws),1);
+                status.clients.ws--;
             })
             .on('error', (error) => {
                 console.log({wss_error: error});

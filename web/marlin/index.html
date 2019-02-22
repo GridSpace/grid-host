@@ -51,7 +51,7 @@
                     <label>bed</label>
                     <div>
                         <button class="dn" onclick="bed_temp_lower()">&lt;</button>
-                        <input id="bed" value="60" size="3"></input>
+                        <input id="bed" value="" size="3"></input>
                         <button class="up" onclick="bed_temp_higher()">&gt;</button>
                         <input disabled="true" id="bed_temp" size="6"></input>
                         <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
@@ -61,7 +61,7 @@
                     <label>nozzle</label>
                     <div>
                         <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
-                        <input id="nozzle" value="220" size="3"></input>
+                        <input id="nozzle" value="" size="3"></input>
                         <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
                         <input disabled="true" id="nozzle_temp" size="6"></input>
                         <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
@@ -74,7 +74,6 @@
             </div>
             <div class="grow"></div>
             <div id="actions" class="row panel">
-                <button onclick="update()">update</button>
                 <button id="reload" onclick="reload()">reload</button>
                 <button id="reboot" onclick="reboot()">reboot</button>
                 <button id="shutdown" onclick="shutdown()">shutdown</button>

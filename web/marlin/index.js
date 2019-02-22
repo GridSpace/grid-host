@@ -3,7 +3,6 @@ let queue = [];
 let logs = [];
 let ready = false;
 let sock = null;
-let last_update = 0;
 let last_jog = null;
 let jog_val = 0.0;
 
@@ -114,14 +113,6 @@ function retract(v) {
     gr(`E-${v}`);
 }
 
-function update() {
-    let now = Date.now();
-    if (now - last_update > 5000) {
-        send('M105');
-        last_update = now;
-    }
-}
-
 function set_jog(val, el) {
     jog_val = val;
     if (last_jog) {
@@ -165,7 +156,6 @@ function init() {
         while (queue.length) {
             send(queue.shift());
         }
-        update();
     };
     sock.onclose = (evt) => {
         log({wss_close: true});
@@ -187,18 +177,7 @@ function init() {
     };
     sock.onmessage = (evt) => {
         let msg = unescape(evt.data);
-        if (msg.indexOf('ok T:') > 0) {
-            msg = msg.split(' ');
-            $('nozzle_temp').value = msg[3].substring(2);
-            $('bed_temp').value = msg[5].substring(2);
-            last_update = Date.now();
-            send('*status');
-        } else if (msg.indexOf('<-- T:') > 0) {
-            msg = msg.split(' ');
-            $('nozzle_temp').value = msg[2].substring(2);
-            $('bed_temp').value = msg[4].substring(2);
-            last_update = Date.now();
-        } else if (msg.indexOf("*** {") >= 0) {
+        if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(4,msg.length-4));
             if (status.print) {
                 $('filename').value = status.print.filename;
@@ -245,5 +224,4 @@ function init() {
             $('nozzle_toggle').innerText = 'off';
         }
     };
-    setInterval(update, 5000);
 }
