@@ -37,6 +37,12 @@ button {
 .grow {
     flex-grow: 1;
 }
+.align_stretch {
+    align-items: stretch;
+}
+.align_center {
+    align-items: center;
+}
 .selected {
     color: white;
     background-color: #888;
@@ -85,13 +91,31 @@ button {
     border-radius: 3px;
     padding: 2px;
 }
+#position input {
+    margin-right: 10px;
+}
+
+#offset {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding-bottom: 7px;
+}
+#offset > label {
+    font-size: 10px;
+    background-color: #eee;
+    border-radius: 3px;
+    padding: 2px;
+}
+#offset input {
+    margin-right: 10px;
+}
 
 #temp {
     flex-direction: row;
 }
 #temp > div {
-    display: flex;
-    flex-direction: column;
     align-items: stretch;
     text-align: center;
 }

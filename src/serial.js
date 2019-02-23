@@ -31,6 +31,7 @@ const connect = require('connect');
 const linebuf = require("buffer.lines");
 const WebSocket = require('ws');
 
+let starting = false;           // output phase just after reset
 let waiting = 0;                // unack'd output lines
 let maxout = 0;                 // high water mark for buffer
 let debug = true;               // echo commands
@@ -141,9 +142,10 @@ function openSerialPort() {
             status.device.line = Date.now();
             line = line.toString().trim();
             let matched = null;
-            if (line.indexOf("echo:  M900") === 0) {
+            if (starting && line.indexOf("echo:  M900") === 0) {
                 cmdlog("<-- " + line);
                 collect = [];
+                starting = false;
             } else
             if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
                 if (line.indexOf("ok ") === 0 && collect) {
@@ -180,6 +182,7 @@ function processPortOutput(line) {
     let update = false;
     if (line === "start") {
         update = true;
+        starting = true;
         status.device.boot = Date.now();
         status.print.clear = false;
         waiting = 0;

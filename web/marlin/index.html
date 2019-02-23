@@ -48,7 +48,7 @@
             </div>
             <div id="position" class="col panel">
                     <label>position</label>
-                    <div>
+                    <div class="row align_center">
                         <label>X</label>
                         <input id="xpos" value="" size="5" disabled="true"></input>
                         <label>Y</label>
@@ -57,10 +57,26 @@
                         <input id="zpos" value="" size="5" disabled="true"></input>
                         <label>E</label>
                         <input id="epos" value="" size="5" disabled="true"></input>
+                        <div class="grow"></div>
+                        <button id="go_zero">goto 0,0,0</button>
+                    </div>
+            </div>
+            <div id="offset" class="col panel">
+                    <label>home offset</label>
+                    <div class="row align_center">
+                        <label>X</label>
+                        <input id="xoff" value="" size="5" disabled="true"></input>
+                        <label>Y</label>
+                        <input id="yoff" value="" size="5" disabled="true"></input>
+                        <label>Z</label>
+                        <input id="zoff" value="" size="5" disabled="true"></input>
+                        <div class="grow"></div>
+                        <button id="off_set">set</button>
+                        <button id="off_clear">clear</button>
                     </div>
             </div>
             <div id="temp" class="col panel">
-                <div>
+                <div class="col">
                     <label>bed</label>
                     <div>
                         <button class="dn" onclick="bed_temp_lower()">&lt;</button>
@@ -70,7 +86,7 @@
                         <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
                     </div>
                 </div>
-                <div>
+                <div class="col">
                     <label>extruder</label>
                     <div>
                         <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>

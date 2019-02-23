@@ -5,6 +5,7 @@ let logs = [];
 let ready = false;
 let sock = null;
 let last_jog = null;
+let last_set = {};      // last settings object
 let jog_val = 0.0;
 
 function reload() {
@@ -184,6 +185,7 @@ function init() {
         let msg = unescape(evt.data);
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(4,msg.length-4));
+            last_set = status;
             if (status.print) {
                 $('filename').value = status.print.filename;
                 $('progress').value = status.print.progress + '%';
@@ -192,9 +194,11 @@ function init() {
                 if (status.target.bed) {
                     $('bed').classList.add('heating');
                     $('bed').value = status.target.bed;
+                    $('bed_temp').classList.add('heating');
                     $('bed_toggle').innerText = 'off';
                 } else {
                     $('bed').classList.remove('heating');
+                    $('bed_temp').classList.remove('heating');
                     $('bed_toggle').innerText = 'on';
                 }
                 if (status.temp.bed) {
@@ -203,12 +207,14 @@ function init() {
                 if (status.target.ext[0]) {
                     $('nozzle').classList.add('heating');
                     $('nozzle').value = status.target.ext[0];
+                    $('nozzle_temp').classList.add('heating');
                     $('nozzle_toggle').innerText = 'off';
                 } else {
                     $('nozzle').classList.remove('heating');
+                    $('nozzle_temp').classList.remove('heating');
                     $('nozzle_toggle').innerText = 'on';
                 }
-                if (status.temp.ext) {
+                if (status.temp.ext[0]) {
                     $('nozzle_temp').value = parseInt(status.temp.ext[0]);
                 }
             }
@@ -218,7 +224,12 @@ function init() {
                 $('zpos').value = parseFloat(status.pos.Z).toFixed(1);
                 $('epos').value = parseFloat(status.pos.E).toFixed(1);
             }
-            log(status);
+            if (status.settings && status.settings.offset) {
+                let off = status.settings.offset;
+                $('xoff').value = parseFloat(off.X).toFixed(1);
+                $('yoff').value = parseFloat(off.Y).toFixed(1);
+                $('zoff').value = parseFloat(off.Z).toFixed(1);
+            }
         } else if (msg.indexOf("*** [") >= 0) {
             log(JSON.parse(msg.substring(4,msg.length-4)));
         } else if (msg.indexOf("***") >= 0) {
@@ -240,5 +251,19 @@ function init() {
             send('M104 S' + nozzle_temp());
             $('nozzle_toggle').innerText = 'off';
         }
+    };
+    $('go_zero').onclick = () => {
+        send('G0X0Y0Z0');
+    };
+    $('off_set').onclick = () => {
+        if (last_set && last_set.pos) {
+            let pos = last_set.pos;
+            send(`M206 X-${pos.X} Y-${pos.Y} Z-${pos.Z}`);
+            send('M503');
+        }
+    };
+    $('off_clear').onclick = () => {
+        send('M206 X0 Y0 Z0');
+        send('M503');
     };
 }
