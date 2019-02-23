@@ -72,6 +72,20 @@ button {
     width: 50px;
 }
 
+#position {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding-bottom: 7px;
+}
+#position > label {
+    font-size: 10px;
+    background-color: #eee;
+    border-radius: 3px;
+    padding: 2px;
+}
+
 #temp {
     flex-direction: row;
 }

@@ -197,6 +197,9 @@ function init() {
                     $('bed').classList.remove('heating');
                     $('bed_toggle').innerText = 'on';
                 }
+                if (status.temp.bed) {
+                    $('bed_temp').value = parseInt(status.temp.bed);
+                }
                 if (status.target.ext[0]) {
                     $('nozzle').classList.add('heating');
                     $('nozzle').value = status.target.ext[0];
@@ -205,6 +208,15 @@ function init() {
                     $('nozzle').classList.remove('heating');
                     $('nozzle_toggle').innerText = 'on';
                 }
+                if (status.temp.ext) {
+                    $('nozzle_temp').value = parseInt(status.temp.ext[0]);
+                }
+            }
+            if (status.pos) {
+                $('xpos').value = parseFloat(status.pos.X).toFixed(1);
+                $('ypos').value = parseFloat(status.pos.Y).toFixed(1);
+                $('zpos').value = parseFloat(status.pos.Z).toFixed(1);
+                $('epos').value = parseFloat(status.pos.E).toFixed(1);
             }
             log(status);
         } else if (msg.indexOf("*** [") >= 0) {

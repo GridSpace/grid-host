@@ -46,6 +46,19 @@
                     <button onclick="abort()">abort</button>
                 </div>
             </div>
+            <div id="position" class="col panel">
+                    <label>position</label>
+                    <div>
+                        <label>X</label>
+                        <input id="xpos" value="" size="5" disabled="true"></input>
+                        <label>Y</label>
+                        <input id="ypos" value="" size="5" disabled="true"></input>
+                        <label>Z</label>
+                        <input id="zpos" value="" size="5" disabled="true"></input>
+                        <label>E</label>
+                        <input id="epos" value="" size="5" disabled="true"></input>
+                    </div>
+            </div>
             <div id="temp" class="col panel">
                 <div>
                     <label>bed</label>
@@ -53,17 +66,17 @@
                         <button class="dn" onclick="bed_temp_lower()">&lt;</button>
                         <input id="bed" value="" size="3"></input>
                         <button class="up" onclick="bed_temp_higher()">&gt;</button>
-                        <input disabled="true" id="bed_temp" size="6"></input>
+                        <input id="bed_temp" size="4" disabled="true"></input>
                         <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
                     </div>
                 </div>
                 <div>
-                    <label>nozzle</label>
+                    <label>extruder</label>
                     <div>
                         <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
                         <input id="nozzle" value="" size="3"></input>
                         <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
-                        <input disabled="true" id="nozzle_temp" size="6"></input>
+                        <input id="nozzle_temp" size="4" disabled="true"></input>
                         <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
                     </div>
                 </div>
