@@ -8,6 +8,14 @@ let last_jog = null;
 let last_set = {};      // last settings object
 let jog_val = 0.0;
 
+function $(id) {
+    return document.getElementById(id);
+}
+
+function log(msg) {
+    console.log({msg});
+}
+
 function reload() {
     document.location = document.location;
 }
@@ -24,12 +32,39 @@ function shutdown() {
     }
 }
 
-function $(id) {
-    return document.getElementById(id);
+function print(file) {
+    if (confirm(`start print "${file}"?`)) {
+        send(`*kick ${file}`);
+    }
 }
 
-function log(msg) {
-    console.log({msg});
+function remove(file) {
+    if (confirm(`delete "${file}"?`)) {
+        send(`*delete ${file}`);
+        send('*list');
+    }
+}
+
+function off_set() {
+    if (last_set && last_set.pos) {
+        let pos = last_set.pos;
+        send(`M206 X-${pos.X} Y-${pos.Y} Z-${pos.Z}`);
+        send('M503');
+    }
+}
+
+function off_clear() {
+    send('M206 X0 Y0 Z0');
+    send('M503');
+}
+
+function eeprom_save() {
+    send('M500');
+}
+
+function eeprom_restore() {
+    send('M501');
+    send('M503');
 }
 
 function bed_toggle() {
@@ -97,13 +132,11 @@ function clear_bed() {
 
 function print_next() {
     send('*kick');
-    send('*status');
 }
 
 function abort() {
     if (confirm('abort print job?')) {
         send('*abort');
-        send('*status');
     }
 }
 
@@ -144,10 +177,45 @@ function send(message) {
     }
 }
 
+function init_filedrop() {
+    var list = $("file-list");
+
+    list.addEventListener("dragover", function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        evt.dataTransfer.dropEffect = 'copy';
+        list.setAttribute("class", "red_bg");
+    });
+
+    list.addEventListener("dragleave", function(evt) {
+        list.setAttribute("class", "");
+    });
+
+    list.addEventListener("drop", function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+
+        list.setAttribute("class", "");
+
+        var files = evt.dataTransfer.files;
+
+        console.log(files);
+        for (var i=0; i<files.length; i++) {
+            var file = files[i];
+            var read = new FileReader();
+            read.onloadend = function(e) {
+                Ajax.post("/api/drop?name=" + encodeURIComponent(file.name), e.target.result, function(reply) {
+                    console.log({put_reply: reply});
+                });
+            };
+            read.readAsBinaryString(file);
+        }
+
+        setTimeout(update, 500);
+    });
+}
+
 function init() {
-    // log({wss_init: true, ready});
-    // sock = new WebSocket('ws://localhost:4080/ws');
-    //sock = new WebSocket('ws://192.168.86.248:4080');
     sock = new WebSocket(`ws://${document.location.hostname}:4080`);
     sock.onopen = (evt) => {
         if (ready) {
@@ -161,6 +229,7 @@ function init() {
         interval = setInterval(() => {
             send('*status');
         }, 500);
+        send('*list');
     };
     sock.onclose = (evt) => {
         log({wss_close: true});
@@ -236,7 +305,13 @@ function init() {
                 $('zoff').value = parseFloat(off.Z).toFixed(1);
             }
         } else if (msg.indexOf("*** [") >= 0) {
-            log(JSON.parse(msg.substring(4,msg.length-4)));
+            let list = $('file-list');
+            let html = [];
+            JSON.parse(msg.substring(4,msg.length-4)).forEach(file => {
+                let name = file.name.substring(file.name.lastIndexOf("/")+1);
+                html.push(`<div class="row"><label ondblclick="print('${name}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
+            });
+            list.innerHTML = html.join('');
         } else if (msg.indexOf("***") >= 0) {
             try {
                 log({wss_msg: msg});
@@ -260,15 +335,11 @@ function init() {
     $('go_zero').onclick = () => {
         send('G0X0Y0Z0');
     };
-    $('off_set').onclick = () => {
-        if (last_set && last_set.pos) {
-            let pos = last_set.pos;
-            send(`M206 X-${pos.X} Y-${pos.Y} Z-${pos.Z}`);
-            send('M503');
+    $('send').onkeyup = ev => {
+        if (ev.keyCode === 13) {
+            send($('send').value.trim());
+            $('send').value = '';
         }
     };
-    $('off_clear').onclick = () => {
-        send('M206 X0 Y0 Z0');
-        send('M503');
-    };
+    init_filedrop();
 }

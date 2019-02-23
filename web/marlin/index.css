@@ -57,6 +57,22 @@ button {
     margin: 3px;
     justify-content: space-around;
 }
+.label-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding-bottom: 7px;
+}
+.label-group > label {
+    font-size: 10px;
+    background-color: #eee;
+    border-radius: 3px;
+    padding: 2px;
+}
+.label-group input {
+    margin-right: 10px;
+}
 
 #pos div,table {
     padding-right: 4px;
@@ -76,40 +92,6 @@ button {
     padding: 2px;
     font-size: 12px;
     width: 50px;
-}
-
-#position {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-    padding-bottom: 7px;
-}
-#position > label {
-    font-size: 10px;
-    background-color: #eee;
-    border-radius: 3px;
-    padding: 2px;
-}
-#position input {
-    margin-right: 10px;
-}
-
-#offset {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-    padding-bottom: 7px;
-}
-#offset > label {
-    font-size: 10px;
-    background-color: #eee;
-    border-radius: 3px;
-    padding: 2px;
-}
-#offset input {
-    margin-right: 10px;
 }
 
 #temp {
@@ -137,13 +119,39 @@ button {
     margin-top: 0;
     margin-left: 0;
 }
-
+#sender {
+    align-items: center;
+}
+#send {
+    width: 100%;
+    margin: 5px;
+}
 #status {
     padding: 6px;
 }
 #status input {
     padding: 5px;
     margin-right: 6px;
+}
+#files {
+    justify-content: flex-start;
+}
+#file-list div {
+    margin: 3px;
+    align-items: stretch;
+}
+#file-list label {
+    text-align: left;
+    user-select: none;
+    flex-grow: 1;
+}
+#file-list label:hover {
+    background-color: #fee;
+}
+#file-list button {
+    margin: 2px;
+    padding: 2px 4px 2px 4px;
+    border-radius: 2px;
 }
 #filename {
     flex-grow: 1;

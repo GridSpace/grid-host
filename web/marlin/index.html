@@ -46,34 +46,34 @@
                     <button onclick="abort()">abort</button>
                 </div>
             </div>
-            <div id="position" class="col panel">
-                    <label>position</label>
-                    <div class="row align_center">
-                        <label>X</label>
-                        <input id="xpos" value="" size="5" disabled="true"></input>
-                        <label>Y</label>
-                        <input id="ypos" value="" size="5" disabled="true"></input>
-                        <label>Z</label>
-                        <input id="zpos" value="" size="5" disabled="true"></input>
-                        <label>E</label>
-                        <input id="epos" value="" size="5" disabled="true"></input>
-                        <div class="grow"></div>
-                        <button id="go_zero">goto 0,0,0</button>
-                    </div>
+            <div class="col panel label-group">
+                <label>position</label>
+                <div class="row align_center">
+                    <label>X</label>
+                    <input id="xpos" value="" size="5" disabled="true"></input>
+                    <label>Y</label>
+                    <input id="ypos" value="" size="5" disabled="true"></input>
+                    <label>Z</label>
+                    <input id="zpos" value="" size="5" disabled="true"></input>
+                    <label>E</label>
+                    <input id="epos" value="" size="5" disabled="true"></input>
+                    <div class="grow"></div>
+                    <button id="go_zero">goto 0,0,0</button>
+                </div>
             </div>
-            <div id="offset" class="col panel">
-                    <label>home offset</label>
-                    <div class="row align_center">
-                        <label>X</label>
-                        <input id="xoff" value="" size="5" disabled="true"></input>
-                        <label>Y</label>
-                        <input id="yoff" value="" size="5" disabled="true"></input>
-                        <label>Z</label>
-                        <input id="zoff" value="" size="5" disabled="true"></input>
-                        <div class="grow"></div>
-                        <button id="off_set">set</button>
-                        <button id="off_clear">clear</button>
-                    </div>
+            <div class="col panel label-group">
+                <label>home offset</label>
+                <div class="row align_center">
+                    <label>X</label>
+                    <input id="xoff" value="" size="5" disabled="true"></input>
+                    <label>Y</label>
+                    <input id="yoff" value="" size="5" disabled="true"></input>
+                    <label>Z</label>
+                    <input id="zoff" value="" size="5" disabled="true"></input>
+                    <div class="grow"></div>
+                    <button onclick="off_set()">set</button>
+                    <button onclick="off_clear()">clear</button>
+                </div>
             </div>
             <div id="temp" class="col panel">
                 <div class="col">
@@ -101,11 +101,29 @@
                 <label>file</label><input id="filename" disabled="true" size="30"></input>
                 <label>progress</label><input id="progress" disabled="true" size="8"></input>
             </div>
-            <div class="grow"></div>
-            <div id="actions" class="row panel">
-                <button id="reload" onclick="reload()">reload</button>
-                <button id="reboot" onclick="reboot()">reboot</button>
-                <button id="shutdown" onclick="shutdown()">shutdown</button>
+            <div id="files" class="col panel label-group grow">
+                <label>files</label>
+                <div id="file-list" class="col grow"></div>
+            </div>
+            <div id="sender" class="row panel">
+                <label>gcode</label><input id="send" size="40"></input>
+            </div>
+            <div class="row panel justify_center">
+                <div id="eeprom" class="label-group col align_center">
+                    <label>eeprom</label>
+                    <div>
+                        <button onclick="eeprom_save()">save</button>
+                        <button onclick="eeprom_restore()">restore</button>
+                    </div>
+                </div>
+                <div id="actions" class="label-group col align_center">
+                    <label>system</label>
+                    <div>
+                        <button id="reload" onclick="reload()">reload</button>
+                        <button id="reboot" onclick="reboot()">reboot</button>
+                        <button id="shutdown" onclick="shutdown()">shutdown</button>
+                    </div>
+                </div>
             </div>
         </div>
     </body>

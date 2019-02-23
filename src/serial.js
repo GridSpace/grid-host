@@ -89,15 +89,20 @@ const status = {
 function emit(line, flags) {
     const debug = flags && flags.debug;
     const stat = flags && flags.status;
+    const list = flags && flags.list;
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
     clients.forEach(client => {
         let cstat = (stat && client.request_status);
-        if (cstat || (client.monitoring && !stat)) {
+        let clist = (list && client.request_list);
+        if (cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
             if (cstat) {
                 client.request_status = false;
+            }
+            if (clist) {
+                client.request_list = false;
             }
         }
     });
@@ -153,7 +158,7 @@ function openSerialPort() {
                     collect.push(line);
                 }
                 matched = match.shift();
-                if (!matched.flags.auto) {
+                if (!matched || !matched.flags.auto) {
                     console.log({matched, collect});
                 }
                 waiting = Math.max(waiting - 1, 0);
@@ -327,7 +332,11 @@ function processInput(line, channel) {
         case "*auto off": return opt.auto = false;
         case "*debug on": return debug = true;
         case "*debug off": return debug = false;
-        case "*list": return evtlog(JSON.stringify(dircache));
+        case "*list":
+            if (channel) {
+                channel.request_list = true;
+            }
+            return evtlog(JSON.stringify(dircache), {list: true});
         case "*kick": return kickNext();
         case "*abort": return abort();
         case "*pause": return pause();
@@ -355,8 +364,10 @@ function processInput(line, channel) {
     }
     if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
-    } else {
+    } else if (line.charAt(0) !== "*") {
         queuePriority(line);
+    } else {
+        evtlog(`invalid command "${line.substring(1)}"`);
     }
 };
 
@@ -501,6 +512,28 @@ function headers(req, res, next) {
     next();
 }
 
+function drophandler(req, res, next) {
+    const dropdir = (opt.dir || opt.filedir);
+    if (req.url === "/api/drop") {
+        res.end("thank you --- drop");
+    } else {
+        next();
+    }
+    // server.addFixedPath("/api/drop", (req, res, next) => {
+    //     var opt = {
+    //         name: req.ionq.params.get("name"),
+    //         post: req.ionq.post
+    //     };
+    //     fs.writeFileSync(dropdir + "/" + opt.name, opt.post);
+    //     res.end(JSON.stringify({put: opt.name}));
+    // });
+    // server.addFixedPath("/api/delete", (req, res, next) => {
+    //     var name = req.ionq.params.get("name");
+    //     fs.unlinkSync(dropdir + "/" + name);
+    //     res.end(JSON.stringify({del: name}));
+    // });
+}
+
 // -- start it up --
 
 if (opt.help) {
@@ -567,6 +600,7 @@ if (opt.webport) {
     const webport = parseInt(opt.webport) || (opt.listen + 1) || 8000;
     const handler = connect()
         .use(headers)
+        .use(drophandler)
         .use(serve(process.cwd() + "/" + webdir + "/"));
     const server = http.createServer(handler).listen(webport);
     const wss = new WebSocket.Server({ server });
