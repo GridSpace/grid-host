@@ -199,19 +199,21 @@ function init_filedrop() {
 
         var files = evt.dataTransfer.files;
 
-        console.log(files);
         for (var i=0; i<files.length; i++) {
             var file = files[i];
             var read = new FileReader();
             read.onloadend = function(e) {
-                Ajax.post("/api/drop?name=" + encodeURIComponent(file.name), e.target.result, function(reply) {
-                    console.log({put_reply: reply});
+                fetch("/api/drop?name=" + encodeURIComponent(file.name), {
+                    method: "post",
+                    body: e.target.result
+                }).then(reply => {
+                    return reply.text();
+                }).then(text => {
+                    console.log({text});
                 });
             };
             read.readAsBinaryString(file);
         }
-
-        setTimeout(update, 500);
     });
 }
 

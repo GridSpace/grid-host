@@ -136,6 +136,9 @@ button {
 #files {
     justify-content: flex-start;
 }
+#file-list label:hover {
+    background-color: #fee;
+}
 #file-list div {
     margin: 3px;
     align-items: stretch;
@@ -144,9 +147,6 @@ button {
     text-align: left;
     user-select: none;
     flex-grow: 1;
-}
-#file-list label:hover {
-    background-color: #fee;
 }
 #file-list button {
     margin: 2px;

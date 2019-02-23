@@ -30,6 +30,7 @@ const serve = require('serve-static');
 const connect = require('connect');
 const linebuf = require("buffer.lines");
 const WebSocket = require('ws');
+const filedir = (opt.dir || opt.filedir);
 
 let starting = false;           // output phase just after reset
 let waiting = 0;                // unack'd output lines
@@ -362,7 +363,9 @@ function processInput(line, channel) {
             }
             return evtlog(JSON.stringify(status), {status: true});
     }
-    if (line.indexOf("*send ") === 0) {
+    if (line.indexOf("*kick ") === 0) {
+        kickNamed(filedir + "/" + line.substring(6));
+    } else if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
     } else if (line.charAt(0) !== "*") {
         queuePriority(line);
@@ -476,14 +479,13 @@ function write(line, flags) {
     }
 }
 
-function checkDropDir() {
-    const dir = (opt.dir || opt.filedir);
-    if (!dir) return;
+function checkFileDir() {
+    if (!filedir) return;
     try {
         let valid = [];
-        fs.readdirSync(dir).forEach(name => {
+        fs.readdirSync(filedir).forEach(name => {
             if (name.indexOf(".gcode") > 0 || name.indexOf(".nc") > 0) {
-                name = dir + "/" + name;
+                name = filedir + "/" + name;
                 let stat = fs.statSync(name);
                 valid.push({name: name, size: stat.size, time: stat.mtimeMs});
             }
@@ -494,11 +496,15 @@ function checkDropDir() {
         if (opt.auto && valid.length && status.print.clear) {
             kickNext();
         }
-        setTimeout(checkDropDir, 2000);
+        setTimeout(checkFileDir, 2000);
     } catch (e) {
         console.log(e);
     }
 };
+
+function kickNamed(name) {
+    sendFile(name);
+}
 
 function kickNext() {
     if (!dircache.length) return evtlog("no valid files");
@@ -513,25 +519,20 @@ function headers(req, res, next) {
 }
 
 function drophandler(req, res, next) {
-    const dropdir = (opt.dir || opt.filedir);
-    if (req.url === "/api/drop") {
-        res.end("thank you --- drop");
+    const dropkey = "/api/drop?name=";
+    if (req.url.indexOf(dropkey) === 0 && req.method === 'POST') {
+        let name = req.url.substring(dropkey.length);
+        let body = '';
+        req.on('data', data => {
+            body += data.toString();
+        })
+        req.on('end', () => {
+            fs.writeFileSync(filedir + "/" + name, body);
+            res.end("file received");
+        })
     } else {
         next();
     }
-    // server.addFixedPath("/api/drop", (req, res, next) => {
-    //     var opt = {
-    //         name: req.ionq.params.get("name"),
-    //         post: req.ionq.post
-    //     };
-    //     fs.writeFileSync(dropdir + "/" + opt.name, opt.post);
-    //     res.end(JSON.stringify({put: opt.name}));
-    // });
-    // server.addFixedPath("/api/delete", (req, res, next) => {
-    //     var name = req.ionq.params.get("name");
-    //     fs.unlinkSync(dropdir + "/" + name);
-    //     res.end(JSON.stringify({del: name}));
-    // });
 }
 
 // -- start it up --
@@ -635,4 +636,4 @@ console.log({ port: port || 'undefined', baud, bufmax, mode });
 
 openSerialPort();
 
-checkDropDir();
+checkFileDir();
