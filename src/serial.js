@@ -93,7 +93,7 @@ function emit(line, flags) {
     }
     clients.forEach(client => {
         let cstat = (stat && client.request_status);
-        if (client.monitoring || cstat) {
+        if (cstat || (client.monitoring && !stat)) {
             client.write(line + "\n");
             if (cstat) {
                 client.request_status = false;
@@ -106,7 +106,7 @@ function cmdlog(line, flags) {
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
-    if (!flags || !(flags && flags.auto)) {//status.print.run === false) {
+    if (!flags || !(flags && flags.auto)) {
         emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line, flags);
     }
 };
