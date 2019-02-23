@@ -1,3 +1,4 @@
+let interval = null;
 let timeout = null;
 let queue = [];
 let logs = [];
@@ -156,9 +157,13 @@ function init() {
         while (queue.length) {
             send(queue.shift());
         }
+        interval = setInterval(() => {
+            send('*status');
+        }, 500);
     };
     sock.onclose = (evt) => {
         log({wss_close: true});
+        clearInterval(interval);
         if (timeout != null) {
             return;
         }
