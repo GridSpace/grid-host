@@ -40,8 +40,11 @@ let sdspool = false;            // spool to sd for printing
 let dircache = [];              // cache of files in watched directory
 let clients = [];               // connected clients
 let buf = [];                   // output line buffer
+let match = [];                 // queue for matching command with response
+let collect = null;             // collect lines between oks
 let sport = null;               // bound serial port
 let mode = 'marlin';            // operating mode
+let interval = null;            // pointer to interval updater
 
 // marlin-centric, to be fixed
 const status = {
@@ -82,42 +85,38 @@ const status = {
 };
 
 // write line to all connected clients
-function emit(line, debug) {
+function emit(line, flags) {
+    const debug = flags && flags.debug;
+    const stat = flags && flags.status;
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
-    if (clients.length === 0 || debug) {
-        console.log(line);
-        return;
-    }
     clients.forEach(client => {
-        client.write(line + "\n");
+        let cstat = (stat && client.request_status);
+        if (client.monitoring || cstat) {
+            client.write(line + "\n");
+            if (cstat) {
+                client.request_status = false;
+            }
+        }
     });
 }
 
-function cmdlog(line) {
+function cmdlog(line, flags) {
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
-    if (debug || waiting <= 1) {
-        emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line);
+    if (!flags || !(flags && flags.auto)) {//status.print.run === false) {
+        emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line, flags);
     }
 };
 
 // send *** message *** to all clients (not stdout unless stdin specified)
-function evtlog(line) {
+function evtlog(line, flags) {
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
-    emit("*** " + line + " ***");
-};
-
-// send *** message *** to stdout and any connected clients
-function evtdebug(line, debug) {
-    if (typeof(line) === 'object') {
-        line = JSON.stringify(line);
-    }
-    emit("*** " + line + " ***", true);
+    emit("*** " + line + " ***", flags);
 };
 
 function openSerialPort() {
@@ -134,19 +133,36 @@ function openSerialPort() {
             sport = null;
             console.log(error);
             setTimeout(openSerialPort, 1000);
+            clearInterval(interval);
+            interval = null;
             status.device.connect = 0;
         })
         .on('line', function(line) {
             status.device.line = Date.now();
             line = line.toString().trim();
-            cmdlog("<-- " + line);
+            let matched = null;
+            if (line.indexOf("echo:  M900") === 0) {
+                cmdlog("<-- " + line);
+                collect = [];
+            } else
             if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
+                if (line.indexOf("ok ") === 0 && collect) {
+                    line = line.substring(3);
+                    collect.push(line);
+                }
+                matched = match.shift();
+                if (!matched.flags.auto) {
+                    console.log({matched, collect});
+                }
                 waiting = Math.max(waiting - 1, 0);
-                line = line.substring(3);
                 if (status.update) {
                     status.update = false;
-                    evtdebug(status);
                 }
+                collect = [];
+            } else if (collect) {
+                collect.push(line);
+            } else {
+                cmdlog("<-- " + line, {auto: matched});
             }
             processPortOutput(line);
             processQueue();
@@ -167,10 +183,19 @@ function processPortOutput(line) {
         status.device.boot = Date.now();
         status.print.clear = false;
         waiting = 0;
+        collect = null;
+        match = [];
         buf = [];
-        queue('M105'); // get temps
-        queue('M114'); // get position
-        queue('M119'); // get endstops
+        if (!interval) {
+            interval = setInterval(() => {
+                if (status.device.connect === 0) {
+                    return;
+                }
+                write('M105', {auto: true}); // get temps
+                write('M114', {auto: true}); // get position
+                write('M119', {auto: true}); // get endstops
+            }, 1000);
+        }
     }
     // parse M105 temperature updates
     if (line.indexOf("T:") === 0) {
@@ -265,13 +290,13 @@ function sendFile(filename) {
     try {
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
-            evtdebug(`spooling "${filename} to SD"`);
+            evtlog(`spooling "${filename} to SD"`);
             queue(`M28 print.gco`);
             gcode.forEach(line => {
                 queue(line);
             });
             queue(`M29`);
-            evtdebug(`printing "${filename} from SD"`);
+            evtlog(`printing "${filename} from SD"`);
             queue(`M23 print.gco`);
             queue(`M24`);
         } else {
@@ -285,7 +310,7 @@ function sendFile(filename) {
     }
 }
 
-function processCmdLine(line) {
+function processInput(line, channel) {
     line = line.toString().trim();
     if (line.indexOf("*exec ") === 0) {
         let cmd = line.substring(6);
@@ -307,13 +332,28 @@ function processCmdLine(line) {
         case "*clear":
             status.print.clear = true;
             return evtlog("bed marked clear");
+        case "*monitor on":
+            if (channel && !channel.monitoring) {
+                channel.monitoring = true;
+                evtlog("monitoring enabled");
+            }
+            return;
+        case "*monitor off":
+            if (channel && channel.monitoring) {
+                evtlog("monitoring disabled");
+                channel.monitoring = false;
+            }
+            return;
         case "*status":
-            return evtlog(JSON.stringify(status));
+            if (channel) {
+                channel.request_status = true;
+            }
+            return evtlog(JSON.stringify(status), {status: true});
     }
     if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
     } else {
-        queue(line, true);
+        queuePriority(line);
     }
 };
 
@@ -324,7 +364,7 @@ function abort() {
     } else
     // safety if buffer in play
     if (buf.length) {
-        write("M108");      // cancel / unblock heating
+        write("M108"); // cancel / unblock heating
         buf = [
             "M104 S0 T0",   // extruder 0 heat off
             "M104 S0 T1",   // extruder 1 heat off
@@ -392,11 +432,16 @@ function queue(line, priority) {
     }
 };
 
-function write(line) {
+function queuePriority(line) {
+    queue(line, true);
+}
+
+function write(line, flags) {
     if (line.indexOf("M2000") === 0) {
         pause();
         return;
     }
+    flags = flags || {};
     switch (line.charAt(0)) {
         case ';':
             return;
@@ -405,11 +450,12 @@ function write(line) {
         case '~': // grbl resume
         case 'M':
         case 'G':
+            match.push({line, flags});
             waiting++;
             break;
     }
     if (sport) {
-        cmdlog("--> " + line);
+        cmdlog("--> " + line, flags);
         sport.write(line + "\n");
     } else {
         console.log("*** serial port missing *** " + line);
@@ -457,14 +503,14 @@ function headers(req, res, next) {
 if (opt.help) {
     console.log([
         "usage: serial [options]",
-        "   device  <dev>  : path to serial port device",
-        "   baud    <rate> : baud rate for serial device",
-        "   listen  <port> : port for command interface",
-        "   webport <port> : port to listen for web connections",
-        "   webdir  <dir>  : directory to serve on <webport>",
-        "   filedir <dir>  : directory to watch for gcode",
-        "   stdin          : enable stdin as command interface",
-        "   grbl           : enable grbl command mode"
+        "   --device=<dev>   : path to serial port device",
+        "   --baud=<rate>    : baud rate for serial device",
+        "   --listen=<port>  : port for command interface",
+        "   --webport=<port> : port to listen for web connections",
+        "   --webdir=<dir>   : directory to serve on <webport>",
+        "   --filedir=<dir>  : directory to watch for gcode",
+        "   --stdin          : enable stdin as command interface",
+        "   --grbl           : enable grbl command mode"
     ].join("\n"));
     process.exit(0);
 }
@@ -490,10 +536,12 @@ if (opt.probe) {
     return;
 }
 
+clients.push(process.stdout);
+process.stdout.monitoring = true;
+
 if (opt.stdin) {
     new LineBuffer(process.stdin);
-    process.stdin.on("line", line => { processCmdLine(line) });
-    clients.push(process.stdout);
+    process.stdin.on("line", line => { processInput(line, process.stdout) });
     status.clients.stdin = 1;
 }
 
@@ -502,7 +550,7 @@ if (opt.listen) {
         status.clients.net++;
         new LineBuffer(socket);
         socket.write("*ready\n");
-        socket.on("line", line => { processCmdLine(line) });
+        socket.on("line", line => { processInput(line, socket) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
             status.clients.net--;
@@ -530,7 +578,7 @@ if (opt.webport) {
                 console.log({wss_error: error});
             })
             .on('message', (message) => {
-                processCmdLine(message);
+                processInput(message, ws);
             });
 
         ws.send("*ready");
