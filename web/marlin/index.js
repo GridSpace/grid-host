@@ -95,7 +95,7 @@ function clear_bed() {
     send('*status');
 }
 
-function kick_next() {
+function print_next() {
     send('*kick');
     send('*status');
 }
@@ -189,29 +189,34 @@ function init() {
             if (status.print) {
                 $('filename').value = status.print.filename;
                 $('progress').value = status.print.progress + '%';
+                if (status.print.clear) {
+                    $('clear_bed').classList.remove('red_bg');
+                } else {
+                    $('clear_bed').classList.add('red_bg');
+                }
             }
             if (status.target) {
                 if (status.target.bed) {
-                    $('bed').classList.add('heating');
+                    $('bed').classList.add('red_bg');
                     $('bed').value = status.target.bed;
-                    $('bed_temp').classList.add('heating');
+                    $('bed_temp').classList.add('red_bg');
                     $('bed_toggle').innerText = 'off';
                 } else {
-                    $('bed').classList.remove('heating');
-                    $('bed_temp').classList.remove('heating');
+                    $('bed').classList.remove('red_bg');
+                    $('bed_temp').classList.remove('red_bg');
                     $('bed_toggle').innerText = 'on';
                 }
                 if (status.temp.bed) {
                     $('bed_temp').value = parseInt(status.temp.bed);
                 }
                 if (status.target.ext[0]) {
-                    $('nozzle').classList.add('heating');
+                    $('nozzle').classList.add('red_bg');
                     $('nozzle').value = status.target.ext[0];
-                    $('nozzle_temp').classList.add('heating');
+                    $('nozzle_temp').classList.add('red_bg');
                     $('nozzle_toggle').innerText = 'off';
                 } else {
-                    $('nozzle').classList.remove('heating');
-                    $('nozzle_temp').classList.remove('heating');
+                    $('nozzle').classList.remove('red_bg');
+                    $('nozzle_temp').classList.remove('red_bg');
                     $('nozzle_toggle').innerText = 'on';
                 }
                 if (status.temp.ext[0]) {
