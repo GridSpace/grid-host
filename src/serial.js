@@ -97,7 +97,8 @@ function emit(line, flags) {
     clients.forEach(client => {
         let cstat = (stat && client.request_status);
         let clist = (list && client.request_list);
-        if (cstat || clist || (client.monitoring && !stat && !list)) {
+        let cmatch = flags && flags.channel === client;
+        if (cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
             if (cstat) {
                 client.request_status = false;
@@ -152,15 +153,23 @@ function openSerialPort() {
                 cmdlog("<-- " + line);
                 collect = [];
                 starting = false;
-            } else
-            if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
+            } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
                 if (line.indexOf("ok ") === 0 && collect) {
                     line = line.substring(3);
                     collect.push(line);
                 }
                 matched = match.shift();
                 if (!matched || !matched.flags.auto) {
-                    console.log({matched, collect});
+                    let flags = matched && matched.flags ? matched.flags : null;
+                    if (collect.length) {
+                        collect.forEach((el, i) => {
+                            if (i === 0) {
+                                cmdlog("<-- " + el, flags);
+                            } else {
+                                cmdlog("    " + el, flags);
+                            }
+                        });
+                    }
                 }
                 waiting = Math.max(waiting - 1, 0);
                 if (status.update) {
@@ -200,9 +209,9 @@ function processPortOutput(line) {
                 if (status.device.connect === 0) {
                     return;
                 }
-                write('M105', {auto: true}); // get temps
-                write('M114', {auto: true}); // get position
-                write('M119', {auto: true}); // get endstops
+                queue('M105', {auto: true}); // get temps
+                queue('M114', {auto: true}); // get position
+                queue('M119', {auto: true}); // get endstops
             }, 1000);
         }
     }
@@ -320,6 +329,14 @@ function sendFile(filename) {
 }
 
 function processInput(line, channel) {
+    try {
+        processInput2(line, channel);
+    } catch (e) {
+        console.trace(line, e);
+    }
+}
+
+function processInput2(line, channel) {
     line = line.toString().trim();
     if (line.indexOf("*exec ") === 0) {
         let cmd = line.substring(6);
@@ -363,12 +380,14 @@ function processInput(line, channel) {
             }
             return evtlog(JSON.stringify(status), {status: true});
     }
-    if (line.indexOf("*kick ") === 0) {
+    if (line.indexOf("*delete ") === 0) {
+        fs.unlinkSync(filedir + "/" + line.substring(8));
+    } else if (line.indexOf("*kick ") === 0) {
         kickNamed(filedir + "/" + line.substring(6));
     } else if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
     } else if (line.charAt(0) !== "*") {
-        queuePriority(line);
+        queuePriority(line, channel);
     } else {
         evtlog(`invalid command "${line.substring(1)}"`);
     }
@@ -414,7 +433,8 @@ function processQueue() {
     if (processing) return;
     processing = true;
     while (waiting < bufmax && buf.length && !paused) {
-        write(buf.shift());
+        let {line, flags} = buf.shift();
+        write(line,flags);
     }
     if (buf.length === 0) {
         maxout = 0;
@@ -432,28 +452,32 @@ function processQueue() {
     processing = false;
 };
 
-function queue(line, priority) {
+function queue(line, flags) {
     line = line.trim();
     if (line.length === 0) {
         return;
     }
     if (waiting < bufmax) {
-        write(line);
+        write(line, flags);
     } else {
-        if (priority) {
-            buf.splice(0, 0, line)
+        if (flags && flags.priority) {
+            buf.splice(0, 0, {line, flags})
         } else {
-            buf.push(line);
+            buf.push({line, flags});
         }
         maxout = Math.max(maxout, buf.length);
     }
 };
 
-function queuePriority(line) {
-    queue(line, true);
+function queuePriority(line, channel) {
+    queue(line, {priority: true, channel});
 }
 
 function write(line, flags) {
+    if (!line) {
+        console.trace("missing line", line, flags);
+        return;
+    }
     if (line.indexOf("M2000") === 0) {
         pause();
         return;
