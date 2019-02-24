@@ -33,6 +33,14 @@ function shutdown() {
 }
 
 function print(file) {
+    if (!last_set) {
+        alert('not connected');
+        return;
+    }
+    if (!last_set.print.clear) {
+        alert('bed not cleared');
+        return;
+    }
     if (confirm(`start print "${file}"?`)) {
         send(`*kick ${file}`);
     }
@@ -41,7 +49,9 @@ function print(file) {
 function remove(file) {
     if (confirm(`delete "${file}"?`)) {
         send(`*delete ${file}`);
-        send('*list');
+        setTimeout(() => {
+            send('*list');
+        }, 250);
     }
 }
 
@@ -210,6 +220,9 @@ function init_filedrop() {
                     return reply.text();
                 }).then(text => {
                     console.log({text});
+                    setTimeout(() => {
+                        send('*list');
+                    }, 250);
                 });
             };
             read.readAsBinaryString(file);

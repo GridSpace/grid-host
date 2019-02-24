@@ -55,6 +55,10 @@ const status = {
         net: 0,                 // direct network clients
         stdin: 0                // 1 of stdin active
     },
+    buffer: {
+        waiting: 0,             // unack'd output
+        queue: 0,               // queue depth
+    },
     device: {
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully
@@ -171,7 +175,7 @@ function openSerialPort() {
                         });
                     }
                 }
-                waiting = Math.max(waiting - 1, 0);
+                status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
                 if (status.update) {
                     status.update = false;
                 }
@@ -200,7 +204,7 @@ function processPortOutput(line) {
         starting = true;
         status.device.boot = Date.now();
         status.print.clear = false;
-        waiting = 0;
+        status.buffer.waiting = waiting = 0;
         collect = null;
         match = [];
         buf = [];
@@ -244,8 +248,11 @@ function processPortOutput(line) {
         line.split(' ').forEach(tok => {
             tok = tok.split(':');
             if (tok.length === 2) {
-                pos[tok[0]] = parseFloat(tok[1]);
-                update = true;
+                // do not overwrite value (Z: comes twice, for example)
+                if (!pos[tok[0]]) {
+                    pos[tok[0]] = parseFloat(tok[1]);
+                    update = true;
+                }
             }
         });
     }
@@ -382,6 +389,7 @@ function processInput2(line, channel) {
     }
     if (line.indexOf("*delete ") === 0) {
         fs.unlinkSync(filedir + "/" + line.substring(8));
+        checkFileDir();
     } else if (line.indexOf("*kick ") === 0) {
         kickNamed(filedir + "/" + line.substring(6));
     } else if (line.indexOf("*send ") === 0) {
@@ -397,20 +405,22 @@ function abort() {
     evtlog("execution aborted");
     if (mode === 'grbl') {
         buf = [];
-    } else
-    // safety if buffer in play
-    if (buf.length) {
-        write("M108"); // cancel / unblock heating
-        buf = [
+    } else {
+        buf = [];
+        write("M108", {}); // cancel / unblock heating
+        [
+            "M108",         // cancel heating
             "M104 S0 T0",   // extruder 0 heat off
-            "M104 S0 T1",   // extruder 1 heat off
             "M140 S0 T0",   // bed heat off
             "M107",         // shut off cooling fan
             "G91",          // relative moves
             "G0 Z10",       // drop bed 1cm
-            "G28 X0 Y0",    // home X & Y
+            "G28 X Y",      // home X & Y
+            "G90",          // restore absolute moves
             "M84"           // disable steppers
-        ];
+        ].forEach(line => {
+            queue(line, {priority: true});
+        });
     }
     processQueue();
     status.print.clear = false;
@@ -434,6 +444,7 @@ function processQueue() {
     processing = true;
     while (waiting < bufmax && buf.length && !paused) {
         let {line, flags} = buf.shift();
+        status.buffer.queue = buf.length;
         write(line,flags);
     }
     if (buf.length === 0) {
@@ -465,6 +476,7 @@ function queue(line, flags) {
         } else {
             buf.push({line, flags});
         }
+        status.buffer.queue = buf.length;
         maxout = Math.max(maxout, buf.length);
     }
 };
@@ -490,9 +502,14 @@ function write(line, flags) {
         case '?': // grbl
         case '~': // grbl resume
         case 'M':
+            if (line.indexOf('M1000') === 0) {
+                status.print.prep = status.print.start;
+                status.print.start = Date.now();
+            }
         case 'G':
             match.push({line, flags});
             waiting++;
+            status.buffer.waiting = waiting;
             break;
     }
     if (sport) {
