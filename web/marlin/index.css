@@ -136,6 +136,9 @@ button {
 #files {
     justify-content: flex-start;
 }
+#file-list {
+    overflow-y: auto;
+}
 #file-list label:hover {
     background-color: #fee;
 }

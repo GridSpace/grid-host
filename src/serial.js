@@ -47,6 +47,9 @@ let collect = null;             // collect lines between oks
 let sport = null;               // bound serial port
 let mode = 'marlin';            // operating mode
 let interval = null;            // pointer to interval updater
+let auto = true;                // interval collection of system state
+let auto_lb = 0;                // interval last buffer size check
+let onboot = [];                // commands to run on boot (useful for abort)
 
 // marlin-centric, to be fixed
 const status = {
@@ -150,6 +153,7 @@ function openSerialPort() {
             status.device.connect = 0;
         })
         .on('line', function(line) {
+            // console.log("<... " + line);
             status.device.line = Date.now();
             line = line.toString().trim();
             let matched = null;
@@ -166,6 +170,7 @@ function openSerialPort() {
                 if (!matched || !matched.flags.auto) {
                     let flags = matched && matched.flags ? matched.flags : null;
                     if (collect.length) {
+                        // cmdlog("==> " + (matched ? matched.line : "no match"));
                         collect.forEach((el, i) => {
                             if (i === 0) {
                                 cmdlog("<-- " + el, flags);
@@ -173,6 +178,10 @@ function openSerialPort() {
                                 cmdlog("    " + el, flags);
                             }
                         });
+                    // } else if (matched) {
+                    //     cmdlog("=== " + matched.line);
+                    // } else {
+                    //     cmdlog("--- no match");
                     }
                 }
                 status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
@@ -208,14 +217,24 @@ function processPortOutput(line) {
         collect = null;
         match = [];
         buf = [];
+        // queue onboot commands
+        onboot.forEach(cmd => {
+            queue(cmd);
+        });
+        onboot = [];
+        // setup interval data collection
         if (!interval) {
             interval = setInterval(() => {
-                if (status.device.connect === 0) {
+                if (status.device.connect === 0 || !auto) {
                     return;
                 }
-                queue('M105', {auto: true}); // get temps
-                queue('M114', {auto: true}); // get position
-                queue('M119', {auto: true}); // get endstops
+                // only queue when wait is decreasing or zero
+                if (waiting === 0 || waiting <= auto_lb - 3) {
+                    queue('M105', {auto: true}); // get temps
+                    queue('M114', {auto: true}); // get position
+                    queue('M119', {auto: true}); // get endstops
+                }
+                auto_lb = waiting;
             }, 1000);
         }
     }
@@ -312,6 +331,9 @@ function sendFile(filename) {
     status.print.filename = filename;
     status.print.start = Date.now();
     evtlog("send: " + filename);
+    // prevent auto polling during send buffering
+    let auto_save = auto;
+    auto = false;
     try {
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
@@ -333,6 +355,7 @@ function sendFile(filename) {
         evtlog("error sending file");
         console.log(e);
     }
+    auto = auto_save;
 }
 
 function processInput(line, channel) {
@@ -353,10 +376,13 @@ function processInput2(line, channel) {
         return;
     }
     switch (line) {
-        case "*auto on": return opt.auto = true;
-        case "*auto off": return opt.auto = false;
+        case "*auto on": return auto = true;
+        case "*auto off": return auto = false;
         case "*debug on": return debug = true;
         case "*debug off": return debug = false;
+        case "*match":
+            console.log({match});
+            return;
         case "*list":
             if (channel) {
                 channel.request_list = true;
@@ -403,27 +429,39 @@ function processInput2(line, channel) {
 
 function abort() {
     evtlog("execution aborted");
-    if (mode === 'grbl') {
-        buf = [];
-    } else {
-        buf = [];
-        write("M108", {}); // cancel / unblock heating
-        [
-            "M108",         // cancel heating
-            "M104 S0 T0",   // extruder 0 heat off
-            "M140 S0 T0",   // bed heat off
-            "M107",         // shut off cooling fan
-            "G91",          // relative moves
-            "G0 Z10",       // drop bed 1cm
-            "G28 X Y",      // home X & Y
-            "G90",          // restore absolute moves
-            "M84"           // disable steppers
-        ].forEach(line => {
-            queue(line, {priority: true});
-        });
-    }
-    processQueue();
-    status.print.clear = false;
+    sport.close(); // forces re-init of marlin
+    onboot = [
+        "M104 S0 T0",   // extruder 0 heat off
+        "M140 S0 T0",   // bed heat off
+        "M107",         // shut off cooling fan
+        "G91",          // relative moves
+        "G0 Z10",       // drop bed 1cm
+        "G28 X Y",      // home X & Y
+        "G90",          // restore absolute moves
+        "M84"           // disable steppers
+    ];
+    return;
+    // if (mode === 'grbl') {
+    //     buf = [];
+    // } else {
+    //     buf = [];
+    //     // match = [];
+    //     // write('M108', {abort: true}); // cancel heating
+    //     [
+    //         "M104 S0 T0",   // extruder 0 heat off
+    //         "M140 S0 T0",   // bed heat off
+    //         "M107",         // shut off cooling fan
+    //         "G91",          // relative moves
+    //         "G0 Z10",       // drop bed 1cm
+    //         "G28 X Y",      // home X & Y
+    //         "G90",          // restore absolute moves
+    //         "M84"           // disable steppers
+    //     ].forEach((line, i) => {
+    //         queue(line, {priority: i === 0});
+    //     });
+    // }
+    // processQueue();
+    // status.print.clear = false;
 };
 
 function pause() {
@@ -440,7 +478,9 @@ function resume() {
 };
 
 function processQueue() {
-    if (processing) return;
+    if (processing) {
+        return;
+    }
     processing = true;
     while (waiting < bufmax && buf.length && !paused) {
         let {line, flags} = buf.shift();
@@ -505,6 +545,8 @@ function write(line, flags) {
             if (line.indexOf('M1000') === 0) {
                 status.print.prep = status.print.start;
                 status.print.start = Date.now();
+                // do not send
+                return;
             }
         case 'G':
             match.push({line, flags});
@@ -513,6 +555,7 @@ function write(line, flags) {
             break;
     }
     if (sport) {
+        // console.log("...> " + line);
         cmdlog("--> " + line, flags);
         sport.write(line + "\n");
     } else {
@@ -534,9 +577,6 @@ function checkFileDir() {
         dircache = valid.sort((a, b) => {
             return b.time - a.time;
         });
-        if (opt.auto && valid.length && status.print.clear) {
-            kickNext();
-        }
         setTimeout(checkFileDir, 2000);
     } catch (e) {
         console.log(e);
