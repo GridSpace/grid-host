@@ -31,11 +31,11 @@ const connect = require('connect');
 const linebuf = require("buffer.lines");
 const WebSocket = require('ws');
 const filedir = (opt.dir || opt.filedir);
+const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
 
 let starting = false;           // output phase just after reset
 let waiting = 0;                // unack'd output lines
 let maxout = 0;                 // high water mark for buffer
-let debug = true;               // echo commands
 let paused = false;             // queue processing paused
 let processing = false;         // queue being drained
 let sdspool = false;            // spool to sd for printing
@@ -47,8 +47,9 @@ let collect = null;             // collect lines between oks
 let sport = null;               // bound serial port
 let mode = 'marlin';            // operating mode
 let interval = null;            // pointer to interval updater
-let auto = true;                // interval collection of system state
+let auto = true;                // true to enable interval collection of data
 let auto_lb = 0;                // interval last buffer size check
+let auto_int = auto_int_def;    // interval for auto collect in ms
 let onboot = [];                // commands to run on boot (useful for abort)
 
 // marlin-centric, to be fixed
@@ -63,6 +64,7 @@ const status = {
         queue: 0,               // queue depth
     },
     device: {
+        ready: false,           // true when connected and post-init
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully
         close: 0,               // time of last close
@@ -95,7 +97,6 @@ const status = {
 
 // write line to all connected clients
 function emit(line, flags) {
-    const debug = flags && flags.debug;
     const stat = flags && flags.status;
     const list = flags && flags.list;
     if (typeof(line) === 'object') {
@@ -151,6 +152,7 @@ function openSerialPort() {
             clearInterval(interval);
             interval = null;
             status.device.connect = 0;
+            status.device.ready = false;
         })
         .on('line', function(line) {
             // console.log("<... " + line);
@@ -167,21 +169,25 @@ function openSerialPort() {
                     collect.push(line);
                 }
                 matched = match.shift();
+                let from = matched ? matched.line : "???";
+                let flags = matched ? matched.flags : {};
+                // callbacks used by auto stats gathering
+                if (flags.callback) {
+                    flags.callback(collect, matched.line);
+                }
+                // auto stats reporting
                 if (!matched || !matched.flags.auto) {
-                    let flags = matched && matched.flags ? matched.flags : null;
                     if (collect.length) {
-                        // cmdlog("==> " + (matched ? matched.line : "no match"));
-                        collect.forEach((el, i) => {
-                            if (i === 0) {
-                                cmdlog("<-- " + el, flags);
-                            } else {
-                                cmdlog("    " + el, flags);
-                            }
-                        });
-                    // } else if (matched) {
-                    //     cmdlog("=== " + matched.line);
+                        cmdlog("==> " + from + " -- " + JSON.stringify(collect));
+                        // collect.forEach((el, i) => {
+                        //     if (i === 0) {
+                        //         cmdlog("<-- " + el, flags);
+                        //     } else {
+                        //         cmdlog("    " + el, flags);
+                        //     }
+                        // });
                     // } else {
-                    //     cmdlog("--- no match");
+                    //     cmdlog("==> " + from + " -- ok");
                     }
                 }
                 status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
@@ -202,6 +208,7 @@ function openSerialPort() {
             evtlog("close");
             setTimeout(openSerialPort, 1000);
             status.device.close = Date.now();
+            status.device.ready = false;
         });
 }
 
@@ -211,6 +218,7 @@ function processPortOutput(line) {
     if (line === "start") {
         update = true;
         starting = true;
+        status.device.ready = true;
         status.device.boot = Date.now();
         status.print.clear = false;
         status.buffer.waiting = waiting = 0;
@@ -224,18 +232,31 @@ function processPortOutput(line) {
         onboot = [];
         // setup interval data collection
         if (!interval) {
+            // prevent rescheduling a command until it's completed
+            let runflags = {
+                "M119": true,
+                "M114": true,
+                "M105": true
+            };
             interval = setInterval(() => {
-                if (status.device.connect === 0 || !auto) {
+                if (!status.device.ready || auto_int === 0) {
                     return;
                 }
+                let priority = true;
+                let callback = (collect, line) => {
+                    runflags[line] = true;
+                };
                 // only queue when wait is decreasing or zero
                 if (waiting === 0 || waiting <= auto_lb - 3) {
-                    queue('M105', {auto: true}); // get temps
-                    queue('M114', {auto: true}); // get position
-                    queue('M119', {auto: true}); // get endstops
+                    for (let key in runflags) {
+                        if (runflags[key]) {
+                            runflags[key] = false;
+                            queue(key, {auto: true, priority, callback}); // get endstops
+                        }
+                    }
                 }
-                auto_lb = waiting;
-            }, 1000);
+                auto_lb = buf.length;
+            }, auto_int);
         }
     }
     // parse M105 temperature updates
@@ -315,6 +336,12 @@ function processPortOutput(line) {
             time: Date.now(),
             cause: line.substring(6)
         };
+        evtlog(line);
+        sport.close();
+    }
+    // catch processing errors and reboot
+    if (line.indexOf("Unknown command:") >= 0) {
+        evtlog(`fatal: ${line}`);
         sport.close();
     }
     if (update) {
@@ -378,8 +405,6 @@ function processInput2(line, channel) {
     switch (line) {
         case "*auto on": return auto = true;
         case "*auto off": return auto = false;
-        case "*debug on": return debug = true;
-        case "*debug off": return debug = false;
         case "*match":
             console.log({match});
             return;
@@ -429,39 +454,39 @@ function processInput2(line, channel) {
 
 function abort() {
     evtlog("execution aborted");
-    sport.close(); // forces re-init of marlin
-    onboot = [
-        "M104 S0 T0",   // extruder 0 heat off
-        "M140 S0 T0",   // bed heat off
-        "M107",         // shut off cooling fan
-        "G91",          // relative moves
-        "G0 Z10",       // drop bed 1cm
-        "G28 X Y",      // home X & Y
-        "G90",          // restore absolute moves
-        "M84"           // disable steppers
-    ];
-    return;
-    // if (mode === 'grbl') {
-    //     buf = [];
-    // } else {
-    //     buf = [];
-    //     // match = [];
-    //     // write('M108', {abort: true}); // cancel heating
-    //     [
-    //         "M104 S0 T0",   // extruder 0 heat off
-    //         "M140 S0 T0",   // bed heat off
-    //         "M107",         // shut off cooling fan
-    //         "G91",          // relative moves
-    //         "G0 Z10",       // drop bed 1cm
-    //         "G28 X Y",      // home X & Y
-    //         "G90",          // restore absolute moves
-    //         "M84"           // disable steppers
-    //     ].forEach((line, i) => {
-    //         queue(line, {priority: i === 0});
-    //     });
-    // }
-    // processQueue();
-    // status.print.clear = false;
+    // sport.close(); // forces re-init of marlin
+    // onboot = [
+    //     "M104 S0 T0",   // extruder 0 heat off
+    //     "M140 S0 T0",   // bed heat off
+    //     "M107",         // shut off cooling fan
+    //     "G91",          // relative moves
+    //     "G0 Z10",       // drop bed 1cm
+    //     "G28 X Y",      // home X & Y
+    //     "G90",          // restore absolute moves
+    //     "M84"           // disable steppers
+    // ];
+    // return;
+    if (mode === 'grbl') {
+        buf = [];
+    } else {
+        buf = [];
+        // match = [];
+        // write('M108', {abort: true}); // cancel heating
+        [
+            "M104 S0 T0",   // extruder 0 heat off
+            "M140 S0 T0",   // bed heat off
+            "M107",         // shut off cooling fan
+            "G91",          // relative moves
+            "G0 Z10",       // drop bed 1cm
+            "G28 X Y",      // home X & Y
+            "G90",          // restore absolute moves
+            "M84"           // disable steppers
+        ].forEach((line, i) => {
+            queue(line, {priority: i === 0});
+        });
+    }
+    processQueue();
+    status.print.clear = false;
 };
 
 function pause() {
@@ -533,6 +558,10 @@ function write(line, flags) {
     if (line.indexOf("M2000") === 0) {
         pause();
         return;
+    }
+    let sci = line.indexOf(";");
+    if (sci > 0) {
+        line = line.substring(0, sci).trim();
     }
     flags = flags || {};
     switch (line.charAt(0)) {
@@ -713,7 +742,7 @@ if (opt.webport) {
     console.log({ webport, webdir });
 }
 
-console.log({ port: port || 'undefined', baud, bufmax, mode });
+console.log({ port: port || 'undefined', baud, mode, maxbuf: bufmax, auto: auto_int });
 
 openSerialPort();
 

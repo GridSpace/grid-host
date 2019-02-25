@@ -194,18 +194,18 @@ function init_filedrop() {
         evt.stopPropagation();
         evt.preventDefault();
         evt.dataTransfer.dropEffect = 'copy';
-        list.setAttribute("class", "red_bg");
+        list.classList.add("red_bg");
     });
 
     list.addEventListener("dragleave", function(evt) {
-        list.setAttribute("class", "");
+        list.classList.remove("red_bg");
     });
 
     list.addEventListener("drop", function(evt) {
         evt.stopPropagation();
         evt.preventDefault();
 
-        list.setAttribute("class", "");
+        list.classList.remove("red_bg");
 
         var files = evt.dataTransfer.files;
 
@@ -231,6 +231,7 @@ function init_filedrop() {
 }
 
 function init() {
+    timeout = null;
     sock = new WebSocket(`ws://${document.location.hostname}:4080`);
     sock.onopen = (evt) => {
         if (ready) {
