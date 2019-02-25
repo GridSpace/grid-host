@@ -234,7 +234,7 @@ function processPortOutput(line) {
         if (!interval) {
             // prevent rescheduling a command until it's completed
             let runflags = {
-                "M119": true,
+                // "M119": true,
                 "M114": true,
                 "M105": true
             };

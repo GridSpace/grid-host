@@ -1,8 +1,6 @@
 body {
     font-family: sans-serif;
-    flex-direction: column;
     position: fixed;
-    display: flex;
     top: 0;
     bottom: 0;
     left: 0;
@@ -19,46 +17,6 @@ hr {
 }
 th,td {
     white-space: nowrap;
-}
-#top {
-    padding: 0 8px 0 8px;
-    text-align: center;
-}
-#top label {
-    padding: 0 10px 0 10px;
-}
-#middle {
-    position: relative;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    min-height: 30%;
-    height: 30%;
-    overflow: auto;
-}
-#cam {
-    display: flex;
-    flex-direction: row;
-    flex-grow: 1;
-    margin-left: 20px;
-    width: 100%;
-}
-#cam img {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-}
-#bottom {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    flex-grow: 1;
-    overflow: auto;
-}
-#preview {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
 }
 label {
     font-weight: bold;
@@ -92,4 +50,47 @@ tr:hover th {
 }
 tr:hover td {
     background-color: #fee;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+}
+.row {
+    display: flex;
+    flex-direction: row;
+}
+.grow {
+    flex-grow: 1;
+}
+
+#top {
+    padding: 0 8px 0 8px;
+    text-align: center;
+}
+#top label {
+    padding: 0 10px 0 10px;
+}
+
+#printers {
+    align-items: flex-start;
+}
+#cam {
+    margin-left: 20px;
+}
+#cam img {
+    width: auto;
+    height: 400px;
+}
+
+#jobs {
+    align-items: stretch;
+}
+#queue {
+    overflow-y: auto;
+    height: 100%;
+}
+#detail img {
+    width: auto;
+    height: 600px;
 }

@@ -6,23 +6,25 @@
         <link rel="stylesheet" type="text/css" href="index.css">
     </head>
     <body onload="init()">
+        <div class="col">
         <div id="top">
             <label><a href="https://github.com/GridSpace/grid-print">grid:print server</a></label>
             <span>works with</span>
             <label><a href="https://github.com/GridSpace">grid:space apps</a></label>
         </div>
         <hr>
-        <div id="middle">
-            <div id="targets"></div>
-            <div id="cam"><img id="image" /></div>
+        <div id="printers" class="row">
+            <div id="targets" class="col"></div>
+            <div id="cam" class="row"><img id="image" /></div>
         </div>
         <hr>
-        <div id="bottom">
-            <div id="queue"></div>
-            <div id="detail">
+        <div id="jobs" class="row grow">
+            <div id="queue" class="col"></div>
+            <div id="detail" class="row">
                 <img id="preview"/>
                 <div id="gcode"></div>
             </div>
+        </div>
         </div>
     </body>
 </html>
