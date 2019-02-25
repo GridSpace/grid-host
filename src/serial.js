@@ -177,7 +177,7 @@ function openSerialPort() {
                 }
                 // auto stats reporting
                 if (!matched || !matched.flags.auto) {
-                    if (collect.length) {
+                    if (collect && collect.length) {
                         cmdlog("==> " + from + " -- " + JSON.stringify(collect));
                         // collect.forEach((el, i) => {
                         //     if (i === 0) {
