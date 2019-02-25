@@ -178,16 +178,17 @@ function openSerialPort() {
                 // auto stats reporting
                 if (!matched || !matched.flags.auto) {
                     if (collect && collect.length) {
-                        cmdlog("==> " + from + " -- " + JSON.stringify(collect));
-                        // collect.forEach((el, i) => {
-                        //     if (i === 0) {
-                        //         cmdlog("<-- " + el, flags);
-                        //     } else {
-                        //         cmdlog("    " + el, flags);
-                        //     }
-                        // });
-                    // } else {
-                    //     cmdlog("==> " + from + " -- ok");
+                        if (collect.length >= 4) {
+                            collect.forEach((el, i) => {
+                                if (i === 0) {
+                                    cmdlog("<-- " + el, flags);
+                                } else {
+                                    cmdlog("    " + el, flags);
+                                }
+                            });
+                        } else {
+                            cmdlog("==> " + from + " -- " + JSON.stringify(collect));
+                        }
                     }
                 }
                 status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
