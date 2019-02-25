@@ -403,6 +403,7 @@ function processInput2(line, channel) {
         return;
     }
     switch (line) {
+        case "*bounce": return sport.close();
         case "*auto on": return auto = true;
         case "*auto off": return auto = false;
         case "*match":
