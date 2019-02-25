@@ -131,12 +131,20 @@ function queue(q) {
         cell('th', div('status')),
         '</tr></thead><tbody>'
     ];
+    let lastday = null;
     q.reverse().forEach(el => {
         let target = el.target.comment || el.target.key || el.target;
         let tag = localStorage[`tag-${el.from}`] || el.from;
-        let time = el.time || {};
+        let time = el.time.add || 0;
+        let day = moment(time).format('dddd YYYY-MM-DD');
+        if (day !== lastday) {
+            html.push(`<tr>`);
+            html.push(cell('th', "--- " + day + " ---", {colspan: 6, class: "daypart"}));
+            html.push('</tr>');
+        }
+        lastday = day;
         html.push(`<tr id="q-${el.key}">`);
-        html.push(cell('td', moment(time.add || 0).format('YYYY-MM-DD HH:MM:ss ddd'), { onclick:`queue_del(${time.add})` } ));
+        html.push(cell('td', moment(time).format('HH:MM:ss'), { onclick:`queue_del(${time})` } ));
         html.push(cell('td', target));
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
@@ -155,21 +163,11 @@ function queue(q) {
         };
         let d = $(`q-${el.key}`);
         d.onmouseover = () => {
-            // fetch(el.data_file)
-            //     .then(v => {
-            //         console.log({v});
-            //         return v.text();
-            //     })
-            //     .then(t => {
-            //         console.log({t});
-            //         $('gcode').innerText = t;
-            //     });
             $('preview').src = el.image_file;
         };
         d.onmouseout = () => {
             d.onmouseout = () => {
                 $('preview').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-                // $('gcode').innerText = '';
             };
         };
     });

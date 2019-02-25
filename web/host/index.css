@@ -63,6 +63,12 @@ tr:hover td {
 .grow {
     flex-grow: 1;
 }
+.daypart {
+    text-align: center;
+    font-family: monospace;
+    font-size: 12px;
+    background-color: white;
+}
 
 #top {
     padding: 0 8px 0 8px;
