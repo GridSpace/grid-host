@@ -73,7 +73,6 @@ class Connection {
                     })
                     .on("error", (error) => {
                         socket._error = error;
-                        console.log({error});
                     })
                     .on("close", () => {
                         if (socket && socket._ready) {
