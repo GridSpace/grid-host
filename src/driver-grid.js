@@ -13,6 +13,7 @@ class Connection {
         this.interval = null;
         this.connecting = false;
         this.status = { state: "offline" };
+        this.kick = false;
     }
 
     connect() {
@@ -54,7 +55,11 @@ class Connection {
                         line = line.toString();
                         if (line === "*ready") {
                             socket._ready = true;
-                            console.log({connected: this.device.name});
+                            driver.api.Util.log({connected: this.device.name});
+                            if (this.kick) {
+                                socket.write("*kick\n");
+                                this.kick = false;
+                            }
                         } else if (line.indexOf("*** {") === 0) {
                             let info = JSON.parse(line.substring(4, line.length - 4));
                             let status = this.status;
@@ -72,7 +77,7 @@ class Connection {
                     })
                     .on("close", () => {
                         if (socket && socket._ready) {
-                            console.log({disconnected: this.device.name});
+                            driver.api.Util.log({disconnected: this.device.name});
                         }
                         this.connecting = false;
                         this.socket = socket = null;
@@ -100,6 +105,7 @@ class Connection {
                 this.socket.write(`*upload ${name}\n`);
                 this.socket.write(entry.data);
                 this.socket.end();
+                this.kick = true;
                 resolve();
             } catch (e) {
                 reject(e);
