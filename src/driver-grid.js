@@ -1,7 +1,7 @@
 /** target <-> connection cache */
 const cache = {};
 const net = require('net');
-const lbuff = require("buffer.lines");
+const lbuff = require("./linebuffer");
 
 class Connection {
     constructor(device) {

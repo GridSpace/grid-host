@@ -7,7 +7,7 @@
  */
 "use strict";
 
-const lbuff = require("buffer.lines");
+const lbuff = require("./linebuffer");
 const crc32 = require('buffer-crc32');
 const net   = require('net');
 const fs    = require('fs');

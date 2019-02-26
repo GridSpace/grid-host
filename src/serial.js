@@ -247,14 +247,22 @@ function processPortOutput(line) {
                 let callback = (collect, line) => {
                     runflags[line] = true;
                 };
-                // only queue when wait is decreasing or zero
-                if (waiting === 0 || waiting <= auto_lb - 3) {
+                // only queue when wait is decreasing or zero and not printing
+                if (buf.length === 0 && !status.print.run) {
+                // if (buf.length === 0 || buf.length <= auto_lb - 3) {
                     for (let key in runflags) {
                         if (runflags[key]) {
+                            // do not probe position during print
+                            // if (status.print.run && key === "M114") {
+                            //     evtlog("skip position probe");
+                            //     continue;
+                            // }
                             runflags[key] = false;
                             queue(key, {auto: true, priority, callback}); // get endstops
                         }
                     }
+                // } else {
+                //     evtlog({auto_blocked: buf.length, last: auto_lb, waiting});
                 }
                 auto_lb = buf.length;
             }, auto_int);
@@ -583,10 +591,11 @@ function write(line, flags) {
         case '~': // grbl resume
         case 'M':
             if (line.indexOf('M1000') === 0) {
-                status.print.prep = status.print.start;
-                status.print.start = Date.now();
-                // do not send
-                return;
+                flags.callback = () => {
+                    status.print.prep = status.print.start;
+                    status.print.start = Date.now();
+                    evtlog("print starting");
+                };
             }
         case 'G':
             match.push({line, flags});
