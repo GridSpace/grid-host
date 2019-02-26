@@ -91,9 +91,9 @@ class Connection {
         console.log({grid_print:entry});
         return new Promise((resolve, reject) => {
             try {
-                socket.write(`*upload ${entry.name}\n`);
-                socket.write(entry.data);
-                socket.end();
+                this.socket.write(`*upload ${entry.name}\n`);
+                this.socket.write(entry.data);
+                this.socket.end();
                 resolve();
             } catch (e) {
                 reject(e);
