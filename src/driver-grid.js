@@ -54,7 +54,7 @@ class Connection {
                         line = line.toString();
                         if (line === "*ready") {
                             socket._ready = true;
-                            console.log({ready: true});
+                            console.log({grid_ready: true});
                         } else if (line.indexOf("*** {") === 0) {
                             let info = JSON.parse(line.substring(4, line.length - 4));
                             let status = this.status;
@@ -88,11 +88,16 @@ class Connection {
     }
 
     print(entry) {
-        // console.log({print:entry});
+        console.log({grid_print:entry});
         return new Promise((resolve, reject) => {
-            socket.write(`*upload ${entry.name}\n`);
-            socket.write(entry.data);
-            socket.end();
+            try {
+                socket.write(`*upload ${entry.name}\n`);
+                socket.write(entry.data);
+                socket.end();
+                resolve();
+            } catch (e) {
+                reject(e);
+            }
             // reject("not implemented");
             // if (entry.image) {
             //     png2bmp(Buffer.from(entry.image, "base64"))
