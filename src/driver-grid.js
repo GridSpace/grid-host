@@ -76,6 +76,9 @@ class Connection {
                     })
                     .on("close", () => {
                         if (socket && socket._ready) {
+                            if (socket._error) {
+                                console.log({error: socket._error});
+                            }
                             driver.api.Util.log({disconnected: this.device.name});
                         }
                         this.connecting = false;
