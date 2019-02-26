@@ -13,7 +13,7 @@
  * different abort per device or type (fdm vs cnc)
  */
 
-const LineBuffer = require("buffer.lines");
+const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
 const opt = require('minimist')(process.argv.slice(2));
 const net = require('net');
@@ -28,7 +28,6 @@ const url = require('url');
 const http = require('http');
 const serve = require('serve-static');
 const connect = require('connect');
-const linebuf = require("buffer.lines");
 const WebSocket = require('ws');
 const filedir = (opt.dir || opt.filedir);
 const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
@@ -45,6 +44,7 @@ let buf = [];                   // output line buffer
 let match = [];                 // queue for matching command with response
 let collect = null;             // collect lines between oks
 let sport = null;               // bound serial port
+let upload = null;              // name of file being uploaded
 let mode = 'marlin';            // operating mode
 let interval = null;            // pointer to interval updater
 let auto = true;                // true to enable interval collection of data
@@ -440,7 +440,16 @@ function processInput2(line, channel) {
             }
             return evtlog(JSON.stringify(status), {status: true});
     }
-    if (line.indexOf("*delete ") === 0) {
+    if (line.indexOf("*upload ") === 0) {
+        if (channel.linebuf) {
+            // accumulate all input data to linebuffer w/ no line breaks
+            channel.linebuf.enabled = false;
+            upload = line.substring(8);
+            evtlog({upload});
+        } else {
+            evtlog({no_upload_possible: channel});
+        }
+    } else if (line.indexOf("*delete ") === 0) {
         fs.unlinkSync(filedir + "/" + line.substring(8));
         checkFileDir();
     } else if (line.indexOf("*kick ") === 0) {
@@ -697,12 +706,16 @@ if (opt.stdin) {
 if (opt.listen) {
     net.createServer(socket => {
         status.clients.net++;
-        new LineBuffer(socket);
+        socket.linebuf = new LineBuffer(socket);
         socket.write("*ready\n");
         socket.on("line", line => { processInput(line, socket) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
             status.clients.net--;
+            // store upload, if available
+            if (upload) {
+                fs.writeFileSync(filedir + "/" + upload, socket.linebuf.buffer);
+            }
         });
         clients.push(socket);
     }).listen(parseInt(opt.listen));

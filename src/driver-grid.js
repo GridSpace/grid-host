@@ -78,13 +78,7 @@ class Connection {
             }
             this.interval = setInterval(() => {
                 if (!socket) {
-                    return this.connect()
-                        .then(c => {
-                            // console.log({c});
-                        })
-                        .catch(e => {
-                            // console.log({e});
-                        });
+                    return this.connect().then(c => {}).catch(e => {});
                 }
                 if (socket._ready) {
                     socket.write("*status\n");
