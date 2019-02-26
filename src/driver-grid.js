@@ -13,7 +13,7 @@ class Connection {
         this.interval = null;
         this.connecting = false;
         this.status = { state: "offline" };
-        this.kick = false;
+        this.kick = null;
     }
 
     connect() {
@@ -57,8 +57,8 @@ class Connection {
                             socket._ready = true;
                             driver.api.Util.log({connected: this.device.name});
                             if (this.kick) {
-                                socket.write("*kick\n");
-                                this.kick = false;
+                                socket.write(`*kick ${this.kick}\n`);
+                                this.kick = null;
                             }
                         } else if (line.indexOf("*** {") === 0) {
                             let info = JSON.parse(line.substring(4, line.length - 4));
@@ -88,7 +88,7 @@ class Connection {
                 if (!socket) {
                     return this.connect().then(c => {}).catch(e => {});
                 }
-                if (socket._ready) {
+                if (socket._ready && !this.kick) {
                     socket.write("*status\n");
                 }
             }, 500);
@@ -105,7 +105,7 @@ class Connection {
                 this.socket.write(`*upload ${name}\n`);
                 this.socket.write(entry.data);
                 this.socket.end();
-                this.kick = true;
+                this.kick = name;
                 resolve();
             } catch (e) {
                 reject(e);
