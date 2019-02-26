@@ -90,7 +90,10 @@ class Connection {
     print(entry) {
         // console.log({print:entry});
         return new Promise((resolve, reject) => {
-            reject("not implemented");
+            socket.write(`*upload ${entry.name}\n`);
+            socket.write(entry.data);
+            socket.end();
+            // reject("not implemented");
             // if (entry.image) {
             //     png2bmp(Buffer.from(entry.image, "base64"))
             //         .then(bmp => {
