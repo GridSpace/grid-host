@@ -91,7 +91,11 @@ class Connection {
         console.log({grid_print:entry});
         return new Promise((resolve, reject) => {
             try {
-                this.socket.write(`*upload ${entry.name}\n`);
+                let name = entry.name;
+                if (name.indexOf(".gcode") < 0) {
+                    name = name + ".gcode";
+                }
+                this.socket.write(`*upload ${name}\n`);
                 this.socket.write(entry.data);
                 this.socket.end();
                 resolve();

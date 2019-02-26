@@ -23,7 +23,7 @@ class LineBuffer {
         const cr = data.indexOf("\r");
         const lf = data.indexOf("\n");
         if (lf && cr + 1 == lf) { left = 1 }
-        if (lf >= 0) {
+        if (lf >= 0 && this.enabled) {
             this.stream.emit("line", data.slice(0, lf - left));
             this.buffer = data.slice(lf + 1);
             this.nextLine();
