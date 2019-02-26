@@ -54,7 +54,7 @@ class Connection {
                         line = line.toString();
                         if (line === "*ready") {
                             socket._ready = true;
-                            console.log({grid_ready: true});
+                            console.log({connected: this.device.name});
                         } else if (line.indexOf("*** {") === 0) {
                             let info = JSON.parse(line.substring(4, line.length - 4));
                             let status = this.status;
@@ -71,6 +71,9 @@ class Connection {
                         console.log({error});
                     })
                     .on("close", () => {
+                        if (socket && socket._ready) {
+                            console.log({disconnected: this.device.name});
+                        }
                         this.connecting = false;
                         this.socket = socket = null;
                         this.status = { state: "offline" };
@@ -88,7 +91,6 @@ class Connection {
     }
 
     print(entry) {
-        console.log({grid_print:entry});
         return new Promise((resolve, reject) => {
             try {
                 let name = entry.name;
@@ -102,21 +104,6 @@ class Connection {
             } catch (e) {
                 reject(e);
             }
-            // reject("not implemented");
-            // if (entry.image) {
-            //     png2bmp(Buffer.from(entry.image, "base64"))
-            //         .then(bmp => {
-            //             return this.socket.print(entry.name, entry.data, bmp.data, entry.estime, entry.fused);
-            //         })
-            //         .then(print => {
-            //             resolve(print);
-            //         })
-            //         .catch(error => {
-            //             reject(error);
-            //         });
-            // } else {
-            //     return this.socket.print(entry.name, entry.data, null, entry.estime, entry.fused);
-            // }
         });
     }
 
