@@ -119,6 +119,7 @@ function emit(line, flags) {
 }
 
 function cmdlog(line, flags) {
+    if (opt.debug) return;
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
@@ -155,7 +156,10 @@ function openSerialPort() {
             status.device.ready = false;
         })
         .on('line', function(line) {
-            if (opt.debug) console.log("<... " + line);
+            if (opt.debug) {
+                let cmd = (match[0] || {line:''}).line;
+                console.log("<... " + (cmd ? cmd + " -- " + line : line));
+            }
             status.device.line = Date.now();
             line = line.toString().trim();
             let matched = null;
@@ -163,6 +167,9 @@ function openSerialPort() {
                 cmdlog("<-- " + line);
                 collect = [];
                 starting = false;
+                if (opt.kick) {
+                    processInput("*clearkick");
+                }
             } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
                 if (line.indexOf("ok ") === 0 && collect) {
                     line = line.substring(3);
@@ -179,6 +186,7 @@ function openSerialPort() {
                 if (!matched || !matched.flags.auto) {
                     if (collect && collect.length) {
                         if (collect.length >= 4) {
+                            cmdlog("==> " + from);
                             collect.forEach((el, i) => {
                                 if (i === 0) {
                                     cmdlog("<-- " + el, flags);
@@ -235,7 +243,6 @@ function processPortOutput(line) {
         if (!interval) {
             // prevent rescheduling a command until it's completed
             let runflags = {
-                // "M119": true,
                 "M114": true,
                 "M105": true
             };
@@ -248,15 +255,10 @@ function processPortOutput(line) {
                     runflags[line] = true;
                 };
                 // only queue when wait is decreasing or zero and not printing
-                if (buf.length === 0 && !status.print.run) {
-                // if (buf.length === 0 || buf.length <= auto_lb - 3) {
+                // if (buf.length === 0 && status.print.run === false) {
+                if (buf.length === 0 || buf.length <= auto_lb - 3) {
                     for (let key in runflags) {
                         if (runflags[key]) {
-                            // do not probe position during print
-                            // if (status.print.run && key === "M114") {
-                            //     evtlog("skip position probe");
-                            //     continue;
-                            // }
                             runflags[key] = false;
                             queue(key, {auto: true, priority, callback}); // get endstops
                         }
@@ -347,11 +349,13 @@ function processPortOutput(line) {
         };
         evtlog(line);
         sport.close();
+        if (opt.debug) process.exit(-1);
     }
     // catch processing errors and reboot
     if (line.indexOf("Unknown command:") >= 0) {
         evtlog(`fatal: ${line}`);
         sport.close();
+        if (opt.debug) process.exit(-1);
     }
     if (update) {
         status.update = true;
@@ -423,7 +427,13 @@ function processInput2(line, channel) {
                 channel.request_list = true;
             }
             return evtlog(JSON.stringify(dircache), {list: true});
-        case "*kick": return kickNext();
+        case "*clearkick":
+            status.print.clear = true;
+        case "*kick":
+            if (status.print.run) {
+                return evtlog("print in progress");
+            }
+            return kickNext();
         case "*abort": return abort();
         case "*pause": return pause();
         case "*resume": return resume();
@@ -461,6 +471,9 @@ function processInput2(line, channel) {
         fs.unlinkSync(filedir + "/" + line.substring(8));
         checkFileDir();
     } else if (line.indexOf("*kick ") === 0) {
+        if (status.print.run) {
+            return evtlog("print in progress");
+        }
         kickNamed(filedir + "/" + line.substring(6));
     } else if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
@@ -473,39 +486,39 @@ function processInput2(line, channel) {
 
 function abort() {
     evtlog("execution aborted");
-    // sport.close(); // forces re-init of marlin
-    // onboot = [
-    //     "M104 S0 T0",   // extruder 0 heat off
-    //     "M140 S0 T0",   // bed heat off
-    //     "M107",         // shut off cooling fan
-    //     "G91",          // relative moves
-    //     "G0 Z10",       // drop bed 1cm
-    //     "G28 X Y",      // home X & Y
-    //     "G90",          // restore absolute moves
-    //     "M84"           // disable steppers
-    // ];
-    // return;
-    if (mode === 'grbl') {
-        buf = [];
-    } else {
-        buf = [];
-        // match = [];
-        // write('M108', {abort: true}); // cancel heating
-        [
-            "M104 S0 T0",   // extruder 0 heat off
-            "M140 S0 T0",   // bed heat off
-            "M107",         // shut off cooling fan
-            "G91",          // relative moves
-            "G0 Z10",       // drop bed 1cm
-            "G28 X Y",      // home X & Y
-            "G90",          // restore absolute moves
-            "M84"           // disable steppers
-        ].forEach((line, i) => {
-            queue(line, {priority: i === 0});
-        });
-    }
-    processQueue();
-    status.print.clear = false;
+    sport.close(); // forces re-init of marlin
+    onboot = [
+        "M104 S0 T0",   // extruder 0 heat off
+        "M140 S0 T0",   // bed heat off
+        "M107",         // shut off cooling fan
+        "G91",          // relative moves
+        "G0 Z10",       // drop bed 1cm
+        "G28 X Y",      // home X & Y
+        "G90",          // restore absolute moves
+        "M84"           // disable steppers
+    ];
+    return;
+    // if (mode === 'grbl') {
+    //     buf = [];
+    // } else {
+    //     buf = [];
+    //     // match = [];
+    //     // write('M108', {abort: true}); // cancel heating
+    //     [
+    //         "M104 S0 T0",   // extruder 0 heat off
+    //         "M140 S0 T0",   // bed heat off
+    //         "M107",         // shut off cooling fan
+    //         "G91",          // relative moves
+    //         "G0 Z10",       // drop bed 1cm
+    //         "G28 X Y",      // home X & Y
+    //         "G90",          // restore absolute moves
+    //         "M84"           // disable steppers
+    //     ].forEach((line, i) => {
+    //         queue(line, {priority: i === 0});
+    //     });
+    // }
+    // processQueue();
+    // status.print.clear = false;
 };
 
 function pause() {
@@ -590,7 +603,11 @@ function write(line, flags) {
         case '?': // grbl
         case '~': // grbl resume
         case 'M':
-            if (line.indexOf('M1000') === 0) {
+            // eat / report M117
+            // if (line.indexOf('M117') === 0) {
+            //     return evtlog(line.substring(5));
+            // }
+            if (line.indexOf('M117 Start') === 0) {
                 flags.callback = () => {
                     status.print.prep = status.print.start;
                     status.print.start = Date.now();
