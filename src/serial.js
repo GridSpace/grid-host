@@ -350,7 +350,6 @@ function processPortOutput(line) {
         evtlog(line);
         if (opt.fragile) {
             sport.close();
-            sport.close();
             if (opt.debug) process.exit(-1);
         }
     }
