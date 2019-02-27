@@ -346,10 +346,12 @@ function processPortOutput(line) {
             cause: line.substring(6)
         };
         evtlog(line);
-        sport.close();
+        if (opt.fragile) {
+            sport.close();
+        }
     }
     // catch processing errors and reboot
-    if (line.indexOf("Unknown command:") >= 0) {
+    if (opt.fragile && line.indexOf("Unknown command:") >= 0) {
         evtlog(`fatal: ${line}`);
         sport.close();
     }
