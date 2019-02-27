@@ -4,6 +4,12 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    overflow-y: auto;
 }
 td {
     text-align: center;
@@ -138,6 +144,7 @@ button {
 }
 #file-list {
     overflow-y: auto;
+    min-height: 100px;
 }
 #file-list label:hover {
     background-color: #fee;
