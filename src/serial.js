@@ -155,7 +155,7 @@ function openSerialPort() {
             status.device.ready = false;
         })
         .on('line', function(line) {
-            // console.log("<... " + line);
+            if (opt.debug) console.log("<... " + line);
             status.device.line = Date.now();
             line = line.toString().trim();
             let matched = null;
@@ -604,7 +604,7 @@ function write(line, flags) {
             break;
     }
     if (sport) {
-        // console.log("...> " + line);
+        if (opt.debug) console.log("...> " + line);
         cmdlog("--> " + line, flags);
         sport.write(line + "\n");
     } else {
