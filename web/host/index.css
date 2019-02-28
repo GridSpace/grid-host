@@ -88,13 +88,13 @@ tr:hover td {
 #printers {
     align-items: stretch;
     overflow-y: auto;
+    min-height: 250px;
 }
 #cam {
     margin-left: 20px;
     background-image: var(--target-url);
     background-size: contain;
     background-repeat: no-repeat;
-    min-height: 350px;
 }
 
 #jobs {
