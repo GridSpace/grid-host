@@ -5,8 +5,7 @@
         <script src="index.js"></script>
         <link rel="stylesheet" type="text/css" href="index.css">
     </head>
-    <body onload="init()">
-        <div class="col">
+    <body onload="init()" class="col">
         <div id="top">
             <label><a href="https://github.com/GridSpace/grid-print">grid:print server</a></label>
             <span>works with</span>
@@ -15,16 +14,15 @@
         <hr>
         <div id="printers" class="row">
             <div id="targets" class="col"></div>
-            <div id="cam" class="row"><img id="image" /></div>
+            <div id="cam" class="row grow"></div>
         </div>
         <hr>
         <div id="jobs" class="row grow">
             <div id="queue" class="col"></div>
-            <div id="detail" class="row">
-                <img id="preview"/>
+            <div id="detail" class="row grow">
+                <img id="preview" class="grow"/>
                 <div id="gcode"></div>
             </div>
-        </div>
         </div>
     </body>
 </html>

@@ -63,10 +63,10 @@ function targets(t) {
             let d = $(`device-${k}`);
             let time = Date.now().toString(36);
             d.onmouseover = () => {
-                $('image').src = `${v.image || ""}?${time}`;
+                document.documentElement.style.setProperty('--target-url', `url("${v.image || ""}?${time}")`);
             };
             d.onmouseout = () => {
-                $('image').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+                document.documentElement.style.setProperty('--target-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
             };
         }
     }
@@ -163,11 +163,15 @@ function queue(q) {
         };
         let d = $(`q-${el.key}`);
         d.onmouseover = () => {
-            $('preview').src = el.image_file;
+            if (el.image_file) {
+                document.documentElement.style.setProperty('--queue-url', `url("${el.image_file}")`);
+            } else {
+                document.documentElement.style.setProperty('--queue-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+            }
         };
         d.onmouseout = () => {
             d.onmouseout = () => {
-                $('preview').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+                document.documentElement.style.setProperty('--queue-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
             };
         };
     });

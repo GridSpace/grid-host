@@ -1,10 +1,17 @@
+:root {
+    --target-url: url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=");
+    --queue-url: url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=");
+}
 body {
     font-family: sans-serif;
     position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    top: 8px;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
 a {
     text-decoration: none;
@@ -79,14 +86,15 @@ tr:hover td {
 }
 
 #printers {
-    align-items: flex-start;
+    align-items: stretch;
+    overflow-y: auto;
 }
 #cam {
     margin-left: 20px;
-}
-#cam img {
-    width: auto;
-    height: 400px;
+    background-image: var(--target-url);
+    background-size: contain;
+    background-repeat: no-repeat;
+    min-height: 250px;
 }
 
 #jobs {
@@ -96,7 +104,9 @@ tr:hover td {
     overflow-y: auto;
     height: 100%;
 }
-#detail img {
-    width: auto;
-    height: 600px;
+#preview {
+    margin-left: 20px;
+    background-image: var(--queue-url);
+    background-size: contain;
+    background-repeat: no-repeat;
 }
