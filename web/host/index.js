@@ -63,10 +63,12 @@ function targets(t) {
             let d = $(`device-${k}`);
             let time = Date.now().toString(36);
             d.onmouseover = () => {
-                document.documentElement.style.setProperty('--target-url', `url("${v.image || ""}?${time}")`);
+                document.documentElement.style.setProperty('--image-url', `url("${v.image || ""}?${time}")`);
+                $('gcode').style.display = 'none';
             };
             d.onmouseout = () => {
-                document.documentElement.style.setProperty('--target-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+                document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+                $('gcode').style.display = 'none';
             };
         }
     }
@@ -164,15 +166,21 @@ function queue(q) {
         let d = $(`q-${el.key}`);
         d.onmouseover = () => {
             if (el.image_file) {
-                document.documentElement.style.setProperty('--queue-url', `url("${el.image_file}")`);
+                document.documentElement.style.setProperty('--image-url', `url("${el.image_file}")`);
             } else {
-                document.documentElement.style.setProperty('--queue-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+                document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
             }
-        };
-        d.onmouseout = () => {
-            d.onmouseout = () => {
-                document.documentElement.style.setProperty('--queue-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
-            };
+            fetch(`/api/head?key=${el.key}`)
+                .then(v => v.json())
+                .then(h => {
+                    if (h && h.length) {
+                        $('gcode').style.display = 'flex';
+                        $('gcode').innerText = h.join("\n");
+                    } else {
+                        $('gcode').style.display = 'flex';
+                        $('gcode').innerText = '';
+                    }
+                });
         };
     });
 }

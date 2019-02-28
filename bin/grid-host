@@ -253,6 +253,17 @@ const Web = {
 
         switch (path.substring(apiroot.length)) {
 
+            // return top n lines of a file (usually gcode)
+            case "head":
+                queueEntry = Queue.get(query.key);
+                if (queueEntry && queueEntry.data_file) {
+                    let buf = fs.readFileSync(tempDir + "/" + queueEntry.data_file);
+                    res.end(JSON.stringify(buf.toString().split("\n").slice(0,100)));
+                } else {
+                    res.end("[]");
+                }
+                break;
+
             // return list of print Devices
             case "targets":
                 res.end(Devices.encode());

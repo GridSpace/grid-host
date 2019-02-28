@@ -1,6 +1,5 @@
 :root {
-    --target-url: url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=");
-    --queue-url: url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=");
+    --image-url: url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=");
 }
 body {
     font-family: sans-serif;
@@ -85,28 +84,29 @@ tr:hover td {
     padding: 0 10px 0 10px;
 }
 
-#printers {
+#targets {
     align-items: stretch;
     overflow-y: auto;
     min-height: 300px;
-}
-#cam {
-    margin-left: 20px;
-    background-image: var(--target-url);
-    background-size: contain;
-    background-repeat: no-repeat;
-}
-
-#jobs {
-    align-items: stretch;
 }
 #queue {
     overflow-y: auto;
     height: 100%;
 }
-#preview {
-    margin-left: 20px;
-    background-image: var(--queue-url);
+#preview{
+    margin-left: 8px;
+}
+#cam {
+    border: 1px solid #bbb;
+    background-image: var(--image-url);
     background-size: contain;
     background-repeat: no-repeat;
+}
+#gcode {
+    margin-top: 5px;
+    height: 25em;
+    font-family: monospace;
+    border: 1px solid #bbb;
+    overflow-y: auto;
+    padding: 5px;
 }
