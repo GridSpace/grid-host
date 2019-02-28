@@ -1,5 +1,5 @@
-let lastT = null;
-let lastQ = null;
+let lastT = {};
+let lastQ = [];
 
 function $(id) {
     return document.getElementById(id);
@@ -10,7 +10,7 @@ function browse(url) {
 }
 
 function targets(t) {
-    lastT = Object.assign({}, t);
+    let changed = false;
     let html = [
         '<table><thead><tr>',
         cell('th', div('target')),
@@ -23,6 +23,18 @@ function targets(t) {
         cell('th', div('action')),
         '</tr></thead><tbody>'
     ];
+    for (let k in t) {
+        // new target
+        if (!lastT.hasOwnProperty(k)) {
+            changed = true;
+        }
+    }
+    for (let k in lastT) {
+        // dropped target
+        if (!t.hasOwnProperty(k)) {
+            changed = true;
+        }
+    }
     for (let k in t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
@@ -54,6 +66,10 @@ function targets(t) {
             }
             html.push('</tr>');
         }
+    }
+    lastT = Object.assign({}, t);
+    if (!changed) {
+        return;
     }
     html.push('</tbody></table>');
     $('targets').innerHTML = html.join('');
@@ -122,7 +138,21 @@ function queue_del(time) {
 }
 
 function queue(q) {
+    let changed = false;
+    if (q.length === lastQ.length) {
+        for (let i=0; i<q.length; i++) {
+            if (q[i].key !== lastQ[i].key) {
+                changed = true;
+                break;
+            }
+        }
+    } else {
+        changed = true;
+    }
     lastQ = q.slice();
+    if (!changed) {
+        return;
+    }
     let html = [
         '<table><thead><tr>',
         cell('th', div('date')),
