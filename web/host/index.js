@@ -91,9 +91,11 @@ function targets(t) {
 
 let fetching = [];
 let clearimage = null;
+let fetchloop = null;
 
 function updateImage(url,refresh) {
     clearTimeout(clearimage);
+    clearTimeout(fetchloop);
     if (url === null || url === undefined) {
         clearimage = setTimeout(() => {
             if (fetching.length === 0) {
@@ -109,6 +111,11 @@ function updateImage(url,refresh) {
         let p = fetching.indexOf(u);
         if (p === fetching.length - 1) {
             document.documentElement.style.setProperty('--image-url', `url("${u}`);
+            if (refresh) {
+                fetchloop = setTimeout(() => {
+                    updateImage(url, true);
+                }, 1000);
+            }
         }
         fetching.splice(p, 1);
     };
