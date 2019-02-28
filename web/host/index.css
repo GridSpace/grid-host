@@ -88,7 +88,7 @@ tr:hover td {
 #printers {
     align-items: stretch;
     overflow-y: auto;
-    min-height: 250px;
+    min-height: 300px;
 }
 #cam {
     margin-left: 20px;
