@@ -94,7 +94,7 @@ tr:hover td {
     background-image: var(--target-url);
     background-size: contain;
     background-repeat: no-repeat;
-    min-height: 250px;
+    min-height: 350px;
 }
 
 #jobs {
