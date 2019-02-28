@@ -348,8 +348,8 @@ function processPortOutput(line) {
             cause: line.substring(6)
         };
         evtlog(line);
+        sport.close();
         if (opt.fragile) {
-            sport.close();
             if (opt.debug) process.exit(-1);
         }
     }
