@@ -35,44 +35,43 @@ function targets(t) {
             changed = true;
         }
     }
+    lastT = Object.assign({}, t);
     for (let k in t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
             let stat = v.status;
-            html.push(`<tr id="device-${k}">`);
+            let devid = `device-${k}`;
+            html.push(`<tr id="${devid}">`);
             html.push(cell('th', k, {
                 onclick: `browse('${v.web}')`
             }));
             html.push(cell('td', v.comment || ''));
             if (stat) {
-                html.push(cell('td', stat.state || '-'));
-                html.push(cell('td', `${stat.progress || 0}%`));
-                if (stat.temps && stat.temps.T0) {
-                    html.push(cell('td', stat.temps.T0.join(' / ')));
-                } else {
-                    html.push(cell('td', '-'));
-                }
-                if (stat.temps && stat.temps.T1) {
-                    html.push(cell('td', stat.temps.T1.join(' / ')));
-                } else {
-                    html.push(cell('td', '-'));
-                }
-                if (stat.temps && stat.temps.B) {
-                    html.push(cell('td', stat.temps.B.join(' / ')));
-                } else {
-                    html.push(cell('td', '-'));
-                }
+                html.push(cell(`td id="${devid}-st"`, ''));
+                html.push(cell(`td id="${devid}-pr"`, ''));
+                html.push(cell(`td id="${devid}-t0"`, ''));
+                html.push(cell(`td id="${devid}-t1"`, ''));
+                html.push(cell(`td id="${devid}-b"`, ''));
                 html.push(cell('td', 'cancel', {onclick: `print_cancel('${k}')`}));
             }
             html.push('</tr>');
         }
     }
-    lastT = Object.assign({}, t);
-    if (!changed) {
-        return;
-    }
     html.push('</tbody></table>');
-    $('targets').innerHTML = html.join('');
+    if (changed) {
+        $('targets').innerHTML = html.join('');
+    }
+    // update fields
+    for (let k in t) {
+        let v = t[k];
+        let stat = v.status;
+        let devid = `device-${k}`;
+        $(`${devid}-st`).innerText = stat.state || '-';
+        $(`${devid}-pr`).innerText = stat.progress || 0;
+        $(`${devid}-t0`).innerText = stat.temps ? stat.temps.T0.join(' / ') : '';
+        $(`${devid}-t1`).innerText = stat.temps ? stat.temps.T1.join(' / ') : '';
+        $(`${devid}-b`).innerText = stat.temps ? stat.temps.B.join(' / ') : '';
+    }
     for (let k in t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
