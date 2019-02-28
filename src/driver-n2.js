@@ -27,7 +27,7 @@ function getMonitor(device) {
                         T1: stat.n1,
                         B: stat.bed
                     };
-                    info.state = stat.n0[1] + stat.n1[1] + stat.bed[1] > 0 ? "PRINTING" : "READY";
+                    info.state = stat.n0[1] + stat.n1[1] + stat.bed[1] > 0 ? "PRINTING" : "IDLE";
                     // grid-host relies on driver to update device.status object
                     device.status = monitor.status;
                 }

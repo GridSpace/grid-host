@@ -415,7 +415,7 @@ class FFControl {
                 })
                 .then(lines => {
                     status.status = parseMapLines(lines);
-                    status.state = status.status.MachineStatus;
+                    status.state = status.status.MachineStatus === "READY" ? "IDLE" : "PRINTING";
                     return this.send(COMMAND.Status);
                 })
                 .then(lines => {

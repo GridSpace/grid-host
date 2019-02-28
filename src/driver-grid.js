@@ -63,7 +63,7 @@ class Connection {
                         } else if (line.indexOf("*** {") === 0) {
                             let info = JSON.parse(line.substring(4, line.length - 4));
                             let status = this.status;
-                            status.state = info.print.run ? "printing" : "idle";
+                            status.state = info.print.run ? "PRINTING" : "IDLE";
                             status.progress = info.print.progress;
                             status.temps = {
                                 T0: [ info.temp.ext[0], info.target.ext[0] ],
