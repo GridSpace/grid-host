@@ -78,7 +78,7 @@ function targets(t) {
             let d = $(`device-${k}`);
             let time = Date.now().toString(36);
             d.onmouseover = () => {
-                updateImage(v.image);
+                updateImage(v.image, true);
                 $('gcode').style.display = 'none';
             };
             d.onmouseout = () => {
@@ -92,7 +92,7 @@ function targets(t) {
 let fetching = [];
 let clearimage = null;
 
-function updateImage(url) {
+function updateImage(url,refresh) {
     clearTimeout(clearimage);
     if (url === null || url === undefined) {
         clearimage = setTimeout(() => {
@@ -102,7 +102,7 @@ function updateImage(url) {
         }, 500);
         return;
     }
-    let t = Date.now().toString(36);
+    let t = refresh ? (Date.now()/2000).toString(36) ? 123;
     let i = new Image();
     let u = `${url}?${t}`;
     let cb = () => {
