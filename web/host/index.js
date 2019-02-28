@@ -102,7 +102,7 @@ function updateImage(url,refresh) {
         }, 500);
         return;
     }
-    let t = refresh ? (Date.now()/2000).toString(36) ? 123;
+    let t = refresh ? (Date.now()/2000).toString(36) : 123;
     let i = new Image();
     let u = `${url}?${t}`;
     let cb = () => {
