@@ -78,15 +78,29 @@ function targets(t) {
             let d = $(`device-${k}`);
             let time = Date.now().toString(36);
             d.onmouseover = () => {
-                document.documentElement.style.setProperty('--image-url', `url("${v.image || ""}?${time}")`);
+                updateImage(v.image);
                 $('gcode').style.display = 'none';
             };
             d.onmouseout = () => {
-                document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+                updateImage(null);
                 $('gcode').style.display = 'none';
             };
         }
     }
+}
+
+function updateImage(url) {
+    if (!url) {
+        document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+        return;
+    }
+    let t = Date.now().toString(36);
+    let i = new Image();
+    let u = `${url}?${t}`;
+    i.onload = () => {
+        document.documentElement.style.setProperty('--image-url', `url("${u}`);
+    };
+    i.src = u;
 }
 
 function div(text) {
@@ -195,9 +209,9 @@ function queue(q) {
         let d = $(`q-${el.key}`);
         d.onmouseover = () => {
             if (el.image_file) {
-                document.documentElement.style.setProperty('--image-url', `url("${el.image_file}")`);
+                updateImage(el.image_file);
             } else {
-                document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+                updateImage(null);
             }
             fetch(`/api/head?key=${el.key}`)
                 .then(v => v.json())
