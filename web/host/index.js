@@ -82,24 +82,38 @@ function targets(t) {
                 $('gcode').style.display = 'none';
             };
             d.onmouseout = () => {
-                updateImage(null);
+                updateImage();
                 $('gcode').style.display = 'none';
             };
         }
     }
 }
 
+let fetching = [];
+let clearimage = null;
+
 function updateImage(url) {
-    if (!url) {
-        document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+    clearTimeout(clearimage);
+    if (url === null || url === undefined) {
+        clearimage = setTimeout(() => {
+            if (fetching.length === 0) {
+                document.documentElement.style.setProperty('--image-url', `url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")`);
+            }
+        }, 500);
         return;
     }
     let t = Date.now().toString(36);
     let i = new Image();
     let u = `${url}?${t}`;
-    i.onload = () => {
-        document.documentElement.style.setProperty('--image-url', `url("${u}`);
+    let cb = () => {
+        let p = fetching.indexOf(u);
+        if (p === fetching.length - 1) {
+            document.documentElement.style.setProperty('--image-url', `url("${u}`);
+        }
+        fetching.splice(p, 1);
     };
+    fetching.push(u);
+    i.onload = cb;
     i.src = u;
 }
 
@@ -211,7 +225,7 @@ function queue(q) {
             if (el.image_file) {
                 updateImage(el.image_file);
             } else {
-                updateImage(null);
+                updateImage();
             }
             fetch(`/api/head?key=${el.key}`)
                 .then(v => v.json())
