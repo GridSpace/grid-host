@@ -144,7 +144,7 @@ function queue(q) {
         }
         lastday = day;
         html.push(`<tr id="q-${el.key}">`);
-        html.push(cell('td', moment(time).format('HH:MM:ss'), { onclick:`queue_del(${time})` } ));
+        html.push(cell('td', moment(time).format('HH:mm:ss'), { onclick:`queue_del(${time})` } ));
         html.push(cell('td', target));
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
