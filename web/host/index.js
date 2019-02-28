@@ -77,7 +77,7 @@ function targets(t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
             let d = $(`device-${k}`);
-            let time = (Date.now()/10000).toString(36);
+            let time = Date.now().toString(36);
             d.onmouseover = () => {
                 document.documentElement.style.setProperty('--image-url', `url("${v.image || ""}?${time}")`);
                 $('gcode').style.display = 'none';
