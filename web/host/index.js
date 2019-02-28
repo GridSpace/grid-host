@@ -68,9 +68,9 @@ function targets(t) {
         let devid = `device-${k}`;
         $(`${devid}-st`).innerText = stat.state || '-';
         $(`${devid}-pr`).innerText = stat.progress || 0;
-        $(`${devid}-t0`).innerText = stat.temps ? stat.temps.T0.join(' / ') : '';
-        $(`${devid}-t1`).innerText = stat.temps ? stat.temps.T1.join(' / ') : '';
-        $(`${devid}-b`).innerText = stat.temps ? stat.temps.B.join(' / ') : '';
+        $(`${devid}-t0`).innerText = stat.temps && stat.temps.T0 ? stat.temps.T0.join(' / ') : '';
+        $(`${devid}-t1`).innerText = stat.temps && stat.temps.T1 ? stat.temps.T1.join(' / ') : '';
+        $(`${devid}-b`).innerText = stat.temps && stat.temps.B ? stat.temps.B.join(' / ') : '';
     }
     for (let k in t) {
         if (t.hasOwnProperty(k)) {
