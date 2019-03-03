@@ -82,9 +82,11 @@ function bed_toggle() {
     if (toggle.innerText === 'on') {
         toggle.innerText = 'off';
         send('M140 S' + bed_temp());
+        send('M105');
     } else {
         toggle.innerText = 'on';
         send('M140 S0');
+        send('M105');
     }
 }
 
@@ -95,11 +97,13 @@ function bed_temp() {
 function bed_temp_lower() {
     $('bed').value = Math.max(0, bed_temp() - 5);
     send('M140 S' + bed_temp());
+    send('M105');
 }
 
 function bed_temp_higher() {
     $('bed').value = Math.min(100, bed_temp() + 5);
     send('M140 S' + bed_temp());
+    send('M105');
 }
 
 function nozzle_toggle() {
@@ -107,9 +111,11 @@ function nozzle_toggle() {
     if (toggle.innerText === 'on') {
         toggle.innerText = 'off';
         send('M104 S' + nozzle_temp());
+        send('M105');
     } else {
         toggle.innerText = 'on';
         send('M104 S0');
+        send('M105');
     }
 }
 
@@ -120,11 +126,13 @@ function nozzle_temp() {
 function nozzle_temp_lower() {
     $('nozzle').value = Math.max(0, nozzle_temp() - 5);
     send('M104 S' + nozzle_temp());
+    send('M105');
 }
 
 function nozzle_temp_higher() {
     $('nozzle').value = Math.min(300, nozzle_temp() + 5);
     send('M104 S' + nozzle_temp());
+    send('M105');
 }
 
 function goto_home() {
@@ -339,12 +347,14 @@ function init() {
     $('bed').onkeyup = ev => {
         if (ev.keyCode === 13) {
             send('M140 S' + bed_temp());
+            send('M105');
             $('bed_toggle').innerText = 'off';
         }
     };
     $('nozzle').onkeyup = ev => {
         if (ev.keyCode === 13) {
             send('M104 S' + nozzle_temp());
+            send('M105');
             $('nozzle_toggle').innerText = 'off';
         }
     };

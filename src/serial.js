@@ -119,7 +119,12 @@ function emit(line, flags) {
 }
 
 function cmdlog(line, flags) {
-    if (opt.debug) return;
+    if (opt.debug) {
+        return;
+    }
+    if (flags && flags.print && !opt.verbose) {
+        return;
+    }
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
@@ -164,7 +169,7 @@ function openSerialPort() {
             line = line.toString().trim();
             let matched = null;
             if (starting && line.indexOf("echo:  M900") === 0) {
-                cmdlog("<-- " + line);
+                cmdlog("<-- " + line, {});
                 collect = [];
                 starting = false;
                 if (opt.kick) {
@@ -186,7 +191,7 @@ function openSerialPort() {
                 if (!matched || !matched.flags.auto) {
                     if (collect && collect.length) {
                         if (collect.length >= 4) {
-                            cmdlog("==> " + from);
+                            cmdlog("==> " + from, flags);
                             collect.forEach((el, i) => {
                                 if (i === 0) {
                                     cmdlog("<-- " + el, flags);
@@ -195,7 +200,7 @@ function openSerialPort() {
                                 }
                             });
                         } else {
-                            cmdlog("==> " + from + " -- " + JSON.stringify(collect));
+                            cmdlog("==> " + from + " -- " + JSON.stringify(collect), flags);
                         }
                     }
                 }
@@ -390,7 +395,7 @@ function sendFile(filename) {
             queue(`M24`);
         } else {
             gcode.forEach(line => {
-                queue(line);
+                queue(line, {print: true});
             });
         }
     } catch (e) {
