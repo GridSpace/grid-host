@@ -92,6 +92,7 @@ const status = {
         min: {},
         max: {}
     },
+    poll: {},                   // status of polling events (M114, etc)
     settings: {},               // map of active settings
 };
 
@@ -257,6 +258,7 @@ function processPortOutput(line) {
                 }
                 let priority = true;
                 let callback = (collect, line) => {
+                    status.poll[line] = (status.poll[line] || 0) + 1;
                     runflags[line] = true;
                 };
                 // only queue when wait is decreasing or zero and not printing

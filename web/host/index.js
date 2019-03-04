@@ -184,9 +184,6 @@ function queue(q) {
         changed = true;
     }
     lastQ = q.slice();
-    if (!changed) {
-        return;
-    }
     let html = [
         '<table><thead><tr>',
         cell('th', div('date')),
@@ -214,11 +211,21 @@ function queue(q) {
         html.push(cell('td', target));
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
-        html.push(cell('td', el.size || ''));
+        html.push(cell('td', el.size || ''), {id: `q-${el.key}-size`});
         html.push(cell('td', el.status, {id: `q-${el.key}-kick`, onclick: ""}));
         html.push('</tr>');
     });
     html.push('</tbody></table>');
+    if (!changed) {
+        // update status without table redraw
+        q.reverse().forEach(el => {
+            try {
+                $(`q-${el.key}-size`).innerText = el.size;
+                $(`q-${el.key}-kick`).innerText = el.status;
+            } catch (e) { }
+        });
+        return;
+    }
     $('queue').innerHTML = html.join('');
     q.forEach(el => {
         $(`q-${el.key}-kick`).onclick = () => {
