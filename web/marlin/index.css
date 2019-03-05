@@ -54,8 +54,11 @@ button {
     color: white;
     background-color: #888;
 }
-.red_bg {
+.bg_red {
     background-color: #fdd;
+}
+.bg_green {
+    background-color: #dfd;
 }
 .panel {
     padding :2px;
@@ -170,4 +173,14 @@ button {
 }
 #actions {
     justify-content: center;
+}
+#keypad {
+    justify-content: flex-start;
+    flex-grow: 0;
+}
+#keypad button {
+    width: 20px;
+    height: 20px;
+    padding: 20px;
+    margin: 5px;
 }

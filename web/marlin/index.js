@@ -7,6 +7,7 @@ let sock = null;
 let last_jog = null;
 let last_set = {};      // last settings object
 let jog_val = 0.0;
+let input = null;       // active input for keypad
 
 function $(id) {
     return document.getElementById(id);
@@ -202,18 +203,18 @@ function init_filedrop() {
         evt.stopPropagation();
         evt.preventDefault();
         evt.dataTransfer.dropEffect = 'copy';
-        list.classList.add("red_bg");
+        list.classList.add("bg_red");
     });
 
     list.addEventListener("dragleave", function(evt) {
-        list.classList.remove("red_bg");
+        list.classList.remove("bg_red");
     });
 
     list.addEventListener("drop", function(evt) {
         evt.stopPropagation();
         evt.preventDefault();
 
-        list.classList.remove("red_bg");
+        list.classList.remove("bg_red");
 
         var files = evt.dataTransfer.files;
 
@@ -283,33 +284,37 @@ function init() {
                 $('filename').value = status.print.filename;
                 $('progress').value = status.print.progress + '%';
                 if (status.print.clear) {
-                    $('clear_bed').classList.remove('red_bg');
+                    $('clear_bed').classList.remove('bg_red');
                 } else {
-                    $('clear_bed').classList.add('red_bg');
+                    $('clear_bed').classList.add('bg_red');
                 }
             }
             if (status.target) {
                 if (status.target.bed) {
-                    $('bed').classList.add('red_bg');
-                    $('bed').value = status.target.bed;
-                    $('bed_temp').classList.add('red_bg');
+                    if ($('bed') !== input) {
+                        $('bed').value = status.target.bed;
+                        $('bed').classList.add('bg_red');
+                    }
+                    $('bed_temp').classList.add('bg_red');
                     $('bed_toggle').innerText = 'off';
                 } else {
-                    $('bed').classList.remove('red_bg');
-                    $('bed_temp').classList.remove('red_bg');
+                    $('bed').classList.remove('bg_red');
+                    $('bed_temp').classList.remove('bg_red');
                     $('bed_toggle').innerText = 'on';
                 }
                 if (status.temp.bed) {
                     $('bed_temp').value = parseInt(status.temp.bed);
                 }
                 if (status.target.ext[0]) {
-                    $('nozzle').classList.add('red_bg');
-                    $('nozzle').value = status.target.ext[0];
-                    $('nozzle_temp').classList.add('red_bg');
+                    if ($('nozzle') !== input) {
+                        $('nozzle').value = status.target.ext[0];
+                        $('nozzle').classList.add('bg_red');
+                    }
+                    $('nozzle_temp').classList.add('bg_red');
                     $('nozzle_toggle').innerText = 'off';
                 } else {
-                    $('nozzle').classList.remove('red_bg');
-                    $('nozzle_temp').classList.remove('red_bg');
+                    $('nozzle').classList.remove('bg_red');
+                    $('nozzle_temp').classList.remove('bg_red');
                     $('nozzle_toggle').innerText = 'on';
                 }
                 if (status.temp.ext[0]) {
@@ -344,15 +349,15 @@ function init() {
             }
         }
     };
-    $('bed').onkeyup = ev => {
-        if (ev.keyCode === 13) {
+    let setbed = $('bed').onkeyup = ev => {
+        if (ev === 42 || ev.keyCode === 13) {
             send('M140 S' + bed_temp());
             send('M105');
             $('bed_toggle').innerText = 'off';
         }
     };
-    $('nozzle').onkeyup = ev => {
-        if (ev.keyCode === 13) {
+    let setnozzle = $('nozzle').onkeyup = ev => {
+        if (ev === 42 || ev.keyCode === 13) {
             send('M104 S' + nozzle_temp());
             send('M105');
             $('nozzle_toggle').innerText = 'off';
@@ -367,5 +372,51 @@ function init() {
             $('send').value = '';
         }
     };
+    let input_deselect = document.body.onclick = (ev) => {
+        if (input) {
+            input.classList.remove('bg_green');
+            input = null;
+        }
+    };
+    $('nozzle').onclick = (ev) => {
+        input_deselect();
+        input = $('nozzle');
+        input.classList.add('bg_green');
+        ev.stopPropagation();
+    };
+    $('bed').onclick = (ev) => {
+        input_deselect();
+        input = $('bed');
+        input.classList.add('bg_green');
+        ev.stopPropagation();
+    };
+    for (let i=0; i<10; i++) {
+        $(`kp-${i}`).onclick = (ev) => {
+            if (input) {
+                input.value += i;
+                ev.stopPropagation();
+            }
+        };
+    }
+    $('kp-bs').onclick = (ev) => {
+        if (input) {
+            input.value = input.value.substring(0,input.value.length-1);
+            ev.stopPropagation();
+        }
+    };
+    $('kp-ok').onclick = (ev) => {
+        if (input === $('bed')) {
+            setbed(42);
+        }
+        if (input === $('nozzle')) {
+            setnozzle(42);
+        }
+        ev.stopPropagation();
+    };
+    // disable autocomplete
+    let inputs = document.getElementsByTagName('input');
+    for (let i=0; i<inputs.length; i++) {
+        inputs[i].setAttribute('autocomplete', Date.now().toString(36));
+    }
     init_filedrop();
 }
