@@ -32,6 +32,8 @@ const WebSocket = require('ws');
 const filedir = (opt.dir || opt.filedir);
 const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
 
+let checksum = !opt.nocheck;    // use line numbers and checksums
+let lineno = 1;                 // next output line number
 let starting = false;           // output phase just after reset
 let waiting = 0;                // unack'd output lines
 let maxout = 0;                 // high water mark for buffer
@@ -68,7 +70,8 @@ const status = {
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully
         close: 0,               // time of last close
-        line: 0                 // time of last line output
+        line: 0,                // time of last line output
+        lineno: 0               // last line # sent
     },
     error: {
         time: 0,                // time of last error
@@ -92,7 +95,7 @@ const status = {
         min: {},
         max: {}
     },
-    poll: {},                   // status of polling events (M114, etc)
+    auto: {},                   // status of polling events (M114, etc)
     settings: {},               // map of active settings
 };
 
@@ -184,6 +187,12 @@ function openSerialPort() {
                 matched = match.shift();
                 let from = matched ? matched.line : "???";
                 let flags = matched ? matched.flags : {};
+                if (line.charAt(0) === 'N') {
+                    let lno = parseInt(line.split(' ')[0].substring(1));
+                    if (lno !== flags.lineno) {
+                        console.log({mismatch: line, lno, matched, collect});
+                    }
+                }
                 // callbacks used by auto stats gathering
                 if (flags.callback) {
                     flags.callback(collect, matched.line);
@@ -221,7 +230,7 @@ function openSerialPort() {
         .on('close', function() {
             sport = null;
             evtlog("close");
-            setTimeout(openSerialPort, 1000);
+            setTimeout(openSerialPort, 2000);
             status.device.close = Date.now();
             status.device.ready = false;
         });
@@ -231,6 +240,7 @@ function processPortOutput(line) {
     if (line.length === 0) return;
     let update = false;
     if (line === "start") {
+        lineno = 1;
         update = true;
         starting = true;
         status.device.ready = true;
@@ -240,42 +250,48 @@ function processPortOutput(line) {
         collect = null;
         match = [];
         buf = [];
+        // set port idle kill if doesn't come up fast enough
+        setTimeout(() => {
+            if (starting) {
+                sport.close();
+            }
+        }, 5000);
         // queue onboot commands
         onboot.forEach(cmd => {
             queue(cmd);
         });
         onboot = [];
+        // kill previous interval
+        clearInterval(interval);
         // setup interval data collection
-        if (!interval) {
-            // prevent rescheduling a command until it's completed
-            let runflags = {
-                "M114": true,
-                "M105": true
+        // prevent rescheduling a command until it's completed
+        let runflags = {
+            "M114": true,
+            "M105": true
+        };
+        interval = setInterval(() => {
+            if (starting || !status.device.ready || auto_int === 0) {
+                return;
+            }
+            let priority = true;
+            let callback = (collect, line) => {
+                status.auto[line] = (status.auto[line] || 0) + 1;
+                runflags[line] = true;
             };
-            interval = setInterval(() => {
-                if (!status.device.ready || auto_int === 0) {
-                    return;
-                }
-                let priority = true;
-                let callback = (collect, line) => {
-                    status.poll[line] = (status.poll[line] || 0) + 1;
-                    runflags[line] = true;
-                };
-                // only queue when wait is decreasing or zero and not printing
-                // if (buf.length === 0 && status.print.run === false) {
-                if (buf.length === 0 || buf.length <= auto_lb - 3) {
-                    for (let key in runflags) {
-                        if (runflags[key]) {
-                            runflags[key] = false;
-                            queue(key, {auto: true, priority, callback}); // get endstops
-                        }
+            // only queue when wait is decreasing or zero and not printing
+            // if (buf.length === 0 && status.print.run === false) {
+            if (buf.length === 0 || buf.length <= auto_lb - 3) {
+                for (let key in runflags) {
+                    if (runflags[key]) {
+                        runflags[key] = false;
+                        queue(key, {auto: true, priority, callback}); // get endstops
                     }
-                // } else {
-                //     evtlog({auto_blocked: buf.length, last: auto_lb, waiting});
                 }
-                auto_lb = buf.length;
-            }, auto_int);
-        }
+            // } else {
+            //     evtlog({auto_blocked: buf.length, last: auto_lb, waiting});
+            }
+            auto_lb = buf.length;
+        }, auto_int);
     }
     // parse M105 temperature updates
     if (line.indexOf("T:") === 0) {
@@ -349,7 +365,7 @@ function processPortOutput(line) {
         update = true;
     }
     // catch fatal errors and reboot
-    if (line.indexOf("Error:") === 0) {
+    if (!opt.noerror && line.indexOf("Error:") === 0) {
         status.error = {
             time: Date.now(),
             cause: line.substring(6)
@@ -357,14 +373,20 @@ function processPortOutput(line) {
         evtlog(line);
         sport.close();
         if (opt.fragile) {
-            if (opt.debug) process.exit(-1);
+            if (opt.debug) {
+                console.log({status});
+                process.exit(-1);
+            }
         }
     }
     // catch processing errors and reboot
     if (opt.fragile && line.indexOf("Unknown command:") >= 0) {
         evtlog(`fatal: ${line}`);
         sport.close();
-        if (opt.debug) process.exit(-1);
+        if (opt.debug) {
+            console.log({status});
+            process.exit(-1);
+        }
     }
     if (update) {
         status.update = true;
@@ -630,9 +652,19 @@ function write(line, flags) {
             break;
     }
     if (sport) {
+        if (checksum) {
+            flags.lineno = lineno;
+            status.device.lineno = lineno;
+            line = `N${lineno++} ${line}`;
+            let cksum = 0;
+            Buffer.from(line).forEach(ch => {
+                cksum = cksum ^ ch;
+            });
+            line = `${line}*${cksum}`;
+        }
         if (opt.debug) console.log("...> " + line);
         cmdlog("--> " + line, flags);
-        sport.write(line + "\n");
+        sport.write(`${line}\n`);
     } else {
         console.log("*** serial port missing *** " + line);
     }
