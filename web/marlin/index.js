@@ -290,7 +290,7 @@ function init() {
                 }
             }
             if (status.target) {
-                if (status.target.bed) {
+                if (status.target.bed > 0) {
                     if ($('bed') !== input) {
                         $('bed').value = status.target.bed;
                         $('bed').classList.add('bg_red');
@@ -298,14 +298,15 @@ function init() {
                     $('bed_temp').classList.add('bg_red');
                     $('bed_toggle').innerText = 'off';
                 } else {
+                    if ($('bed') !== input) {
+                        $('bed').value = 0;
+                    }
                     $('bed').classList.remove('bg_red');
                     $('bed_temp').classList.remove('bg_red');
                     $('bed_toggle').innerText = 'on';
                 }
-                if (status.temp.bed) {
-                    $('bed_temp').value = parseInt(status.temp.bed);
-                }
-                if (status.target.ext[0]) {
+                $('bed_temp').value = parseInt(status.temp.bed || 0);
+                if (status.target.ext[0] > 0) {
                     if ($('nozzle') !== input) {
                         $('nozzle').value = status.target.ext[0];
                         $('nozzle').classList.add('bg_red');
@@ -313,13 +314,14 @@ function init() {
                     $('nozzle_temp').classList.add('bg_red');
                     $('nozzle_toggle').innerText = 'off';
                 } else {
+                    if ($('nozzle') !== input) {
+                        $('nozzle').value = 0;
+                    }
                     $('nozzle').classList.remove('bg_red');
                     $('nozzle_temp').classList.remove('bg_red');
                     $('nozzle_toggle').innerText = 'on';
                 }
-                if (status.temp.ext[0]) {
-                    $('nozzle_temp').value = parseInt(status.temp.ext[0]);
-                }
+                $('nozzle_temp').value = parseInt(status.temp.ext[0] || 0);
             }
             if (status.pos) {
                 $('xpos').value = parseFloat(status.pos.X).toFixed(1);
