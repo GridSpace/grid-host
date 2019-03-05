@@ -354,6 +354,7 @@ function init() {
             send('M140 S' + bed_temp());
             send('M105');
             $('bed_toggle').innerText = 'off';
+            input_deselect();
         }
     };
     let setnozzle = $('nozzle').onkeyup = ev => {
@@ -361,6 +362,7 @@ function init() {
             send('M104 S' + nozzle_temp());
             send('M105');
             $('nozzle_toggle').innerText = 'off';
+            input_deselect();
         }
     };
     $('go_zero').onclick = () => {

@@ -70,6 +70,28 @@
                     <button onclick="abort()">abort</button>
                 </div>
             </div>
+            <div id="temp" class="col panel">
+                <div class="col">
+                    <label>bed</label>
+                    <div>
+                        <button class="dn" onclick="bed_temp_lower()">&lt;</button>
+                        <input id="bed" value="" size="3"></input>
+                        <button class="up" onclick="bed_temp_higher()">&gt;</button>
+                        <input id="bed_temp" size="4" disabled="true"></input>
+                        <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <label>extruder</label>
+                    <div>
+                        <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
+                        <input id="nozzle" value="" size="3"></input>
+                        <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
+                        <input id="nozzle_temp" size="4" disabled="true"></input>
+                        <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
+                    </div>
+                </div>
+            </div>
             <div class="col panel label-group">
                 <label>position</label>
                 <div class="row align_center">
@@ -97,28 +119,6 @@
                     <div class="grow"></div>
                     <button onclick="off_set()">set</button>
                     <button onclick="off_clear()">clear</button>
-                </div>
-            </div>
-            <div id="temp" class="col panel">
-                <div class="col">
-                    <label>bed</label>
-                    <div>
-                        <button class="dn" onclick="bed_temp_lower()">&lt;</button>
-                        <input id="bed" value="" size="3"></input>
-                        <button class="up" onclick="bed_temp_higher()">&gt;</button>
-                        <input id="bed_temp" size="4" disabled="true"></input>
-                        <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
-                    </div>
-                </div>
-                <div class="col">
-                    <label>extruder</label>
-                    <div>
-                        <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
-                        <input id="nozzle" value="" size="3"></input>
-                        <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
-                        <input id="nozzle_temp" size="4" disabled="true"></input>
-                        <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
-                    </div>
                 </div>
             </div>
             <div id="status" class="row panel">
