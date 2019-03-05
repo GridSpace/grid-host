@@ -9,7 +9,6 @@ body {
     bottom: 0;
     right: 0;
     left: 0;
-    overflow-y: auto;
 }
 td {
     text-align: center;
@@ -35,10 +34,12 @@ button {
 .row {
     display: flex;
     flex-direction: row;
+    flex-shrink: 0;
 }
 .col {
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
 }
 .grow {
     flex-grow: 1;
@@ -144,7 +145,8 @@ button {
 }
 #file-list {
     overflow-y: auto;
-    min-height: 100px;
+    min-height: 6em;
+    max-height: 20em;
 }
 #file-list label:hover {
     background-color: #fee;
