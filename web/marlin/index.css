@@ -131,6 +131,7 @@ button {
 }
 #status {
     padding: 6px;
+    width: 160px;
 }
 #status input {
     padding: 5px;
@@ -185,6 +186,9 @@ button {
     height: 20px;
     padding: 20px;
     margin: 5px;
+}
+#keypad > div {
+    justify-content: center;
 }
 #scrolltop {
     position: fixed;

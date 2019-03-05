@@ -65,9 +65,9 @@
                 </div>
                 <table>
                     <tr>
-                        <td></td>
+                        <td><button onclick="jog('Z',-1)">Z-</button></td>
                         <td><button onclick="jog('Y',-1)">Y-</button></td>
-                        <td></td>
+                        <td><button onclick="retract(5)">E-</button></td>
                     </tr>
                     <tr>
                         <td><button onclick="jog('X',-1)">X-</button></td>
@@ -75,19 +75,15 @@
                         <td><button onclick="jog('X',1)">X+</button></td>
                     </tr>
                     <tr>
-                        <td></td>
+                        <td><button onclick="jog('Z',1)">Z+</button></td>
                         <td><button onclick="jog('Y',1)">Y+</button></td>
-                        <td></td>
+                        <td><button onclick="extrude(5)">E+</button></td>
                     </tr>
                 </table>
                 <div class="col">
-                    <button onclick="jog('Z',-1)">Z-</button>
-                    <button onclick="disable_motors()">M18</button>
-                    <button onclick="jog('Z',1)">Z+</button>
-                </div>
-                <div class="col">
-                    <button onclick="retract(5)">E-</button>
-                    <button onclick="extrude(5)">E+</button>
+                    <button onclick="disable_motors()">disable motors</button>
+                    <button onclick="filament_unload()">unload</button>
+                    <button onclick="filament_load()">load</button>
                 </div>
                 <div class="col">
                     <button id="clear_bed" onclick="clear_bed()">clear bed</button>

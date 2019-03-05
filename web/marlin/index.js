@@ -381,15 +381,18 @@ function init() {
             input.classList.remove('bg_green');
             input = null;
         }
+        $('keypad').style.display = 'none';
     };
     $('nozzle').onclick = (ev) => {
         input_deselect();
+        $('keypad').style.display = '';
         input = $('nozzle');
         input.classList.add('bg_green');
         ev.stopPropagation();
     };
     $('bed').onclick = (ev) => {
         input_deselect();
+        $('keypad').style.display = '';
         input = $('bed');
         input.classList.add('bg_green');
         ev.stopPropagation();
@@ -427,4 +430,5 @@ function init() {
         document.body.scrollTop = 0;
     };
     init_filedrop();
+    input_deselect();
 }
