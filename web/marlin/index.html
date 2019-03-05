@@ -5,6 +5,7 @@
         <link rel="stylesheet" type="text/css" href="index.css">
     </head>
     <body onload="init()" class="row">
+        <button id="scrolltop">&uarr;</button>
         <div>
             <div id="keypad" class="col panel">
                 <div class="row">
@@ -26,6 +27,30 @@
                     <button id="kp-ok">ok</button>
                     <button id="kp-0">0</button>
                     <button id="kp-bs">&larr;</button>
+                </div>
+            </div>
+            <div id="status" class="col panel">
+                <label>current file</label><input id="filename" disabled="true" size="10"></input>
+                <label>progress</label><input id="progress" disabled="true" size="8"></input>
+            </div>
+            <div id="sender" class="col panel">
+                <label>send gcode</label><input id="send" size="10"></input>
+            </div>
+            <div class="col panel justify_center">
+                <div id="eeprom" class="label-group col align_center">
+                    <label>eeprom</label>
+                    <div class="col">
+                        <button onclick="eeprom_save()">save</button>
+                        <button onclick="eeprom_restore()">restore</button>
+                    </div>
+                </div>
+                <div id="actions" class="label-group col align_center">
+                    <label>system</label>
+                    <div class="col">
+                        <button id="reload" onclick="reload()">reload</button>
+                        <button id="reboot" onclick="reboot()">reboot</button>
+                        <button id="shutdown" onclick="shutdown()">shutdown</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -121,33 +146,9 @@
                     <button onclick="off_clear()">clear</button>
                 </div>
             </div>
-            <div id="status" class="row panel">
-                <label>file</label><input id="filename" disabled="true" size="30"></input>
-                <label>progress</label><input id="progress" disabled="true" size="8"></input>
-            </div>
             <div id="files" class="col panel label-group">
                 <label>files</label>
                 <div id="file-list" class="col"></div>
-            </div>
-            <div id="sender" class="row panel">
-                <label>gcode</label><input id="send" size="40"></input>
-            </div>
-            <div class="row panel justify_center">
-                <div id="eeprom" class="label-group col align_center">
-                    <label>eeprom</label>
-                    <div>
-                        <button onclick="eeprom_save()">save</button>
-                        <button onclick="eeprom_restore()">restore</button>
-                    </div>
-                </div>
-                <div id="actions" class="label-group col align_center">
-                    <label>system</label>
-                    <div>
-                        <button id="reload" onclick="reload()">reload</button>
-                        <button id="reboot" onclick="reboot()">reboot</button>
-                        <button id="shutdown" onclick="shutdown()">shutdown</button>
-                    </div>
-                </div>
             </div>
         </div>
     </body>

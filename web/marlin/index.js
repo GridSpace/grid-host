@@ -422,5 +422,9 @@ function init() {
     for (let i=0; i<inputs.length; i++) {
         inputs[i].setAttribute('autocomplete', Date.now().toString(36));
     }
+    // provide top scroll action
+    $('scrolltop').onclick = (ev) => {
+        document.body.scrollTop = 0;
+    };
     init_filedrop();
 }

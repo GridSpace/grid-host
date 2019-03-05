@@ -129,19 +129,21 @@ button {
     margin-top: 0;
     margin-left: 0;
 }
-#sender {
-    align-items: center;
-}
-#send {
-    width: 100%;
-    margin: 5px;
-}
 #status {
     padding: 6px;
 }
 #status input {
     padding: 5px;
     margin-right: 6px;
+    width: 100%;
+}
+#sender {
+    padding: 6px;
+}
+#sender input {
+    padding: 5px;
+    margin-right: 6px;
+    width: 100%;
 }
 #files {
     justify-content: flex-start;
@@ -183,4 +185,9 @@ button {
     height: 20px;
     padding: 20px;
     margin: 5px;
+}
+#scrolltop {
+    position: fixed;
+    left: 5px;
+    bottom: 5px;
 }
