@@ -15,6 +15,7 @@
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
+const spawn = require('child_process').spawn;
 const opt = require('minimist')(process.argv.slice(2));
 const net = require('net');
 const fs = require('fs');
@@ -53,6 +54,7 @@ let auto = true;                // true to enable interval collection of data
 let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
 let onboot = [];                // commands to run on boot (useful for abort)
+let updating = false;           // true when updating firmware
 
 // marlin-centric, to be fixed
 const status = {
@@ -146,7 +148,8 @@ function evtlog(line, flags) {
 };
 
 function openSerialPort() {
-    if (!port || sport) {
+    if (updating || !port || sport) {
+        setTimeout(openSerialPort, 1000);
         return;
     }
     sport = new SerialPort(port, { baudRate: baud })
@@ -465,6 +468,7 @@ function processInput2(line, channel) {
                 return evtlog("print in progress");
             }
             return kickNext();
+        case "*update": return update();
         case "*abort": return abort();
         case "*pause": return pause();
         case "*resume": return resume();
@@ -514,6 +518,38 @@ function processInput2(line, channel) {
         evtlog(`invalid command "${line.substring(1)}"`);
     }
 };
+
+function update() {
+    if (updating) {
+        return;
+    }
+    updating = true;
+    sport.close();
+    // avrdude -patmega2560 -cwiring -P/dev/ttyUSB0 -b115200 -D -Uflash:w:/home/pi/marlin-gb-118.ino.hex:i
+    let proc = spawn("avrdude", [
+            "-patmega2560",
+            "-cwiring",
+            `-P${port}`,
+            "-b115200",
+            "-D",
+            "-Uflash:w:/home/pi/marlin-gb-118.ino.hex:i"
+        ])
+        .on('error', error => {
+            evtlog("flash update failed");
+        })
+        .on('exit', code => {
+            updating = false;
+            if (code === 0) {
+                evtlog(`flash update completed`);
+            } else {
+                evtlog("flash update failed");
+            }
+        });
+    new LineBuffer(proc.stdout);
+    new LineBuffer(proc.stderr);
+    proc.stdout.on('line', line => { if (line.toString().trim()) evtlog(line.toString()) });
+    proc.stderr.on('line', line => { if (line.toString().trim()) evtlog(line.toString()) });
+}
 
 function abort() {
     evtlog("execution aborted");

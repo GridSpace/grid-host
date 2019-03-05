@@ -3,9 +3,10 @@
         <title>marlin control</title>
         <script src="index.js"></script>
         <link rel="stylesheet" type="text/css" href="index.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     </head>
     <body onload="init()" class="row">
-        <button id="scrolltop">&uarr;</button>
+        <button id="scrolltop" class="fa fa-angle-double-up"></button>
         <div>
             <div id="keypad" class="col panel">
                 <div class="row">
@@ -44,6 +45,12 @@
                         <button onclick="eeprom_restore()">restore</button>
                     </div>
                 </div>
+                <div id="firmware" class="label-group col align_center">
+                    <label>firmware</label>
+                    <div class="col">
+                        <button onclick="firmware_update()">update</button>
+                    </div>
+                </div>
                 <div id="actions" class="label-group col align_center">
                     <label>system</label>
                     <div class="col">
@@ -71,7 +78,7 @@
                     </tr>
                     <tr>
                         <td><button onclick="jog('X',-1)">X-</button></td>
-                        <td><button onclick="goto_home()">home</button></td>
+                        <td><button onclick="goto_home()" class="fa fa-home"></button></td>
                         <td><button onclick="jog('X',1)">X+</button></td>
                     </tr>
                     <tr>
@@ -82,8 +89,11 @@
                 </table>
                 <div class="col">
                     <button onclick="disable_motors()">disable motors</button>
-                    <button onclick="filament_unload()">unload</button>
-                    <button onclick="filament_load()">load</button>
+                    <div class="row">
+                        <button onclick="filament_unload()">unload</button>
+                        <button onclick="filament_load()">load</button>
+                    </div>
+                    <button onclick="stop_motors()">(un)load done</button>
                 </div>
                 <div class="col">
                     <button id="clear_bed" onclick="clear_bed()">clear bed</button>

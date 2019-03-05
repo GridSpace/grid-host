@@ -76,9 +76,10 @@ button {
 }
 .label-group > label {
     font-size: 10px;
-    background-color: #eee;
     border-radius: 3px;
-    padding: 2px;
+    background-color: #888;
+    padding: 2px 2px 4px 2px;
+    color: white;
 }
 .label-group input {
     margin-right: 10px;
@@ -113,9 +114,10 @@ button {
 }
 #temp label {
     font-size: 10px;
-    background-color: #eee;
     border-radius: 3px;
-    padding: 2px;
+    background-color: #888;
+    padding: 2px 2px 4px 2px;
+    color: white;
 }
 #temp input {
     margin: 0;
