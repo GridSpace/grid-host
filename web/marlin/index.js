@@ -137,12 +137,10 @@ function nozzle_temp_higher() {
 }
 
 function filament_load() {
-    send('M302 P1');
     send('G0 E700 F300');
 }
 
 function filament_unload() {
-    send('M302 P1');
     send('G0 E-700 F300');
 }
 
@@ -151,13 +149,11 @@ function goto_home() {
 }
 
 function disable_motors() {
-    send('M302 P0');
     send('M18');
 }
 
 function stop_motors() {
     send('M410');
-    send('M302 P0');
 }
 
 function clear_bed() {
