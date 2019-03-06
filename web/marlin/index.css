@@ -23,9 +23,6 @@ input {
     border: 1px solid #ddd;
     outline: none;
 }
-.editable {
-    background-color: #ffe;
-}
 button {
     margin: 5px;
     padding: 8px;
@@ -58,6 +55,13 @@ button {
 }
 .align_center {
     align-items: center;
+}
+.five {
+    width: 5px;
+    height: 5px;
+}
+.editable {
+    background-color: #ffe;
 }
 .selected {
     color: white;
