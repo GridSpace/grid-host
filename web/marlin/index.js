@@ -22,14 +22,14 @@ function reload() {
 }
 
 function reboot() {
-    if (confirm("reboot controller?")) {
+    if (confirm("reboot system?")) {
         send("*exec sudo reboot");
     }
 }
 
 function shutdown() {
-    if (confirm("shutdown controller?")) {
-        send("*exec sudo halt");
+    if (confirm("shutdown system?")) {
+        send("*exec sudo halt -p");
     }
 }
 
@@ -166,7 +166,15 @@ function print_next() {
 }
 
 function firmware_update() {
-    send('*update');
+    if (confirm("update controller?")) {
+        send('*update');
+    }
+}
+
+function firmware_restart() {
+    if (confirm("restart controller?")) {
+        send('*exit');
+    }
 }
 
 function abort() {

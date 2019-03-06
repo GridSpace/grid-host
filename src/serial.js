@@ -13,6 +13,8 @@
  * different abort per device or type (fdm vs cnc)
  */
 
+const version = "rogue-001";
+
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
 const spawn = require('child_process').spawn;
@@ -73,6 +75,7 @@ const status = {
         connect: 0,             // time port was opened successfully
         close: 0,               // time of last close
         line: 0,                // time of last line output
+        lines: 0,               // number of lines recieved from device
         lineno: 0               // last line # sent
     },
     error: {
@@ -157,6 +160,7 @@ function openSerialPort() {
             evtlog("open: " + port);
             new LineBuffer(sport);
             status.device.connect = Date.now();
+            status.device.lines = 0;
         })
         .on('error', function(error) {
             sport = null;
@@ -168,6 +172,7 @@ function openSerialPort() {
             status.device.ready = false;
         })
         .on('line', function(line) {
+            status.device.lines++;
             if (opt.debug) {
                 let cmd = (match[0] || {line:''}).line;
                 console.log("<... " + (cmd ? cmd + " -- " + line : line));
@@ -253,9 +258,10 @@ function processPortOutput(line) {
         collect = null;
         match = [];
         buf = [];
-        // set port idle kill if doesn't come up fast enough
+        // set port idle kill if doesn't come up as expected
         setTimeout(() => {
-            if (starting) {
+            if (starting && status.device.lines === 0) {
+                evtlog("no serial activity detected ... reopening");
                 sport.close();
             }
         }, 5000);
@@ -461,6 +467,7 @@ function processInput2(line, channel) {
         return;
     }
     switch (line) {
+        case "*exit": return process.exit(0);
         case "*bounce": return sport.close();
         case "*auto on": return auto = true;
         case "*auto off": return auto = false;
@@ -536,14 +543,24 @@ function update() {
     }
     updating = true;
     sport.close();
-    // avrdude -patmega2560 -cwiring -P/dev/ttyUSB0 -b115200 -D -Uflash:w:/home/pi/marlin-gb-118.ino.hex:i
+    let choose = "marlin.ino.hex";
+    let newest = 0;
+    let fwdir = opt.fwdir || "/home/pi/firmware";
+    fs.readdirSync(fwdir).forEach(file => {
+        let stat = fs.statSync(`${fwdir}/${file}`);
+        if (stat.mtimeMs > newest) {
+            newest = stat.mtimeMs;
+            choose = file;
+        }
+    });
+    evtlog(`flashing with ${choose}`);
     let proc = spawn("avrdude", [
             "-patmega2560",
             "-cwiring",
             `-P${port}`,
             "-b115200",
             "-D",
-            "-Uflash:w:/home/pi/marlin-gb-118.ino.hex:i"
+            `-Uflash:w:${fwdir}/${choose}:i`
         ])
         .on('error', error => {
             evtlog("flash update failed");
@@ -871,7 +888,7 @@ if (opt.webport) {
     console.log({ webport, webdir });
 }
 
-console.log({ port: port || 'undefined', baud, mode, maxbuf: bufmax, auto: auto_int });
+console.log({ port: port || 'undefined', baud, mode, maxbuf: bufmax, auto: auto_int, version });
 
 openSerialPort();
 
