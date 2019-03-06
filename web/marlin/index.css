@@ -18,10 +18,13 @@ label {
 }
 input {
     padding: 8px 5px 8px 5px;
-    background-color: #ffe;
+    background-color: #fafafa;
     border-radius: 3px;
     border: 1px solid #ddd;
     outline: none;
+}
+.editable {
+    background-color: #ffe;
 }
 button {
     margin: 5px;

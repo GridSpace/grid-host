@@ -321,7 +321,7 @@ function init() {
                 if (status.target.bed > 0) {
                     if ($('bed') !== input) {
                         $('bed').value = status.target.bed;
-                        $('bed').classList.add('bg_red');
+                        // $('bed').classList.add('bg_red');
                     }
                     $('bed_temp').classList.add('bg_red');
                     $('bed_toggle').innerText = 'off';
@@ -329,7 +329,7 @@ function init() {
                     if ($('bed') !== input) {
                         $('bed').value = 0;
                     }
-                    $('bed').classList.remove('bg_red');
+                    // $('bed').classList.remove('bg_red');
                     $('bed_temp').classList.remove('bg_red');
                     $('bed_toggle').innerText = 'on';
                 }
@@ -337,7 +337,7 @@ function init() {
                 if (status.target.ext[0] > 0) {
                     if ($('nozzle') !== input) {
                         $('nozzle').value = status.target.ext[0];
-                        $('nozzle').classList.add('bg_red');
+                        // $('nozzle').classList.add('bg_red');
                     }
                     $('nozzle_temp').classList.add('bg_red');
                     $('nozzle_toggle').innerText = 'off';
@@ -345,7 +345,7 @@ function init() {
                     if ($('nozzle') !== input) {
                         $('nozzle').value = 0;
                     }
-                    $('nozzle').classList.remove('bg_red');
+                    // $('nozzle').classList.remove('bg_red');
                     $('nozzle_temp').classList.remove('bg_red');
                     $('nozzle_toggle').innerText = 'on';
                 }

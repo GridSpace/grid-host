@@ -35,7 +35,7 @@
                 <label>progress</label><input id="progress" disabled="true" size="8"></input>
             </div>
             <div id="sender" class="col panel">
-                <label>send gcode</label><input id="send" size="10"></input>
+                <label>send gcode</label><input id="send" size="10" class="editable"></input>
             </div>
             <div class="col panel justify_center">
                 <div id="eeprom" class="label-group col align_center">
@@ -106,7 +106,7 @@
                     <label>bed</label>
                     <div>
                         <button class="dn" onclick="bed_temp_lower()">&lt;</button>
-                        <input id="bed" value="" size="3"></input>
+                        <input id="bed" value="" size="3" class="editable"></input>
                         <button class="up" onclick="bed_temp_higher()">&gt;</button>
                         <input id="bed_temp" size="4" disabled="true"></input>
                         <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
@@ -116,7 +116,7 @@
                     <label>extruder</label>
                     <div>
                         <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
-                        <input id="nozzle" value="" size="3"></input>
+                        <input id="nozzle" value="" size="3" class="editable"></input>
                         <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
                         <input id="nozzle_temp" size="4" disabled="true"></input>
                         <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
