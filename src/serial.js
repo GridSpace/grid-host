@@ -367,6 +367,13 @@ function processPortOutput(line) {
         }
         update = true;
     }
+    // resend on checksum errors
+    if (line.indexOf("Resend:") === 0) {
+        let from = line.split(' ')[1];
+        evtlog(`resend from ${from}`);
+        sport.close();
+        process.exit(-1);
+    }
     // catch fatal errors and reboot
     if (!opt.noerror && line.indexOf("Error:") === 0) {
         status.error = {
@@ -374,11 +381,15 @@ function processPortOutput(line) {
             cause: line.substring(6)
         };
         evtlog(line);
-        sport.close();
-        if (opt.fragile) {
-            if (opt.debug) {
-                console.log({status});
-                process.exit(-1);
+        if (line.indexOf("Error:checksum mismatch") === 0) {
+            // ignore then act on 'Resend:'
+        } else {
+            sport.close();
+            if (opt.fragile) {
+                if (opt.debug) {
+                    console.log({status});
+                    process.exit(-1);
+                }
             }
         }
     }
