@@ -214,7 +214,7 @@ function queue(q) {
         html.push(cell('td', target));
         html.push(cell('td', tag, { onclick:`from_tag('${el.from}')` } ));
         html.push(cell('td', el.name));
-        html.push(cell('td', el.size || ''), {id: `q-${el.key}-size`});
+        html.push(cell('td', el.size || '', {id: `q-${el.key}-size`} ));
         html.push(cell('td', el.status, {id: `q-${el.key}-kick`, onclick: ""}));
         html.push('</tr>');
     });
