@@ -166,13 +166,13 @@ function print_next() {
 }
 
 function firmware_update() {
-    if (confirm("update controller?")) {
+    if (confirm("update firmware?")) {
         send('*update');
     }
 }
 
-function firmware_restart() {
-    if (confirm("restart controller?")) {
+function controller_update() {
+    if (confirm("update controller?")) {
         send('*exit');
     }
 }

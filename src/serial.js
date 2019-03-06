@@ -13,7 +13,7 @@
  * different abort per device or type (fdm vs cnc)
  */
 
-const version = "rogue-001";
+const version = "rogue-002";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -521,7 +521,7 @@ function processInput2(line, channel) {
             evtlog({no_upload_possible: channel});
         }
     } else if (line.indexOf("*delete ") === 0) {
-        fs.unlinkSync(filedir + "/" + line.substring(8));
+        fs.unlinkSync(filedir + "/" + line.substring(8) + ".gcode");
         checkFileDir();
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
