@@ -509,7 +509,7 @@ function processInput2(line, channel) {
         if (status.print.run) {
             return evtlog("print in progress");
         }
-        kickNamed(filedir + "/" + line.substring(6));
+        kickNamed(filedir + "/" + line.substring(6) + ".gcode");
     } else if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
     } else if (line.charAt(0) !== "*") {

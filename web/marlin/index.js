@@ -213,6 +213,9 @@ function send(message) {
 }
 
 function cleanName(rname) {
+    if (!rname) {
+        return rname;
+    }
     let name = rname.substring(rname.lastIndexOf("/")+1);
     let doti = name.lastIndexOf('.');
     if (doti > 0) {
