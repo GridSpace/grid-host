@@ -47,6 +47,12 @@ button {
 .grow {
     flex-grow: 1;
 }
+.space-a {
+    justify-content: space-around;
+}
+.space-b {
+    justify-content: space-between;
+}
 .align_stretch {
     align-items: stretch;
 }

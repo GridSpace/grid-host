@@ -17,6 +17,15 @@ function log(msg) {
     console.log({msg});
 }
 
+function zpad(v) {
+    return v < 10 ? `0${v}` : v;
+}
+
+function elapsed(millis) {
+    let time = moment.duration(millis);
+    return `${zpad(time.hours())}:${zpad(time.minutes())}:${zpad(time.seconds())}`;
+}
+
 function reload() {
     document.location = document.location;
 }
@@ -324,6 +333,8 @@ function init() {
                 } else {
                     $('clear_bed').classList.add('bg_red');
                 }
+                let start = status.print.start || status.print.prep;
+                $('elapsed').value = elapsed(Date.now() - start);
             }
             if (status.target) {
                 if (status.target.bed > 0) {

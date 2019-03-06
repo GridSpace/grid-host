@@ -1,6 +1,7 @@
 <html>
     <head>
         <title>marlin control</title>
+        <script src="moment.js"></script>
         <script src="index.js"></script>
         <link rel="stylesheet" type="text/css" href="index.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -32,7 +33,20 @@
             </div>
             <div id="status" class="col panel">
                 <label>current file</label><input id="filename" disabled="true" size="10"></input>
+                <div class="row space-b">
+                    <div class="col">
+                        <label>progress</label>
+                        <input id="progress" disabled="true" size="8"></input>
+                    </div>
+                    <div class="col">
+                        <label>elapsed</label>
+                        <input id="elapsed" disabled="true" size="8"></input>
+                    </div>
+                </div>
+<!--
                 <label>progress</label><input id="progress" disabled="true" size="8"></input>
+                <label>elapsed</label><input id="elapsed" disabled="true" size="8"></input>
+-->
             </div>
             <div id="sender" class="col panel">
                 <label>send gcode</label><input id="send" size="10" class="editable"></input>
