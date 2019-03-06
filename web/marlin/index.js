@@ -1,3 +1,4 @@
+let istouch = 'ontouchstart' in document.documentElement;
 let interval = null;
 let timeout = null;
 let queue = [];
@@ -343,7 +344,7 @@ function init() {
                 let duration = 0;
                 if (status.print.end) {
                     duration = status.print.end - status.print.start;
-                } else {
+                } else if (status.print.prep || status.print.start) {
                     duration = Date.now() - (status.print.start || status.print.prep);
                 }
                 $('elapsed').value = elapsed(duration);
@@ -444,14 +445,18 @@ function init() {
     };
     $('nozzle').onclick = (ev) => {
         input_deselect();
-        $('keypad').style.display = '';
+        if (istouch) {
+            $('keypad').style.display = '';
+        }
         input = $('nozzle');
         input.classList.add('bg_green');
         ev.stopPropagation();
     };
     $('bed').onclick = (ev) => {
         input_deselect();
-        $('keypad').style.display = '';
+        if (istouch) {
+            $('keypad').style.display = '';
+        }
         input = $('bed');
         input.classList.add('bg_green');
         ev.stopPropagation();

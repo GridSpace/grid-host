@@ -280,6 +280,7 @@ function processPortOutput(line) {
         };
         interval = setInterval(() => {
             if (starting || !status.device.ready || auto_int === 0) {
+                // console.log({starting, ready:status.device.ready, auto_int});
                 return;
             }
             let priority = true;
@@ -521,13 +522,21 @@ function processInput2(line, channel) {
             evtlog({no_upload_possible: channel});
         }
     } else if (line.indexOf("*delete ") === 0) {
-        fs.unlinkSync(filedir + "/" + line.substring(8) + ".gcode");
+        let file = line.substring(8);
+        if (file.indexOf(".gcode") < 0) {
+            file += ".gcode";
+        }
+        fs.unlinkSync(filedir + "/" + file);
         checkFileDir();
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
             return evtlog("print in progress");
         }
-        kickNamed(filedir + "/" + line.substring(6) + ".gcode");
+        let file = line.substring(6);
+        if (file.indexOf(".gcode") < 0) {
+            file += ".gcode";
+        }
+        kickNamed(filedir + "/" + file);
     } else if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
     } else if (line.charAt(0) !== "*") {
