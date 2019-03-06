@@ -212,6 +212,15 @@ function send(message) {
     }
 }
 
+function cleanName(rname) {
+    let name = rname.substring(rname.lastIndexOf("/")+1);
+    let doti = name.lastIndexOf('.');
+    if (doti > 0) {
+        name = name.substring(0,doti);
+    }
+    return name;
+}
+
 function init_filedrop() {
     var list = $("file-list");
 
@@ -297,7 +306,7 @@ function init() {
             let status = JSON.parse(msg.substring(4,msg.length-4));
             last_set = status;
             if (status.print) {
-                $('filename').value = status.print.filename;
+                $('filename').value = cleanName(status.print.filename);
                 $('progress').value = status.print.progress + '%';
                 if (status.print.clear) {
                     $('clear_bed').classList.remove('bg_red');
@@ -355,7 +364,7 @@ function init() {
             let list = $('file-list');
             let html = [];
             JSON.parse(msg.substring(4,msg.length-4)).forEach(file => {
-                let name = file.name.substring(file.name.lastIndexOf("/")+1);
+                let name = cleanName(file.name);
                 html.push(`<div class="row"><label ondblclick="print('${name}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
             });
             list.innerHTML = html.join('');
