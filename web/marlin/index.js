@@ -333,8 +333,20 @@ function init() {
                 } else {
                     $('clear_bed').classList.add('bg_red');
                 }
-                let start = status.print.start || status.print.prep;
-                $('elapsed').value = elapsed(Date.now() - start);
+                if (status.print.run) {
+                    $('progress').classList.add('bg_red');
+                    $('elapsed').classList.add('bg_red');
+                } else {
+                    $('progress').classList.remove('bg_red');
+                    $('elapsed').classList.remove('bg_red');
+                }
+                let duration = 0;
+                if (status.print.end) {
+                    duration = status.print.end - status.print.start;
+                } else {
+                    duration = Date.now() - (status.print.start || status.print.prep);
+                }
+                $('elapsed').value = elapsed(duration);
             }
             if (status.target) {
                 if (status.target.bed > 0) {
