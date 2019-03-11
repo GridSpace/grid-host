@@ -32,7 +32,7 @@ const http = require('http');
 const serve = require('serve-static');
 const connect = require('connect');
 const WebSocket = require('ws');
-const filedir = (opt.dir || opt.filedir);
+const filedir = opt.dir || opt.filedir || `${process.cwd()}/tmp`;
 const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
 
 let checksum = !opt.nocheck;    // use line numbers and checksums
@@ -554,8 +554,11 @@ function update() {
     sport.close();
     let choose = "marlin.ino.hex";
     let newest = 0;
-    let fwdir = opt.fwdir || "/home/pi/firmware";
+    let fwdir = opt.fwdir || filedir || `${process.cwd()}/firmware`;
     fs.readdirSync(fwdir).forEach(file => {
+        if (file.indexOf(".hex") < 0) {
+            return;
+        }
         let stat = fs.statSync(`${fwdir}/${file}`);
         if (stat.mtimeMs > newest) {
             newest = stat.mtimeMs;
