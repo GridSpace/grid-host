@@ -362,7 +362,7 @@ function init() {
                     $('elapsed').classList.remove('bg_red');
                 }
                 let duration = 0;
-                if (status.print.end) {
+                if (status.print.end && status.print.end > status.print.start) {
                     duration = status.print.end - status.print.start;
                 } else if (status.print.prep || status.print.start) {
                     duration = (status.print.mark || Date.now()) - status.print.start;
