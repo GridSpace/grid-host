@@ -27,6 +27,14 @@ function elapsed(millis) {
     return `${zpad(time.hours())}:${zpad(time.minutes())}:${zpad(time.seconds())}`;
 }
 
+function alert_on_run() {
+    if (last_set.print.run) {
+        alert("print in progress");
+        return true;
+    }
+    return false;
+}
+
 function reload() {
     document.location = document.location;
 }
@@ -80,12 +88,16 @@ function off_clear() {
 }
 
 function eeprom_save() {
-    send('M500');
+    if (confirm('save eeprom settings')) {
+        send('M500');
+    }
 }
 
 function eeprom_restore() {
-    send('M501');
-    send('M503');
+    if (confirm('restore eeprom settings')) {
+        send('M501');
+        send('M503');
+    }
 }
 
 function bed_toggle() {
@@ -147,26 +159,32 @@ function nozzle_temp_higher() {
 }
 
 function filament_load() {
+    if (alert_on_run()) return;
     send('G0 E700 F300');
 }
 
 function filament_unload() {
+    if (alert_on_run()) return;
     send('G0 E-700 F300');
 }
 
 function goto_home() {
+    if (alert_on_run()) return;
     send('G28');
 }
 
 function disable_motors() {
+    if (alert_on_run()) return;
     send('M18');
 }
 
 function stop_motors() {
+    if (alert_on_run()) return;
     send('M410');
 }
 
 function clear_bed() {
+    if (alert_on_run()) return;
     send('*clear');
     send('*status');
 }
@@ -176,12 +194,14 @@ function print_next() {
 }
 
 function firmware_update() {
+    if (alert_on_run()) return;
     if (confirm("update firmware?")) {
         send('*update');
     }
 }
 
 function controller_update() {
+    if (alert_on_run()) return;
     if (confirm("update controller?")) {
         send('*exit');
     }
@@ -345,7 +365,7 @@ function init() {
                 if (status.print.end) {
                     duration = status.print.end - status.print.start;
                 } else if (status.print.prep || status.print.start) {
-                    duration = Date.now() - (status.print.start || status.print.prep);
+                    duration = (status.print.mark || Date.now()) - status.print.start;
                 }
                 $('elapsed').value = elapsed(duration);
             }

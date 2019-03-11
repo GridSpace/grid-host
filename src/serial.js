@@ -86,7 +86,11 @@ const status = {
         run: false,             // print running
         clear: false,           // bed is clear to print
         filename: null,         // current file name
-        progress: 0.0
+        progress: 0.0,
+        prep: 0,                // gcode pre start time
+        start: 0,               // gcode print start time
+        mark: 0,                // gcode last line out time
+        end: 0                  // gcode end of queue time
     },
     target: {                   // target temp
         bed: null,              // bed
@@ -649,6 +653,7 @@ function processQueue() {
     while (waiting < bufmax && buf.length && !paused) {
         let {line, flags} = buf.shift();
         status.buffer.queue = buf.length;
+        status.print.mark = Date.now();
         write(line,flags);
     }
     if (buf.length === 0) {
