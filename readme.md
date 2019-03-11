@@ -52,7 +52,7 @@ currently built-in filter types:
 
 ## Generate Certs using Cerbot
 
-	certbot --text --agree-tos --email your@address -d local.grid.space --manual --preferred-challenges dns --expand --renew-by-default --manual-public-ip-logging-ok certonly
+	certbot --text --agree-tos --email your@address -d local.grid.space --manual --preferred-challenges dns --expand --renew-by-default --manual-public-ip-logging-ok --config-dir `pwd`/tmp/cb --work-dir `pwd`/tmp/cb --logs-dir `pwd`/tmp/cb certonly
 
 
 ## Starting Grid:Host
