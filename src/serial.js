@@ -42,6 +42,7 @@ let waiting = 0;                // unack'd output lines
 let maxout = 0;                 // high water mark for buffer
 let paused = false;             // queue processing paused
 let processing = false;         // queue being drained
+let updating = false;           // true when updating firmware
 let sdspool = false;            // spool to sd for printing
 let dircache = [];              // cache of files in watched directory
 let clients = [];               // connected clients
@@ -56,7 +57,16 @@ let auto = true;                // true to enable interval collection of data
 let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
 let onboot = [];                // commands to run on boot (useful for abort)
-let updating = false;           // true when updating firmware
+let boot_abort = [
+    "M104 S0 T0",   // extruder 0 heat off
+    "M140 S0 T0",   // bed heat off
+    "M107",         // shut off cooling fan
+    "G91",          // relative moves
+    "G0 Z10",       // drop bed 1cm
+    "G28 X Y",      // home X & Y
+    "G90",          // restore absolute moves
+    "M84"           // disable steppers
+];
 
 // marlin-centric, to be fixed
 const status = {
@@ -426,7 +436,7 @@ function sendFile(filename) {
     status.print.clear = false;
     status.print.filename = filename;
     status.print.start = Date.now();
-    evtlog("send: " + filename);
+    evtlog(`print start ${filename}`);
     // prevent auto polling during send buffering
     let auto_save = auto;
     auto = false;
@@ -596,40 +606,9 @@ function update() {
 }
 
 function abort() {
-    evtlog("execution aborted");
+    evtlog("print aborted");
+    onboot = boot_abort;
     sport.close(); // forces re-init of marlin
-    onboot = [
-        "M104 S0 T0",   // extruder 0 heat off
-        "M140 S0 T0",   // bed heat off
-        "M107",         // shut off cooling fan
-        "G91",          // relative moves
-        "G0 Z10",       // drop bed 1cm
-        "G28 X Y",      // home X & Y
-        "G90",          // restore absolute moves
-        "M84"           // disable steppers
-    ];
-    return;
-    // if (mode === 'grbl') {
-    //     buf = [];
-    // } else {
-    //     buf = [];
-    //     // match = [];
-    //     // write('M108', {abort: true}); // cancel heating
-    //     [
-    //         "M104 S0 T0",   // extruder 0 heat off
-    //         "M140 S0 T0",   // bed heat off
-    //         "M107",         // shut off cooling fan
-    //         "G91",          // relative moves
-    //         "G0 Z10",       // drop bed 1cm
-    //         "G28 X Y",      // home X & Y
-    //         "G90",          // restore absolute moves
-    //         "M84"           // disable steppers
-    //     ].forEach((line, i) => {
-    //         queue(line, {priority: i === 0});
-    //     });
-    // }
-    // processQueue();
-    // status.print.clear = false;
 };
 
 function pause() {
@@ -673,14 +652,15 @@ function processQueue() {
 };
 
 function queue(line, flags) {
+    let priority = flags && flags.priority;
     line = line.trim();
     if (line.length === 0) {
         return;
     }
-    if (waiting < bufmax) {
+    if (waiting < bufmax || (paused && priority)) {
         write(line, flags);
     } else {
-        if (flags && flags.priority) {
+        if (priority) {
             buf.splice(0, 0, {line, flags})
         } else {
             buf.push({line, flags});
@@ -723,7 +703,7 @@ function write(line, flags) {
                 flags.callback = () => {
                     status.print.prep = status.print.start;
                     status.print.start = Date.now();
-                    evtlog("print starting");
+                    evtlog("print body");
                 };
             }
         case 'G':

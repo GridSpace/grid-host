@@ -355,9 +355,11 @@ function init() {
                     $('clear_bed').classList.add('bg_red');
                 }
                 if (status.print.run) {
+                    $('filename').classList.add('bg_red');
                     $('progress').classList.add('bg_red');
                     $('elapsed').classList.add('bg_red');
                 } else {
+                    $('filename').classList.remove('bg_red');
                     $('progress').classList.remove('bg_red');
                     $('elapsed').classList.remove('bg_red');
                 }
