@@ -78,6 +78,8 @@ const status = {
     buffer: {
         waiting: 0,             // unack'd output
         queue: 0,               // queue depth
+        match: null,            // current outstanding commands
+        collect: null           // lines collected against current command
     },
     device: {
         ready: false,           // true when connected and post-init
@@ -246,6 +248,8 @@ function openSerialPort() {
             } else {
                 cmdlog("<-- " + line, {auto: matched});
             }
+            status.buffer.match = match;
+            status.buffer.collect = collect;
             processPortOutput(line);
             processQueue();
         })
