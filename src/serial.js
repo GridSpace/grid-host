@@ -566,7 +566,6 @@ function update() {
         return;
     }
     updating = true;
-    sport.close();
     let choose = "marlin.ino.hex";
     let newest = 0;
     let fwdir = opt.fwdir || filedir || `${process.cwd()}/firmware`;
@@ -580,6 +579,7 @@ function update() {
             choose = file;
         }
     });
+    sport.close();
     evtlog(`flashing with ${choose}`);
     let proc = spawn("avrdude", [
             "-patmega2560",
