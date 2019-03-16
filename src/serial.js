@@ -7,13 +7,9 @@
  * provide raw socket, web socket, and web interface to serial-controlled
  * hardware such as FDM 3D printers and CNC mills based on marlin derived
  * firmwares.
- *
- * TODO
- *
- * different abort per device or type (fdm vs cnc)
  */
 
-const version = "rogue-002";
+const version = "rogue-003";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -168,7 +164,7 @@ function evtlog(line, flags) {
 
 function openSerialPort() {
     if (updating || !port || sport) {
-        setTimeout(openSerialPort, 1000);
+        setTimeout(openSerialPort, 2000);
         return;
     }
     sport = new SerialPort(port, { baudRate: baud })
@@ -177,11 +173,12 @@ function openSerialPort() {
             new LineBuffer(sport);
             status.device.connect = Date.now();
             status.device.lines = 0;
+            lineno = 1;
         })
         .on('error', function(error) {
             sport = null;
             console.log(error);
-            setTimeout(openSerialPort, 1000);
+            setTimeout(openSerialPort, 2000);
             clearInterval(interval);
             interval = null;
             status.device.connect = 0;
