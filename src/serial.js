@@ -23,6 +23,7 @@ const port = opt.device || opt.port || opt._[0]; // serial port device path
 const baud = parseInt(opt.baud || "250000");     // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "8");      // max unack'd output lines
 
+const os = require('os');
 const url = require('url');
 const http = require('http');
 const serve = require('serve-static');
@@ -78,6 +79,7 @@ const status = {
         collect: null           // lines collected against current command
     },
     device: {
+        name: os.hostname(),    // device host name for web display
         ready: false,           // true when connected and post-init
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully

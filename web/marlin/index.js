@@ -346,6 +346,9 @@ function init() {
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(4,msg.length-4));
             last_set = status;
+            if (status.device && status.device.name) {
+                document.title = status.device.name;
+            }
             if (status.print) {
                 $('filename').value = cleanName(status.print.filename);
                 $('progress').value = status.print.progress + '%';
