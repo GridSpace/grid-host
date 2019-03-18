@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "rogue-003";
+const version = "rogue-004";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -50,6 +50,7 @@ let sport = null;               // bound serial port
 let upload = null;              // name of file being uploaded
 let mode = 'marlin';            // operating mode
 let interval = null;            // pointer to interval updater
+let debug = opt.debug;          // debug and dump all data
 let auto = true;                // true to enable interval collection of data
 let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
@@ -77,6 +78,10 @@ const status = {
         queue: 0,               // queue depth
         match: null,            // current outstanding commands
         collect: null           // lines collected against current command
+    },
+    flags: {                    // status of internal flags
+        auto: auto,             // auto update of certain parameters (temp)
+        debug: debug            // verbose serial port tracking
     },
     device: {
         name: os.hostname(),    // device host name for web display
@@ -142,7 +147,7 @@ function emit(line, flags) {
 }
 
 function cmdlog(line, flags) {
-    if (opt.debug) {
+    if (debug) {
         return;
     }
     if (flags && flags.print && !opt.verbose) {
@@ -188,7 +193,7 @@ function openSerialPort() {
         })
         .on('line', function(line) {
             status.device.lines++;
-            if (opt.debug) {
+            if (debug) {
                 let cmd = (match[0] || {line:''}).line;
                 console.log("<... " + (cmd ? cmd + " -- " + line : line));
             }
@@ -247,7 +252,7 @@ function openSerialPort() {
             } else {
                 cmdlog("<-- " + line, {auto: matched});
             }
-            status.buffer.match = match;
+            // status.buffer.match = match;
             status.buffer.collect = collect;
             processPortOutput(line);
             processQueue();
@@ -314,8 +319,8 @@ function processPortOutput(line) {
                         queue(key, {auto: true, priority, callback}); // get endstops
                     }
                 }
-            // } else {
-            //     evtlog({auto_blocked: buf.length, last: auto_lb, waiting});
+            } else if (debug) {
+                evtlog({auto_blocked: buf.length, last: auto_lb, waiting});
             }
             auto_lb = buf.length;
         }, auto_int);
@@ -410,7 +415,7 @@ function processPortOutput(line) {
         } else {
             sport.close();
             if (opt.fragile) {
-                if (opt.debug) {
+                if (debug) {
                     console.log({status});
                     process.exit(-1);
                 }
@@ -421,7 +426,7 @@ function processPortOutput(line) {
     if (opt.fragile && line.indexOf("Unknown command:") >= 0) {
         evtlog(`fatal: ${line}`);
         sport.close();
-        if (opt.debug) {
+        if (debug) {
             console.log({status});
             process.exit(-1);
         }
@@ -489,6 +494,8 @@ function processInput2(line, channel) {
         case "*bounce": return sport.close();
         case "*auto on": return auto = true;
         case "*auto off": return auto = false;
+        case "*debug on": return debug = true;
+        case "*debug off": return debug = false;
         case "*match":
             console.log({match});
             return;
@@ -524,6 +531,8 @@ function processInput2(line, channel) {
             }
             return;
         case "*status":
+            status.flags.auto = auto;
+            status.flags.debug = debug;
             if (channel) {
                 channel.request_status = true;
             }
@@ -726,7 +735,7 @@ function write(line, flags) {
             });
             line = `${line}*${cksum}`;
         }
-        if (opt.debug) console.log("...> " + line);
+        if (debug) console.log("...> " + line);
         cmdlog("--> " + line, flags);
         sport.write(`${line}\n`);
     } else {

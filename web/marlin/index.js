@@ -214,11 +214,11 @@ function abort() {
 }
 
 function extrude(v) {
-    gr(`E${v}`);
+    gr(`E${jog_val} F250`);
 }
 
 function retract(v) {
-    gr(`E-${v}`);
+    gr(`E-${jog_val} F250`);
 }
 
 function set_jog(val, el) {
@@ -231,7 +231,7 @@ function set_jog(val, el) {
 }
 
 function jog(axis, dir) {
-    gr(`${axis}${dir * jog_val}`);
+    gr(`${axis}${dir * jog_val} F1000`);
 }
 
 function gr(msg) {
