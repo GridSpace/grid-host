@@ -32,6 +32,14 @@ const WebSocket = require('ws');
 const filedir = opt.dir || opt.filedir || `${process.cwd()}/tmp`;
 const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
 
+const STATES = {
+    IDLE: "idle",
+    NODEVICE: "no device",
+    CONNECTING: "connecting",
+    PRINTING: "printing",
+    FLASHING: "flashing"
+};
+
 let checksum = !opt.nocheck;    // use line numbers and checksums
 let lineno = 1;                 // next output line number
 let starting = false;           // output phase just after reset
@@ -68,6 +76,7 @@ let boot_abort = [
 
 // marlin-centric, to be fixed
 const status = {
+    state: STATES.NODEVICE,
     clients: {
         ws: 0,                  // web socket client count
         net: 0,                 // direct network clients
@@ -171,6 +180,7 @@ function evtlog(line, flags) {
 
 function openSerialPort() {
     if (updating || !port || sport) {
+        status.state = updating ? STATES.FLASHING : STATES.NODEVICE;
         setTimeout(openSerialPort, 2000);
         return;
     }
@@ -180,7 +190,14 @@ function openSerialPort() {
             new LineBuffer(sport);
             status.device.connect = Date.now();
             status.device.lines = 0;
+            status.state = STATES.CONNECTING;
             lineno = 1;
+            setTimeout(() => {
+                if (status.device.lines === 0) {
+                    evtlog("device not responding. reopening port.");
+                    sport.close();
+                }
+            }, 3000);
         })
         .on('error', function(error) {
             sport = null;
@@ -207,6 +224,7 @@ function openSerialPort() {
                 if (opt.kick) {
                     processInput("*clearkick");
                 }
+                status.state = STATES.IDLE;
             } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
                 if (line.indexOf("ok ") === 0 && collect) {
                     line = line.substring(3);
@@ -263,6 +281,7 @@ function openSerialPort() {
             setTimeout(openSerialPort, 2000);
             status.device.close = Date.now();
             status.device.ready = false;
+            status.state = STATES.NODEVICE;
         });
 }
 
@@ -444,6 +463,7 @@ function sendFile(filename) {
     status.print.clear = false;
     status.print.filename = filename;
     status.print.start = Date.now();
+    status.state = STATES.PRINTING;
     evtlog(`print start ${filename}`);
     // prevent auto polling during send buffering
     let auto_save = auto;
@@ -653,6 +673,7 @@ function processQueue() {
             status.print.end = Date.now();
             status.print.run = false;
             status.print.progress = "100.00";
+            status.state = STATES.IDLE;
             evtlog("print done " + ((status.print.end - status.print.start) / 60000) + " min");
         }
     } else {

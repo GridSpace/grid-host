@@ -1,4 +1,4 @@
-let istouch = 'ontouchstart' in document.documentElement;
+let istouch = true || 'ontouchstart' in document.documentElement;
 let interval = null;
 let timeout = null;
 let queue = [];
@@ -346,6 +346,9 @@ function init() {
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(4,msg.length-4));
             last_set = status;
+            if (status.state) {
+                $('state').value = status.state;
+            }
             if (status.device && status.device.name) {
                 document.title = status.device.name;
             }

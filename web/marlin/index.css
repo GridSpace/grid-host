@@ -1,34 +1,25 @@
 body {
     font-size: 14px;
     font-family: monospace;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
+    align-items: center;
+    justify-content: flex-start;
+    border-bottom: 1px dashed #ddd;
     left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    height: 480;
+}
+div {
+    margin: 0;
+    border: 0;
+    padding: 0;
 }
 td {
     text-align: center;
 }
 label {
     margin: 5px;
-}
-input {
-    padding: 8px 5px 8px 5px;
-    background-color: #fafafa;
-    border-radius: 3px;
-    border: 1px solid #ddd;
-    outline: none;
-}
-button {
-    margin: 5px;
-    padding: 8px;
-    background-color: #eee;
-    border-radius: 5px;
-    outline: none;
 }
 
 .row {
@@ -40,6 +31,12 @@ button {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+}
+.shrink {
+    flex-shrink: 1;
+}
+.over-y {
+    overflow-y: auto;
 }
 .grow {
     flex-grow: 1;
@@ -60,6 +57,10 @@ button {
     width: 5px;
     height: 5px;
 }
+.ten {
+    width: 10px;
+    height: 10px;
+}
 .editable {
     background-color: #ffe;
 }
@@ -73,11 +74,43 @@ button {
 .bg_green {
     background-color: #dfd;
 }
+.grid label {
+    background-color: #def;
+    padding: 3px 4px 3px 4px;
+    border-radius: 3px;
+}
+.grid input {
+    margin: 0;
+    padding: 3px 2px 3px 2px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-weight: bold;
+}
+.tile {
+    width: 800px;
+    justify-content: center;
+    padding: 0;
+}
+.tile input {
+    padding: 8px 5px 8px 5px;
+    background-color: #fafafa;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+    outline: none;
+}
+.tile button {
+    margin: 5px;
+    padding: 8px;
+    background-color: #eee;
+    border-radius: 5px;
+    outline: none;
+}
 .panel {
     padding :2px;
     border: 1px solid #888;
-    border-radius: 4px;
-    margin: 3px;
+    border-radius: 3px;
+    margin: 2px;
     justify-content: space-around;
 }
 .label-group {
@@ -97,12 +130,57 @@ button {
 .label-group input {
     margin-right: 10px;
 }
+.temp {
+    flex-direction: row;
+}
+.temp > div {
+    align-items: stretch;
+    text-align: center;
+}
+.temp label {
+    font-size: 10px;
+    border-radius: 3px;
+    background-color: #888;
+    padding: 2px 2px 4px 2px;
+    color: white;
+}
+.temp input {
+    margin: 0;
+    text-align: center;
+}
+.temp button.dn {
+    margin-top: 0;
+    margin-right: 0;
+}
+.temp button.up {
+    margin-top: 0;
+    margin-left: 0;
+}
 
+#header {
+    width: 790px;
+    border-bottom: 1px solid #00d;
+    margin: 0 0 2px 0;
+    padding: 1px 5px 1px 5px;
+    font-size: 14px;
+}
+#header button {
+    background-color: #eee;
+    border-radius: 5px;
+    outline: none;
+    padding: 4px 8px 4px 8px;
+}
+#footer {
+    border-top: 1px solid #00d;
+    width: 800px;
+    margin: 2px 0 0 0;
+    padding: 1px 5px 1px 5px;
+    white-space: nowrap;
+}
 #pos div,table {
     padding-right: 4px;
     padding-left: 4px;
 }
-
 #jog_set {
     justify-content: center;
     font-family: monospace;
@@ -117,42 +195,6 @@ button {
     font-size: 12px;
     width: 50px;
 }
-
-#temp {
-    flex-direction: row;
-}
-#temp > div {
-    align-items: stretch;
-    text-align: center;
-}
-#temp label {
-    font-size: 10px;
-    border-radius: 3px;
-    background-color: #888;
-    padding: 2px 2px 4px 2px;
-    color: white;
-}
-#temp input {
-    margin: 0;
-    text-align: center;
-}
-#temp button.dn {
-    margin-top: 0;
-    margin-right: 0;
-}
-#temp button.up {
-    margin-top: 0;
-    margin-left: 0;
-}
-#status {
-    padding: 6px;
-    width: 160px;
-}
-#status input {
-    padding: 5px;
-    margin-right: 6px;
-    width: 100%;
-}
 #sender {
     padding: 6px;
 }
@@ -163,11 +205,6 @@ button {
 }
 #files {
     justify-content: flex-start;
-}
-#file-list {
-    overflow-y: auto;
-    min-height: 6em;
-    max-height: 20em;
 }
 #file-list label:hover {
     background-color: #fee;
