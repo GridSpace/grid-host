@@ -511,7 +511,7 @@ function processInput2(line, channel) {
     }
     switch (line) {
         case "*exit": return process.exit(0);
-        case "*bounce": return sport.close();
+        case "*bounce": return sport ? sport.close() : null;
         case "*auto on": return auto = true;
         case "*auto off": return auto = false;
         case "*debug on": return debug = true;
@@ -760,7 +760,7 @@ function write(line, flags) {
         cmdlog("--> " + line, flags);
         sport.write(`${line}\n`);
     } else {
-        console.log("*** serial port missing *** " + line);
+        evtlog("serial port missing: " + line, flags);
     }
 }
 

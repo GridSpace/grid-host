@@ -331,6 +331,7 @@ function init() {
         sock = null;
         ready = false;
         timeout = setTimeout(init, 1000);
+        $('state').value = 'server disconnected';
     };
     sock.onerror = (evt) => {
         log({wss_error: true});
@@ -340,6 +341,7 @@ function init() {
         sock = null;
         ready = false;
         timeout = setTimeout(init, 1000);
+        $('state').value = 'server connection error';
     };
     sock.onmessage = (evt) => {
         let msg = unescape(evt.data);
@@ -389,7 +391,6 @@ function init() {
                     if ($('bed') !== input) {
                         $('bed').value = 0;
                     }
-                    // $('bed').classList.remove('bg_red');
                     $('bed_temp').classList.remove('bg_red');
                     $('bed_toggle').innerText = 'on';
                 }
@@ -397,7 +398,6 @@ function init() {
                 if (status.target.ext[0] > 0) {
                     if ($('nozzle') !== input) {
                         $('nozzle').value = status.target.ext[0];
-                        // $('nozzle').classList.add('bg_red');
                     }
                     $('nozzle_temp').classList.add('bg_red');
                     $('nozzle_toggle').innerText = 'off';
@@ -405,7 +405,6 @@ function init() {
                     if ($('nozzle') !== input) {
                         $('nozzle').value = 0;
                     }
-                    // $('nozzle').classList.remove('bg_red');
                     $('nozzle_temp').classList.remove('bg_red');
                     $('nozzle_toggle').innerText = 'on';
                 }
@@ -417,11 +416,18 @@ function init() {
                 $('zpos').value = parseFloat(status.pos.Z).toFixed(1);
                 $('epos').value = parseFloat(status.pos.E).toFixed(1);
             }
-            if (status.settings && status.settings.offset) {
+            // highlight X,Y,Z pod label when @ origin
+            if (status.settings && status.settings.offset && status.pos) {
                 let off = status.settings.offset;
-                $('xoff').value = parseFloat(off.X).toFixed(1);
-                $('yoff').value = parseFloat(off.Y).toFixed(1);
-                $('zoff').value = parseFloat(off.Z).toFixed(1);
+                if (Math.abs(pos.X - off.X) + Math.abs(pos.Y - off.Y) + Math.abs(pos.Z - off.Z) < 1) {
+                    $('xpos').classList.add('bg_green');
+                    $('ypos').classList.add('bg_green');
+                    $('zpos').classList.add('bg_green');
+                } else {
+                    $('xpos').classList.remove('bg_green');
+                    $('ypos').classList.remove('bg_green');
+                    $('zpos').classList.remove('bg_green');
+                }
             }
         } else if (msg.indexOf("*** [") >= 0) {
             let list = $('file-list');
@@ -434,6 +440,8 @@ function init() {
         } else if (msg.indexOf("***") >= 0) {
             try {
                 log({wss_msg: msg});
+                $('log').innerText += msg.toString();
+                $('log').scrollTop = $('log').scrollHeight;
             } catch (e) {
                 log({wss_msg: evt, err: e});
             }
@@ -512,15 +520,23 @@ function init() {
         }
         ev.stopPropagation();
     };
+    $('p1').onclick = () => {
+        $('t1').style.display = 'flex';
+        $('t2').style.display = 'none';
+        $('p1').style.display = 'none';
+        $('p2').style.display = 'block';
+    };
+    $('p2').onclick = () => {
+        $('t1').style.display = 'none';
+        $('t2').style.display = 'flex';
+        $('p1').style.display = 'block';
+        $('p2').style.display = 'none';
+    };
     // disable autocomplete
     let inputs = document.getElementsByTagName('input');
     for (let i=0; i<inputs.length; i++) {
         inputs[i].setAttribute('autocomplete', Date.now().toString(36));
     }
-    // provide top scroll action
-    $('scrolltop').onclick = (ev) => {
-        document.body.scrollTop = 0;
-    };
     init_filedrop();
     input_deselect();
 }

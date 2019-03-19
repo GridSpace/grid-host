@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     </head>
     <body onload="init()" class="col">
-        <div id="header" class="row grid align_center">
+        <div id="header" class="row align_center">
             <input id="state" class="grow" cols=20 disabled />
             <span class="ten"></span>
             <label>X</label>
@@ -23,36 +23,38 @@
             <input id="nozzle_temp" size="4" disabled="true"></input>
             <label>bed</label>
             <input id="bed_temp" size="4" disabled="true"></input>
+            <span class="ten"></span>
+            <button id="p1">control</button>
+            <button id="p2">command</button>
         </div>
-        <div class="tile row over-x shrink">
-            <button id="scrolltop" class="fa fa-angle-double-up"></button>
-            <div class="col">
-                <div class="col panel justify_center over-y shrink">
-                    <div class="label-group col align_center">
-                        <label>eeprom</label>
-                        <div class="col">
-                            <button onclick="eeprom_save()">save</button>
-                            <button onclick="eeprom_restore()">restore</button>
-                        </div>
-                    </div>
-                    <div class="label-group col align_center">
-                        <label>control</label>
-                        <div class="col">
-                            <button onclick="firmware_update()">reflash</button>
-                            <button onclick="controller_update()">restart</button>
-                        </div>
-                    </div>
-                    <div id="actions" class="label-group col align_center">
-                        <label>system</label>
-                        <div class="col">
-                            <button id="reload" onclick="reload()">reload</button>
-                            <button id="reboot" onclick="reboot()">reboot</button>
-                            <button id="shutdown" onclick="shutdown()">shutdown</button>
-                        </div>
+        <div id="t1" class="tile row grow shrink">
+            <div class="col panel justify_center over-y shrink no-lm">
+                <span class="grow"></span>
+                <div class="label-group col align_center">
+                    <label>eeprom</label>
+                    <div class="col">
+                        <button onclick="eeprom_save()">save</button>
+                        <button onclick="eeprom_restore()">restore</button>
                     </div>
                 </div>
+                <div class="label-group col align_center">
+                    <label>control</label>
+                    <div class="col">
+                        <button onclick="firmware_update()">reflash</button>
+                        <button onclick="controller_update()">restart</button>
+                    </div>
+                </div>
+                <div id="actions" class="label-group col align_center">
+                    <label>system</label>
+                    <div class="col">
+                        <button id="reload" onclick="reload()">reload</button>
+                        <button id="reboot" onclick="reboot()">reboot</button>
+                        <button id="shutdown" onclick="shutdown()">shutdown</button>
+                    </div>
+                </div>
+                <span class="grow"></span>
             </div>
-            <div class="col">
+            <div class="col grow">
                 <div id="pos" class="row panel">
                     <div id="jog_set" class="col">
                         <button onclick="set_jog(0.1,this)">0.1</button>
@@ -81,54 +83,43 @@
                     <div class="col">
                         <button onclick="disable_motors()">disable motors</button>
                         <div class="row">
-                            <button onclick="filament_unload()">unload</button>
-                            <button onclick="filament_load()">load</button>
+                            <button class="grow row-button" onclick="filament_unload()">unload</button>
+                            <button class="grow row-button" onclick="filament_load()">load</button>
                         </div>
                         <button onclick="stop_motors()">(un)load done</button>
                     </div>
                     <div class="col">
                         <button id="clear_bed" onclick="clear_bed()">clear bed</button>
                         <button onclick="print_next()">print next</button>
-                        <button onclick="abort()">abort</button>
+                        <div class="row">
+                            <button class="grow row-button" id="go_zero">O Go</button>
+                            <button class="grow row-button" onclick="off_set()">O Set</button>
+                        </div>
                     </div>
                 </div>
-                <div class="row panel align_center grid">
-                    <label>origin</label>
-                    <div class="grow"></div>
-                    <label>X</label>
-                    <input id="xoff" value="" size="5" disabled="true"></input>
-                    <label>Y</label>
-                    <input id="yoff" value="" size="5" disabled="true"></input>
-                    <label>Z</label>
-                    <input id="zoff" value="" size="5" disabled="true"></input>
-                    <div class="grow"></div>
-                    <button id="go_zero">goto</button>
-                    <button onclick="off_set()">set</button>
-                    <button onclick="off_clear()">clear</button>
-                </div>
-                <div id="files" class="col panel label-group over-y grow shrink">
+                <div id="files" class="panel">
                     <label>files</label>
+                </div>
+                <div class="col panel label-group over-y grow shrink">
                     <div id="file-list" class="col grow"></div>
                 </div>
             </div>
-            <div>
-                <div class="col panel temp">
-                    <div class="col">
+            <div class="col">
+                <div class="col panel no-rm">
+                    <div class="col label-group">
                         <label>set bed</label>
-                        <div>
+                        <div class="row align_center justify_center">
                             <button class="dn" onclick="bed_temp_lower()">&lt;</button>
-                            <input id="bed" value="" size="3" class="editable"></input>
+                            <input id="bed" value="" size="5" class="editable grow"></input>
                             <button class="up" onclick="bed_temp_higher()">&gt;</button>
                             <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
                         </div>
                     </div>
-                </div>
-                <div class="col panel temp">
-                    <div class="col">
+                    <div class="col label-group">
                         <label>set extruder</label>
-                        <div>
+                        <div class="row align_center justify_center">
                             <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
-                            <input id="nozzle" value="" size="3" class="editable"></input>
+                            <input id="nozzle" value="" size="5" class="editable grow"></input>
                             <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
                             <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
                         </div>
@@ -156,18 +147,23 @@
                         <button id="kp-bs">&larr;</button>
                     </div>
                 </div>
-                <div id="sender" class="col panel">
-                    <label>send gcode</label><input id="send" size="10" class="editable"></input>
-                </div>
             </div>
         </div>
-        <div id="footer" class="row grid align_center">
-            <label>current file</label>
+        <div id="t2" class="tile col grow shrink">
+            <div id="sender" class="row panel no-lm no-rm">
+                <label>send</label><input id="send" size="10" class="editable"></input>
+            </div>
+            <div id="log" class="panel shrink grow no-lm no-rm"></div>
+        </div>
+        <div id="footer" class="row align_center">
+            <label>file</label>
             <input id="filename" disabled="true" class="grow"></input>
             <label>progress</label>
             <input id="progress" disabled="true" size="6"></input>
             <label>elapsed</label>
             <input id="elapsed" disabled="true" size="10"></input>
+            <span class="ten"></span>
+            <button id="abort" onclick="abort()">abort</button>
         </div>
     </body>
 </html>

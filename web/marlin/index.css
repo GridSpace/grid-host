@@ -1,6 +1,6 @@
 body {
     font-size: 14px;
-    font-family: monospace;
+    font-family: sans-serif;
     align-items: center;
     justify-content: flex-start;
     border-bottom: 1px dashed #ddd;
@@ -9,6 +9,7 @@ body {
     margin: 0;
     padding: 0;
     height: 480;
+    white-space: nowrap;
 }
 div {
     margin: 0;
@@ -20,6 +21,9 @@ td {
 }
 label {
     margin: 5px;
+}
+input {
+    font-family: monospace;
 }
 
 .row {
@@ -53,6 +57,12 @@ label {
 .align_center {
     align-items: center;
 }
+.no-lm {
+    margin-left: 0 !important;
+}
+.no-rm {
+    margin-right: 0 !important;
+}
 .five {
     width: 5px;
     height: 5px;
@@ -74,108 +84,99 @@ label {
 .bg_green {
     background-color: #dfd;
 }
-.grid label {
-    background-color: #def;
-    padding: 3px 4px 3px 4px;
-    border-radius: 3px;
-}
-.grid input {
-    margin: 0;
-    padding: 3px 2px 3px 2px;
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    font-weight: bold;
-}
 .tile {
     width: 800px;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: stretch;
     padding: 0;
 }
-.tile input {
+.panel {
+    margin: 2px;
+    padding: 2px;
+    border-radius: 3px;
+    border: 1px solid #888;
+    justify-content: space-around;
+}
+.panel input {
     padding: 8px 5px 8px 5px;
     background-color: #fafafa;
     border-radius: 3px;
     border: 1px solid #ddd;
     outline: none;
 }
-.tile button {
+.row-button {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+.panel button {
     margin: 5px;
     padding: 8px;
     background-color: #eee;
     border-radius: 5px;
     outline: none;
 }
-.panel {
-    padding :2px;
-    border: 1px solid #888;
-    border-radius: 3px;
-    margin: 2px;
-    justify-content: space-around;
-}
 .label-group {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     text-align: center;
-    padding-bottom: 7px;
 }
 .label-group > label {
     font-size: 10px;
-    border-radius: 3px;
-    background-color: #888;
-    padding: 2px 2px 4px 2px;
-    color: white;
+    border-top: 1px solid #888;
+    border-bottom: 1px solid #888;
+    background-color: #cde;
+    padding: 3px 2px 3px 2px;
 }
 .label-group input {
-    margin-right: 10px;
-}
-.temp {
-    flex-direction: row;
-}
-.temp > div {
-    align-items: stretch;
     text-align: center;
-}
-.temp label {
-    font-size: 10px;
-    border-radius: 3px;
-    background-color: #888;
-    padding: 2px 2px 4px 2px;
-    color: white;
-}
-.temp input {
-    margin: 0;
-    text-align: center;
-}
-.temp button.dn {
-    margin-top: 0;
-    margin-right: 0;
-}
-.temp button.up {
-    margin-top: 0;
-    margin-left: 0;
 }
 
 #header {
     width: 790px;
-    border-bottom: 1px solid #00d;
     margin: 0 0 2px 0;
     padding: 1px 5px 1px 5px;
+    background-color: #def;
     font-size: 14px;
 }
-#header button {
-    background-color: #eee;
+#header input, #footer input {
+    background-color: white;
+    margin: 0;
+    padding: 3px 2px 3px 2px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-weight: bold;
+}
+#header button, #footer button {
+    background-color: #f5f5f5;
     border-radius: 5px;
     outline: none;
-    padding: 4px 8px 4px 8px;
+    margin: 2px 3px 2px 3px;
+    padding: 4px 6px 4px 6px;
+}
+#header label, #footer label {
+    background-color: #def;
+    padding: 3px 4px 3px 4px;
+    border-radius: 3px;
+}
+#p1, #p2, #abort {
+    width: 8em;
+}
+#p1 {
+    display: none;
+}
+#t2 {
+    display: none;
 }
 #footer {
-    border-top: 1px solid #00d;
-    width: 800px;
+    width: 790px;
     margin: 2px 0 0 0;
     padding: 1px 5px 1px 5px;
-    white-space: nowrap;
+    background-color: #def;
+}
+#origin {
+    padding-right: 5px;
+    justify-content: center;
 }
 #pos div,table {
     padding-right: 4px;
@@ -204,7 +205,8 @@ label {
     width: 100%;
 }
 #files {
-    justify-content: flex-start;
+    text-align: center;
+    background-color: #def;
 }
 #file-list label:hover {
     background-color: #fee;
@@ -241,9 +243,4 @@ label {
 }
 #keypad > div {
     justify-content: center;
-}
-#scrolltop {
-    position: fixed;
-    left: 5px;
-    bottom: 5px;
 }
