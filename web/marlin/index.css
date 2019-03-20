@@ -79,10 +79,10 @@ input {
     background-color: #888;
 }
 .bg_red {
-    background-color: #fdd;
+    background-color: #fdd !important;
 }
 .bg_green {
-    background-color: #dfd;
+    background-color: #dfd !important;
 }
 .tile {
     width: 800px;
@@ -243,4 +243,14 @@ input {
 }
 #keypad > div {
     justify-content: center;
+}
+#bed_toggle, #nozzle_toggle {
+    width: 3em;
+}
+#state {
+    text-align: center;
+}
+#log {
+    font-family: monospace;
+    overflow-y: auto;
 }

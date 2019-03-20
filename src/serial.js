@@ -76,7 +76,8 @@ let boot_abort = [
 
 // marlin-centric, to be fixed
 const status = {
-    state: STATES.NODEVICE,
+    now: 0,                     // server's current time
+    state: STATES.NODEVICE,     // server state
     clients: {
         ws: 0,                  // web socket client count
         net: 0,                 // direct network clients
@@ -225,6 +226,7 @@ function openSerialPort() {
                     processInput("*clearkick");
                 }
                 status.state = STATES.IDLE;
+                evtlog("device ready");
             } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
                 if (line.indexOf("ok ") === 0 && collect) {
                     line = line.substring(3);
@@ -269,6 +271,10 @@ function openSerialPort() {
                 collect.push(line);
             } else {
                 cmdlog("<-- " + line, {auto: matched});
+            }
+            // force output of eeprom settings because it doesn't happen under these conditions
+            if (line.indexOf("echo:EEPROM version mismatch") === 0) {
+                write("M503");
             }
             // status.buffer.match = match;
             status.buffer.collect = collect;
@@ -551,6 +557,7 @@ function processInput2(line, channel) {
             }
             return;
         case "*status":
+            status.now = Date.now();
             status.flags.auto = auto;
             status.flags.debug = debug;
             if (channel) {
@@ -905,7 +912,7 @@ if (opt.webport) {
                 processInput(message, ws);
             });
 
-        ws.send("*ready");
+        ws.send("*ready\n");
         ws.write = (data) => {
             try {
                 ws.send(data);

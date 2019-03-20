@@ -445,6 +445,9 @@ function init() {
             } catch (e) {
                 log({wss_msg: evt, err: e});
             }
+        } else {
+            $('log').innerText += msg.toString();
+            $('log').scrollTop = $('log').scrollHeight;
         }
     };
     let setbed = $('bed').onkeyup = ev => {
