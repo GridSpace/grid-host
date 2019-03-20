@@ -57,6 +57,9 @@ input {
 .align_center {
     align-items: center;
 }
+.text-center {
+    text-align: center;
+}
 .no-lm {
     margin-left: 0 !important;
 }
@@ -132,12 +135,8 @@ input {
     text-align: center;
 }
 
-#header {
-    width: 790px;
-    margin: 0 0 2px 0;
-    padding: 1px 5px 1px 5px;
-    background-color: #def;
-    font-size: 14px;
+#header input {
+    text-align: center;
 }
 #header input, #footer input {
     background-color: white;
@@ -146,6 +145,7 @@ input {
     border: 1px solid #ddd;
     border-radius: 3px;
     font-weight: bold;
+    font-size: 14px;
 }
 #header button, #footer button, #sender button {
     background-color: #f5f5f5;
@@ -167,6 +167,12 @@ input {
 }
 #t2 {
     display: none;
+}
+#header {
+    width: 790px;
+    margin: 0 0 2px 0;
+    padding: 1px 5px 1px 5px;
+    background-color: #def;
 }
 #footer {
     width: 790px;
@@ -245,9 +251,6 @@ input {
 }
 #bed_toggle, #nozzle_toggle {
     width: 3em;
-}
-#state {
-    text-align: center;
 }
 #log {
     font-family: monospace;
