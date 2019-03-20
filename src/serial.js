@@ -905,12 +905,12 @@ if (opt.listen) {
             }
         });
         clients.push(socket);
-    }).listen(parseInt(opt.listen));
+    }).listen(parseInt(opt.listen) || 4000);
 }
 
-if (opt.webport) {
-    const webdir = opt.webdir || "web";
-    const webport = parseInt(opt.webport) || (opt.listen + 1) || 8000;
+if (opt.web || opt.webport) {
+    const webdir = opt.webdir || "web/marlin";
+    const webport = parseInt(opt.webport) || 4080;
     const handler = connect()
         .use(headers)
         .use(drophandler)
