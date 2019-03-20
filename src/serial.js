@@ -19,7 +19,7 @@ const net = require('net');
 const fs = require('fs');
 const { exec } = require('child_process');
 
-const port = opt.device || opt.port || opt._[0]; // serial port device path
+const oport = opt.device || opt.port || opt._[0]; // serial port device path
 const baud = parseInt(opt.baud || "250000");     // baud rate for serial port
 const bufmax = parseInt(opt.buflen || "8");      // max unack'd output lines
 
@@ -40,6 +40,7 @@ const STATES = {
     FLASHING: "flashing"
 };
 
+let port = oport;               // default port (possible to probe)
 let checksum = !opt.nocheck;    // use line numbers and checksums
 let lineno = 1;                 // next output line number
 let starting = false;           // output phase just after reset
@@ -179,6 +180,20 @@ function evtlog(line, flags) {
     }
     emit("*** " + line + " ***", flags);
 };
+
+function probeSerial(then) {
+    let match = null;
+    SerialPort.list((err, ports) => {
+        ports.forEach(port => {
+            if (port.manufacturer && port.manufacturer.toLowerCase().indexOf("arduino") >= 0) {
+                match = port.comName;
+            } else if (!match && (port.vendorId || port.productId || port.serialNumber)) {
+                match = port.comnName;
+            }
+        });
+        then(match);
+    });
+}
 
 function openSerialPort() {
     if (updating || !port || sport) {
@@ -929,8 +944,19 @@ if (opt.webport) {
     console.log({ webport, webdir });
 }
 
-console.log({ port: port || 'undefined', baud, mode, maxbuf: bufmax, auto: auto_int, version });
+function startup() {
+    console.log({ port: port || 'undefined', baud, mode, maxbuf: bufmax, auto: auto_int, version });
+    openSerialPort();
+    checkFileDir();
+}
 
-openSerialPort();
-
-checkFileDir();
+if (!port) {
+    probeSerial(nport => {
+        if (nport) {
+            port = nport;
+        }
+        startup();
+    });
+} else {
+    startup();
+}

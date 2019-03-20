@@ -83,6 +83,9 @@ input {
 .bg_green {
     background-color: #dfd !important;
 }
+.bg_yellow {
+    background-color: #ffd !important;
+}
 .tile {
     width: 800px;
     justify-content: space-between;
