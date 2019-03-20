@@ -233,6 +233,18 @@ function controller_update() {
     }
 }
 
+function pause() {
+    if (status && status.print && status.print.run && confirm('pause print job?')) {
+        send('*pause');
+    }
+}
+
+function resume() {
+    if (status && status.print && status.print.run && confirm('resume print job?')) {
+        send('*resume');
+    }
+}
+
 function abort() {
     if (confirm('abort print job?')) {
         send('*abort');
@@ -380,7 +392,7 @@ function init() {
             let status = JSON.parse(msg.substring(4,msg.length-4));
             last_set = status;
             if (status.state) {
-                $('state').value = status.state;
+                $('state').value = status.print.pause ? "paused" : status.state;
             }
             if (status.device && status.device.name) {
                 document.title = status.device.name;

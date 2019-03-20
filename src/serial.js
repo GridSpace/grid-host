@@ -110,6 +110,7 @@ const status = {
     },
     print: {
         run: false,             // print running
+        pause: false,           // true if paused
         clear: false,           // bed is clear to print
         filename: null,         // current file name
         progress: 0.0,
@@ -210,6 +211,7 @@ function openSerialPort() {
             status.device.connect = Date.now();
             status.device.lines = 0;
             status.state = STATES.CONNECTING;
+            status.print.pause = paused = false;
             lineno = 1;
             setTimeout(() => {
                 if (status.device.lines === 0) {
@@ -672,13 +674,13 @@ function abort() {
 function pause() {
     if (paused) return;
     evtlog("execution paused", {error: true});
-    paused = true;
+    status.print.pause = paused = true;
 };
 
 function resume() {
     if (!paused) return;
     evtlog("execution resumed", {error: true});
-    paused = false;
+    status.print.pause = paused = false;
     processQueue();
 };
 
