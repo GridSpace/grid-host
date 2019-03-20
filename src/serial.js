@@ -621,7 +621,7 @@ function update() {
         }
     });
     sport.close();
-    evtlog(`flashing with ${choose}`);
+    evtlog(`flashing with ${choose}`, {error: true});
     let proc = spawn("avrdude", [
             "-patmega2560",
             "-cwiring",
@@ -631,14 +631,15 @@ function update() {
             `-Uflash:w:${fwdir}/${choose}:i`
         ])
         .on('error', error => {
-            evtlog("flash update failed");
+            updating = false;
+            evtlog("flash update failed", {error: true});
         })
         .on('exit', code => {
             updating = false;
             if (code === 0) {
-                evtlog(`flash update completed`);
+                evtlog(`flash update completed`, {error: true});
             } else {
-                evtlog("flash update failed");
+                evtlog("flash update failed", {error: true});
             }
         });
     new LineBuffer(proc.stdout);
@@ -648,20 +649,20 @@ function update() {
 }
 
 function abort() {
-    evtlog("print aborted");
+    evtlog("print aborted", {error: true});
     onboot = boot_abort;
     sport.close(); // forces re-init of marlin
 };
 
 function pause() {
     if (paused) return;
-    evtlog("execution paused");
+    evtlog("execution paused", {error: true});
     paused = true;
 };
 
 function resume() {
     if (!paused) return;
-    evtlog("execution resumed");
+    evtlog("execution resumed", {error: true});
     paused = false;
     processQueue();
 };
