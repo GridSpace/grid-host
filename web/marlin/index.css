@@ -188,6 +188,9 @@ input {
     font-family: monospace;
     font-size: 12px;
 }
+#jog_set div {
+    padding: 0;
+}
 #sender {
     padding: 6px;
 }

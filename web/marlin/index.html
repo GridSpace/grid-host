@@ -55,50 +55,60 @@
                 <span class="grow"></span>
             </div>
             <div class="col grow">
-                <div id="pos" class="row panel">
-                    <div id="jog_set" class="row align_center justify_center">
+                <div id="pos" class="row">
+                    <div class="row panel">
                         <div class="col">
-                            <button id="j01" onclick="set_jog(0.1,this)">0.1</button>
-                            <button id="j05" onclick="set_jog(0.5,this)">0.5</button>
-                            <button id="j10" onclick="set_jog(1.0,this)">1.0</button>
-                        </div>
-                        <div class="col">
-                            <button id="j20" onclick="set_jog(2.0,this)">2</button>
-                            <button id="j50" onclick="set_jog(5.0,this)">5</button>
-                            <button id="j100" onclick="set_jog(10.0,this)">10</button>
+                            <button id="clear_bed" onclick="clear_bed()">clear bed</button>
+                            <button onclick="print_next()">print next</button>
+                            <button onclick="disable_motors()">disable motors</button>
                         </div>
                     </div>
-                    <table>
-                        <tr>
-                            <td><button onclick="jog('Z',-1)">Z-</button></td>
-                            <td><button onclick="jog('Y',-1)">Y-</button></td>
-                            <td><button onclick="retract()">E-</button></td>
-                        </tr>
-                        <tr>
-                            <td><button onclick="jog('X',-1)">X-</button></td>
-                            <td><button onclick="goto_home()" class="fa fa-home"></button></td>
-                            <td><button onclick="jog('X',1)">X+</button></td>
-                        </tr>
-                        <tr>
-                            <td><button onclick="jog('Z',1)">Z+</button></td>
-                            <td><button onclick="jog('Y',1)">Y+</button></td>
-                            <td><button onclick="extrude()">E+</button></td>
-                        </tr>
-                    </table>
-                    <div class="col">
-                        <button onclick="disable_motors()">disable motors</button>
-                        <div class="row">
-                            <button class="grow row-button" onclick="filament_unload()">unload</button>
-                            <button class="grow row-button" onclick="filament_load()">load</button>
+                    <div class="row panel">
+                        <div id="jog_set" class="row align_center justify_center">
+                            <div class="col">
+                                <button id="j01" onclick="set_jog(0.1,this)">0.1</button>
+                                <button id="j05" onclick="set_jog(0.5,this)">0.5</button>
+                                <button id="j10" onclick="set_jog(1.0,this)">1.0</button>
+                            </div>
+                            <div class="col">
+                                <button id="j20" onclick="set_jog(2.0,this)">2</button>
+                                <button id="j50" onclick="set_jog(5.0,this)">5</button>
+                                <button id="j100" onclick="set_jog(10.0,this)">10</button>
+                            </div>
                         </div>
-                        <button onclick="stop_motors()">(un)load done</button>
                     </div>
-                    <div class="col">
-                        <button id="clear_bed" onclick="clear_bed()">clear bed</button>
-                        <button onclick="print_next()">print next</button>
-                        <div class="row">
-                            <button class="grow row-button" id="go_zero">O Go</button>
-                            <button class="grow row-button" onclick="off_set()">O Set</button>
+                    <div class="row panel">
+                        <table>
+                            <tr>
+                                <td><button onclick="jog('Z',-1)">Z-</button></td>
+                                <td><button onclick="jog('Y',-1)">Y-</button></td>
+                                <td><button onclick="retract()">E-</button></td>
+                            </tr>
+                            <tr>
+                                <td><button onclick="jog('X',-1)">X-</button></td>
+                                <td><button onclick="goto_home()" class="fa fa-home"></button></td>
+                                <td><button onclick="jog('X',1)">X+</button></td>
+                            </tr>
+                            <tr>
+                                <td><button onclick="jog('Z',1)">Z+</button></td>
+                                <td><button onclick="jog('Y',1)">Y+</button></td>
+                                <td><button onclick="extrude()">E+</button></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="row panel grow">
+                        <div class="col">
+                            <div class="row">
+                                <button class="grow row-button" id="go_zero">O Go</button>
+                                <div class="five"></div>
+                                <button class="grow row-button" onclick="off_set()">O Set</button>
+                            </div>
+                            <div class="row">
+                                <button class="grow row-button" onclick="filament_unload()">unload</button>
+                                <div class="five"></div>
+                                <button class="grow row-button" onclick="filament_load()">load</button>
+                            </div>
+                            <button onclick="stop_motors()">(un)load done</button>
                         </div>
                     </div>
                 </div>
@@ -112,7 +122,7 @@
             <div class="col over-y">
                 <div class="col panel no-rm">
                     <div class="col label-group">
-                        <label>set bed</label>
+                        <label>set bed temp</label>
                         <div class="row align_center justify_center">
                             <button class="dn" onclick="bed_temp_lower()">&lt;</button>
                             <input id="bed" value="" size="5" class="editable grow"></input>
@@ -121,7 +131,7 @@
                         </div>
                     </div>
                     <div class="col label-group">
-                        <label>set extruder</label>
+                        <label>set extruder temp</label>
                         <div class="row align_center justify_center">
                             <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
                             <input id="nozzle" value="" size="5" class="editable grow"></input>
@@ -152,13 +162,13 @@
                         <button id="kp-bs">&larr;</button>
                     </div>
                 </div>
-                <div class="col panel label-group">
-                    <label>M303</label>
-                    <button onclick="calibrate_pid()">calibrate nozzle pid</button>
+                <div class="col panel label-group grow">
                     <label>manual update</label>
                     <button onclick="update_endstops()">endstop status</button>
                     <button onclick="update_position()">position status</button>
                     <button onclick="update_temps()">temps status</button>
+                    <label>M303</label>
+                    <button onclick="calibrate_pid()">calibrate nozzle pid</button>
                 </div>
             </div>
         </div>

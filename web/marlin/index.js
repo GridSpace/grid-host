@@ -93,7 +93,9 @@ function off_clear() {
 
 function calibrate_pid() {
     if (alert_on_run()) return;
-    send('M303 S220 C5 U1');
+    if (confirm('run hot end PID calibration?')) {
+        send('M303 S220 C5 U1');
+    }
 }
 
 function update_endstops() {
