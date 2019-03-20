@@ -1,4 +1,4 @@
-let istouch = true || 'ontouchstart' in document.documentElement;
+let istouch = 'ontouchstart' in document.documentElement;
 let interval = null;
 let timeout = null;
 let queue = [];
@@ -9,6 +9,7 @@ let last_jog = null;
 let last_set = {};      // last settings object
 let jog_val = 0.0;
 let input = null;       // active input for keypad
+let settings = localStorage;
 
 function $(id) {
     return document.getElementById(id);
@@ -56,6 +57,7 @@ function print(file) {
         alert('not connected');
         return;
     }
+    if (alert_on_run()) return;
     if (!last_set.print.clear) {
         alert('bed not cleared');
         return;
@@ -75,6 +77,7 @@ function remove(file) {
 }
 
 function off_set() {
+    if (alert_on_run()) return;
     if (last_set && last_set.pos) {
         let pos = last_set.pos;
         send(`M206 X-${pos.X} Y-${pos.Y} Z-${pos.Z}`);
@@ -83,17 +86,37 @@ function off_set() {
 }
 
 function off_clear() {
+    if (alert_on_run()) return;
     send('M206 X0 Y0 Z0');
     send('M503');
 }
 
+function calibrate_pid() {
+    if (alert_on_run()) return;
+    send('M303 S220 C5 U1');
+}
+
+function update_endstops() {
+    send('M119');
+}
+
+function update_temps() {
+    send('M105');
+}
+
+function update_position() {
+    send('M114');
+}
+
 function eeprom_save() {
+    if (alert_on_run()) return;
     if (confirm('save eeprom settings')) {
         send('M500');
     }
 }
 
 function eeprom_restore() {
+    if (alert_on_run()) return;
     if (confirm('restore eeprom settings')) {
         send('M501');
         send('M503');
@@ -190,6 +213,7 @@ function clear_bed() {
 }
 
 function print_next() {
+    if (alert_on_run()) return;
     send('*kick');
 }
 
@@ -214,23 +238,28 @@ function abort() {
 }
 
 function extrude(v) {
+    if (alert_on_run()) return;
     gr(`E${jog_val} F250`);
 }
 
 function retract(v) {
+    if (alert_on_run()) return;
     gr(`E-${jog_val} F250`);
 }
 
 function set_jog(val, el) {
     jog_val = val;
     if (last_jog) {
-        last_jog.classList.remove('selected');
+        last_jog.classList.remove('bg_red');
     }
-    el.classList.add('selected');
+    el.classList.add('bg_red');
     last_jog = el;
+    settings.jog_el = el.id;
+    settings.jog_val = val;
 }
 
 function jog(axis, dir) {
+    if (alert_on_run()) return;
     gr(`${axis}${dir * jog_val} F1000`);
 }
 
@@ -341,7 +370,7 @@ function init() {
         sock = null;
         ready = false;
         timeout = setTimeout(init, 1000);
-        $('state').value = 'server connection error';
+        $('state').value = 'no server connection';
     };
     sock.onmessage = (evt) => {
         let msg = unescape(evt.data);
@@ -545,4 +574,6 @@ function init() {
     }
     init_filedrop();
     input_deselect();
+    // restore settings
+    set_jog(parseFloat(settings.jog_val) || 1, $(settings.jog_el || "j10"));
 }

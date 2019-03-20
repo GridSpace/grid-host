@@ -34,7 +34,7 @@ const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
 
 const STATES = {
     IDLE: "idle",
-    NODEVICE: "no device",
+    NODEVICE: "no controller",
     CONNECTING: "connecting",
     PRINTING: "printing",
     FLASHING: "flashing"

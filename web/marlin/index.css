@@ -77,10 +77,6 @@ input {
 .editable {
     background-color: #ffe;
 }
-.selected {
-    color: white;
-    background-color: #888;
-}
 .bg_red {
     background-color: #fdd !important;
 }
@@ -189,18 +185,8 @@ input {
     padding-left: 4px;
 }
 #jog_set {
-    justify-content: center;
     font-family: monospace;
     font-size: 12px;
-}
-#jog_set input {
-    margin: 6px;
-}
-#jog_set button {
-    margin: 2px;
-    padding: 2px;
-    font-size: 12px;
-    width: 50px;
 }
 #sender {
     padding: 6px;
@@ -213,17 +199,21 @@ input {
     text-align: center;
     background-color: #def;
 }
-#file-list label:hover {
-    background-color: #fee;
-}
 #file-list div {
-    margin: 3px;
+    border: 3px solid white;
     align-items: stretch;
 }
+#file-list div:hover {
+    border: 3px solid #fee;
+    background-color: #fee;
+}
 #file-list label {
+    padding-top: 2px;
     text-align: left;
     user-select: none;
     flex-grow: 1;
+    font-size: 18px;
+    margin: 0;
 }
 #file-list button {
     margin: 2px;
@@ -232,9 +222,6 @@ input {
 }
 #filename {
     flex-grow: 1;
-}
-#actions {
-    justify-content: center;
 }
 #keypad {
     justify-content: flex-start;
