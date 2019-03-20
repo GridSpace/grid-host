@@ -141,10 +141,11 @@ function emit(line, flags) {
         line = JSON.stringify(line);
     }
     clients.forEach(client => {
+        let error = flags && flags.error;
         let cstat = (stat && client.request_status);
         let clist = (list && client.request_list);
         let cmatch = flags && flags.channel === client;
-        if (cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
+        if (error || cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
             if (cstat) {
                 client.request_status = false;
@@ -181,7 +182,9 @@ function evtlog(line, flags) {
 
 function openSerialPort() {
     if (updating || !port || sport) {
-        status.state = updating ? STATES.FLASHING : STATES.NODEVICE;
+        if (!status.device.ready) {
+            status.state = updating ? STATES.FLASHING : STATES.NODEVICE;
+        }
         setTimeout(openSerialPort, 2000);
         return;
     }
@@ -424,7 +427,7 @@ function processPortOutput(line) {
     // resend on checksum errors
     if (line.indexOf("Resend:") === 0) {
         let from = line.split(' ')[1];
-        evtlog(`resend from ${from}`);
+        evtlog(`resend from ${from}`, {error: true});
         sport.close();
         process.exit(-1);
     }
@@ -434,7 +437,7 @@ function processPortOutput(line) {
             time: Date.now(),
             cause: line.substring(6)
         };
-        evtlog(line);
+        evtlog(line, {error: true});
         if (line.indexOf("Error:checksum mismatch") === 0) {
             // ignore then act on 'Resend:'
         } else {
@@ -449,7 +452,7 @@ function processPortOutput(line) {
     }
     // catch processing errors and reboot
     if (opt.fragile && line.indexOf("Unknown command:") >= 0) {
-        evtlog(`fatal: ${line}`);
+        evtlog(`fatal: ${line}`, {error: true});
         sport.close();
         if (debug) {
             console.log({status});
@@ -595,7 +598,7 @@ function processInput2(line, channel) {
     } else if (line.charAt(0) !== "*") {
         queuePriority(line, channel);
     } else {
-        evtlog(`invalid command "${line.substring(1)}"`);
+        evtlog(`invalid command "${line.substring(1)}"`, {channel});
     }
 };
 

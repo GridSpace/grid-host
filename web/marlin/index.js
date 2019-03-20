@@ -469,11 +469,14 @@ function init() {
     $('go_zero').onclick = () => {
         send('G0X0Y0Z0');
     };
-    $('send').onkeyup = ev => {
-        if (ev.keyCode === 13) {
-            send($('send').value.trim());
-            $('send').value = '';
+    $('send').onclick = $('command').onkeyup = ev => {
+        if (ev.type === 'click' || ev.keyCode === 13) {
+            send($('command').value.trim());
+            $('command').value = '';
         }
+    };
+    $('clear').onclick = () => {
+        $('log').innerHTML = '';
     };
     let input_deselect = document.body.onclick = (ev) => {
         if (input) {
