@@ -454,18 +454,21 @@ function init() {
                 $('xpos').classList.remove('bg_green');
                 $('ypos').classList.remove('bg_green');
                 $('zpos').classList.remove('bg_green');
-                $('xpos').classList.remove('bg_yellow');
-                $('ypos').classList.remove('bg_yellow');
-                $('zpos').classList.remove('bg_yellow');
                 if (Math.abs(pos.X) + Math.abs(pos.Y) + Math.abs(pos.Z) < 0.1) {
+                    // highlight origin as green
                     $('xpos').classList.add('bg_green');
                     $('ypos').classList.add('bg_green');
                     $('zpos').classList.add('bg_green');
-                } else if (Math.abs(pos.X - off.X) + Math.abs(pos.Y - off.Y) + Math.abs(pos.Z - off.Z) < 0.1) {
-                    $('xpos').classList.add('bg_yellow');
-                    $('ypos').classList.add('bg_yellow');
-                    $('zpos').classList.add('bg_yellow');
                 }
+            }
+            if (status.estop && status.estop.min) {
+                $('xpos').classList.remove('bg_yellow');
+                $('ypos').classList.remove('bg_yellow');
+                $('zpos').classList.remove('bg_yellow');
+                let min = status.estop.min;
+                if (min.x === ' TRIGGERED') $('xpos').classList.add('bg_yellow');
+                if (min.y === ' TRIGGERED') $('ypos').classList.add('bg_yellow');
+                if (min.z === ' TRIGGERED') $('zpos').classList.add('bg_yellow');
             }
         } else if (msg.indexOf("*** [") >= 0) {
             let list = $('file-list');
