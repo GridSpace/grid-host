@@ -275,9 +275,9 @@ function retract(v) {
 function set_jog(val, el) {
     jog_val = val;
     if (last_jog) {
-        last_jog.classList.remove('bg_red');
+        last_jog.classList.remove('bg_yellow');
     }
-    el.classList.add('bg_red');
+    el.classList.add('bg_yellow');
     last_jog = el;
     settings.jog_el = el.id;
     settings.jog_val = val;
@@ -431,13 +431,13 @@ function init() {
                     $('clear_bed').classList.add('bg_red');
                 }
                 if (status.print.run) {
-                    $('filename').classList.add('bg_red');
-                    $('progress').classList.add('bg_red');
-                    $('elapsed').classList.add('bg_red');
+                    $('filename').classList.add('bg_green');
+                    $('progress').classList.add('bg_green');
+                    $('elapsed').classList.add('bg_green');
                 } else {
-                    $('filename').classList.remove('bg_red');
-                    $('progress').classList.remove('bg_red');
-                    $('elapsed').classList.remove('bg_red');
+                    $('filename').classList.remove('bg_green');
+                    $('progress').classList.remove('bg_green');
+                    $('elapsed').classList.remove('bg_green');
                 }
                 let duration = 0;
                 if (status.print.end && status.print.end > status.print.start) {
