@@ -617,4 +617,6 @@ function init() {
     input_deselect();
     // restore settings
     set_jog(parseFloat(settings.jog_val) || 1, $(settings.jog_el || "j10"));
+    // log screen size
+    $('log').innerHTML = [window.innerWidth,window.innerHeight].join(' x ') + "<br>";
 }

@@ -855,7 +855,7 @@ function kickNamed(name) {
 function kickNext() {
     for (let i=0; i<dircache.length; i++) {
         if (dircache[i].ext === 'gcode') {
-            return sendFile(dircache[0].name);
+            return sendFile(filedir + "/" + dircache[0].name);
         }
     }
     evtlog("no valid files", {error: true});
