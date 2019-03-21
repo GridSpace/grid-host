@@ -482,6 +482,9 @@ function processPortOutput(line) {
 };
 
 function sendFile(filename) {
+    if (!checkDeviceReady()) {
+        return;
+    }
     if (!status.print.clear) {
         return evtlog("bed not marked clear. use *clear first");
     }
@@ -585,6 +588,13 @@ function processInput2(line, channel) {
             }
             return evtlog(JSON.stringify(status), {status: true});
     }
+    if (line.indexOf("*update ") === 0) {
+        let file = line.substring(8);
+        if (file.indexOf(".hex") < 0) {
+            file += ".hex";
+        }
+        return update(file);
+    }
     if (line.indexOf("*upload ") === 0) {
         if (channel.linebuf) {
             // accumulate all input data to linebuffer w/ no line breaks
@@ -619,25 +629,29 @@ function processInput2(line, channel) {
     }
 };
 
-function update() {
+function update(hexfile) {
     if (updating) {
         return;
     }
     updating = true;
-    let choose = "marlin.ino.hex";
+    let choose = hexfile || "marlin.ino.hex";
     let newest = 0;
     let fwdir = opt.fwdir || filedir || `${process.cwd()}/firmware`;
-    fs.readdirSync(fwdir).forEach(file => {
-        if (file.indexOf(".hex") < 0) {
-            return;
-        }
-        let stat = fs.statSync(`${fwdir}/${file}`);
-        if (stat.mtimeMs > newest) {
-            newest = stat.mtimeMs;
-            choose = file;
-        }
-    });
-    sport.close();
+    if (!hexfile) {
+        fs.readdirSync(fwdir).forEach(file => {
+            if (file.indexOf(".hex") < 0) {
+                return;
+            }
+            let stat = fs.statSync(`${fwdir}/${file}`);
+            if (stat.mtimeMs > newest) {
+                newest = stat.mtimeMs;
+                choose = file;
+            }
+        });
+    }
+    if (sport) {
+        sport.close();
+    }
     evtlog(`flashing with ${choose}`, {error: true});
     let proc = spawn("avrdude", [
             "-patmega2560",
@@ -665,20 +679,35 @@ function update() {
     proc.stderr.on('line', line => { if (line.toString().trim()) evtlog(line.toString()) });
 }
 
+function checkDeviceReady() {
+    if (!status.device.ready) {
+        evtlog("device missing or not ready", {error: true});
+        return false;
+    }
+    return true;
+}
+
 function abort() {
+    if (!checkDeviceReady()) {
+        return;
+    }
     evtlog("print aborted", {error: true});
     onboot = boot_abort;
     sport.close(); // forces re-init of marlin
 };
 
 function pause() {
-    if (paused) return;
+    if (paused || !checkDeviceReady()) {
+        return;
+    }
     evtlog("execution paused", {error: true});
     status.print.pause = paused = true;
 };
 
 function resume() {
-    if (!paused) return;
+    if (!paused || !checkDeviceReady()) {
+        return;
+    }
     evtlog("execution resumed", {error: true});
     status.print.pause = paused = false;
     processQueue();
@@ -797,10 +826,15 @@ function checkFileDir() {
     try {
         let valid = [];
         fs.readdirSync(filedir).forEach(name => {
-            if (name.indexOf(".gcode") > 0 || name.indexOf(".nc") > 0) {
-                name = filedir + "/" + name;
-                let stat = fs.statSync(name);
-                valid.push({name: name, size: stat.size, time: stat.mtimeMs});
+            let lp = name.lastIndexOf(".");
+            if (lp <= 0) {
+                return;
+            }
+            let ext = name.substring(lp+1);
+            let short = name.substring(0,lp);
+            if (ext === "gcode" || ext === "nc" || ext === "hex") {
+                let stat = fs.statSync(filedir + "/" + name);
+                valid.push({name, ext, size: stat.size, time: stat.mtimeMs});
             }
         });
         dircache = valid.sort((a, b) => {

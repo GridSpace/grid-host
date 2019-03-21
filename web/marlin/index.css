@@ -158,13 +158,13 @@ input {
     padding: 3px 4px 3px 4px;
     border-radius: 3px;
 }
-#p1, #p2, #abort {
+#b-cmd, #b-ctrl, #abort {
     width: 8em;
 }
-#p1 {
+#b-ctrl {
     display: none;
 }
-#t2 {
+#t-cmd {
     display: none;
 }
 #header {
@@ -220,11 +220,20 @@ input {
     flex-grow: 1;
     font-size: 18px;
     margin: 0;
+    display: flex;
+    align-items: center;
 }
 #file-list button {
     margin: 2px;
     padding: 2px 4px 2px 4px;
     border-radius: 2px;
+}
+#file-list span {
+    border: 1px solid #888;
+    border-radius: 2px;
+    margin: 3px 8px 3px 3px;
+    padding: 1px 3px 3px 3px;
+    background-color: #eee;
 }
 #filename {
     flex-grow: 1;

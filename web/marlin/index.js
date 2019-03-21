@@ -52,12 +52,15 @@ function shutdown() {
     }
 }
 
-function print(file) {
+function print(file, ext) {
     if (!last_set) {
         alert('not connected');
         return;
     }
     if (alert_on_run()) return;
+    if (ext === "h") {
+        return firmware_update(file);
+    }
     if (!last_set.print.clear) {
         alert('bed not cleared');
         return;
@@ -216,13 +219,21 @@ function clear_bed() {
 
 function print_next() {
     if (alert_on_run()) return;
-    send('*kick');
+    if (confirm(`start next print?`)) {
+        send('*kick');
+    }
 }
 
-function firmware_update() {
+function firmware_update(file) {
     if (alert_on_run()) return;
-    if (confirm("update firmware?")) {
-        send('*update');
+    if (file) {
+        if (confirm(`update firmware using "${file}"?`)) {
+            send(`*update ${file}`);
+        }
+    } else {
+        if (confirm("update firmware?")) {
+            send('*update');
+        }
     }
 }
 
@@ -346,6 +357,20 @@ function init_filedrop() {
             read.readAsBinaryString(file);
         }
     });
+}
+
+function showControl() {
+    $('t-ctrl').style.display = 'flex';
+    $('t-cmd').style.display = 'none';
+    $('b-ctrl').style.display = 'none';
+    $('b-cmd').style.display = 'block';
+}
+
+function showCommand() {
+    $('t-ctrl').style.display = 'none';
+    $('t-cmd').style.display = 'flex';
+    $('b-ctrl').style.display = 'block';
+    $('b-cmd').style.display = 'none';
 }
 
 function init() {
@@ -487,7 +512,8 @@ function init() {
             let html = [];
             JSON.parse(msg.substring(4,msg.length-4)).forEach(file => {
                 let name = cleanName(file.name);
-                html.push(`<div class="row"><label ondblclick="print('${name}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
+                let ext = file.ext.charAt(0);
+                html.push(`<div class="row"><span>${ext}</span><label ondblclick="print('${name}','${ext}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
             });
             list.innerHTML = html.join('');
         } else if (msg.indexOf("***") >= 0) {
@@ -495,11 +521,12 @@ function init() {
                 log({wss_msg: msg});
                 $('log').innerText += msg.toString();
                 $('log').scrollTop = $('log').scrollHeight;
+                showCommand();
             } catch (e) {
                 log({wss_msg: evt, err: e});
             }
         } else {
-            $('log').innerText += msg.toString();
+            $('log').innerText += msg;
             $('log').scrollTop = $('log').scrollHeight;
         }
     };
@@ -579,18 +606,8 @@ function init() {
         }
         ev.stopPropagation();
     };
-    $('p1').onclick = () => {
-        $('t1').style.display = 'flex';
-        $('t2').style.display = 'none';
-        $('p1').style.display = 'none';
-        $('p2').style.display = 'block';
-    };
-    $('p2').onclick = () => {
-        $('t1').style.display = 'none';
-        $('t2').style.display = 'flex';
-        $('p1').style.display = 'block';
-        $('p2').style.display = 'none';
-    };
+    $('b-ctrl').onclick = showControl;
+    $('b-cmd').onclick = showCommand;
     // disable autocomplete
     let inputs = document.getElementsByTagName('input');
     for (let i=0; i<inputs.length; i++) {
