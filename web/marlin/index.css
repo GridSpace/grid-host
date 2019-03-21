@@ -205,6 +205,9 @@ input {
     text-align: center;
     background-color: #def;
 }
+#file-list-wrap {
+    justify-content: flex-start;
+}
 #file-list div {
     border: 3px solid white;
     align-items: stretch;

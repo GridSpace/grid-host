@@ -458,7 +458,9 @@ function processPortOutput(line) {
         if (line.indexOf("Error:checksum mismatch") === 0) {
             // ignore then act on 'Resend:'
         } else {
-            sport.close();
+            try {
+                sport.close();
+            } catch (e) { }
             if (opt.fragile) {
                 if (debug) {
                     console.log({status});
