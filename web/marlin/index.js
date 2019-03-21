@@ -1,4 +1,4 @@
-let istouch = 'ontouchstart' in document.documentElement;
+let istouch = 'ontouchstart' in document.documentElement || window.innerWidth === 800;
 let interval = null;
 let timeout = null;
 let queue = [];
@@ -317,7 +317,7 @@ function cleanName(rname) {
 }
 
 function init_filedrop() {
-    var list = $("file-list");
+    var list = $("file-list-wrap");
 
     list.addEventListener("dragover", function(evt) {
         evt.stopPropagation();

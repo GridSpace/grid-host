@@ -186,7 +186,9 @@ function probeSerial(then) {
     let match = null;
     SerialPort.list((err, ports) => {
         ports.forEach(port => {
-            if (port.manufacturer && port.manufacturer.toLowerCase().indexOf("arduino") >= 0) {
+            if (port.pnpId) {
+                match = port.comName;
+            } else if (port.manufacturer && port.manufacturer.toLowerCase().indexOf("arduino") >= 0) {
                 match = port.comName;
             } else if (!match && (port.vendorId || port.productId || port.serialNumber)) {
                 match = port.comnName;
@@ -909,14 +911,14 @@ if (opt.grbl) {
 if (opt.probe) {
     SerialPort.list((err, ports) => {
         ports.forEach(port => {
-            console.log([
-                port.comName,
-                port.pnpId        || null,
-                port.manufacturer || null,
-                port.vendorId     || null,
-                port.productId    || null,
-                port.serialNumber || null
-            ].join(", "));
+            console.log({
+                com: port.comName,
+                pnp: port.pnpId        || null,
+                man: port.manufacturer || null,
+                ven: port.vendorId     || null,
+                prd: port.productId    || null,
+                ser: port.serialNumber || null
+            });
         });
         process.exit(0);
     });

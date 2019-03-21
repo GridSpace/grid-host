@@ -10,6 +10,7 @@ body {
     padding: 0;
     height: 480;
     white-space: nowrap;
+    overflow: hidden;
 }
 div {
     margin: 0;
@@ -183,7 +184,7 @@ input {
     padding-right: 5px;
     justify-content: center;
 }
-#pos div,table {
+#pos table {
     padding-right: 4px;
     padding-left: 4px;
 }
