@@ -519,14 +519,14 @@ function init() {
         } else if (msg.indexOf("***") >= 0) {
             try {
                 log({wss_msg: msg});
-                $('log').innerText += msg.toString();
+                $('log').innerText += `[${moment().format("HH:mm:ss")}] ${msg}`;
                 $('log').scrollTop = $('log').scrollHeight;
                 showCommand();
             } catch (e) {
                 log({wss_msg: evt, err: e});
             }
         } else {
-            $('log').innerText += msg;
+            $('log').innerText += `[${moment().format("HH:mm:ss")}] ${msg}`;
             $('log').scrollTop = $('log').scrollHeight;
         }
     };

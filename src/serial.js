@@ -851,9 +851,13 @@ function kickNamed(name) {
 }
 
 function kickNext() {
-    if (!dircache.length) return evtlog("no valid files");
-    sendFile(dircache[0].name);
-};
+    for (let i=0; i<dircache.length; i++) {
+        if (dircache[i].ext === 'gcode') {
+            return sendFile(dircache[0].name);
+        }
+    }
+    evtlog("no valid files", {error: true});
+}
 
 function headers(req, res, next) {
     res.setHeader("Access-Control-Allow-Origin", req.headers['origin'] || '*');
