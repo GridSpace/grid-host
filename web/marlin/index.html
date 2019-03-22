@@ -108,7 +108,7 @@
                                 <div class="five"></div>
                                 <button class="grow row-button" onclick="filament_load()">load</button>
                             </div>
-                            <button onclick="stop_motors()">(un)load done</button>
+                            <button class="no-lm no-rm" onclick="stop_motors()">(un)load done</button>
                         </div>
                     </div>
                 </div>
@@ -162,7 +162,7 @@
                         <button id="kp-bs">&larr;</button>
                     </div>
                 </div>
-                <div class="col panel label-group grow">
+                <div class="col panel label-group grow no-rm">
                     <label>manual update</label>
                     <button onclick="update_endstops()">endstop status</button>
                     <button onclick="update_position()">position status</button>

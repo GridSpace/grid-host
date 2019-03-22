@@ -989,7 +989,7 @@ if (opt.web || opt.webport) {
 }
 
 function startup() {
-    console.log({ port: port || 'undefined', baud, mode, maxbuf: bufmax, auto: auto_int, version });
+    console.log({ devport: port || 'undefined', ctrlport: opt.listen, baud, mode, maxbuf: bufmax, auto: auto_int, version });
     openSerialPort();
     checkFileDir();
 }
