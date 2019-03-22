@@ -81,10 +81,16 @@ function targets(t) {
             let d = $(`device-${k}`);
             let time = Date.now().toString(36);
             d.onmouseover = () => {
-                updateImage(v.image, true);
-                $('gcode').style.display = 'none';
+                d._hover = true;
+                setTimeout(() => {
+                    if (d._hover === true) {
+                        updateImage(v.image, true);
+                        $('gcode').style.display = 'none';
+                    }
+                }, 200);
             };
             d.onmouseout = () => {
+                d._hover = false;
                 updateImage();
                 $('gcode').style.display = 'none';
             };
@@ -92,11 +98,12 @@ function targets(t) {
     }
 }
 
+let icache = {};
 let fetching = [];
 let clearimage = null;
 let fetchloop = null;
 
-function updateImage(url,refresh) {
+function updateImage(url, refresh) {
     clearTimeout(clearimage);
     clearTimeout(fetchloop);
     if (url === null || url === undefined) {
@@ -108,8 +115,13 @@ function updateImage(url,refresh) {
         return;
     }
     let t = refresh ? (Date.now()/2000).toString(36) : 123;
-    let i = new Image();
     let u = `${url}?${t}`;
+    let i = icache[u] || new Image();
+    let cache_new = false;
+    if (!refresh && !icache[u]) {
+        icache[u] = i;
+        cache_new = true;
+    }
     let cb = () => {
         let p = fetching.indexOf(u);
         if (p === fetching.length - 1) {
@@ -122,9 +134,13 @@ function updateImage(url,refresh) {
         }
         fetching.splice(p, 1);
     };
-    fetching.push(u);
-    i.onload = cb;
-    i.src = u;
+    if (cache_new) {
+        fetching.push(u);
+        i.onload = cb;
+        i.src = u;
+    } else {
+        document.documentElement.style.setProperty('--image-url', `url("${u}`);
+    }
 }
 
 function div(text) {
