@@ -74,6 +74,15 @@ let boot_abort = [
     "G90",          // restore absolute moves
     "M84"           // disable steppers
 ];
+let boot_error = [
+    "M104 S0 T0",   // extruder 0 heat off
+    "M140 S0 T0",   // bed heat off
+    "M107",         // shut off cooling fan
+    "G91",          // relative moves
+    "G0 Z10",       // drop bed 1cm
+    "G90",          // restore absolute moves
+    "M84"           // disable steppers
+];
 
 // marlin-centric, to be fixed
 const status = {
@@ -145,7 +154,7 @@ function emit(line, flags) {
     clients.forEach(client => {
         let error = flags && flags.error;
         let cstat = (stat && client.request_status);
-        let clist = (list && client.request_list);
+        let clist = list;//(list && client.request_list);
         let cmatch = flags && flags.channel === client;
         if (error || cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
@@ -462,6 +471,7 @@ function processPortOutput(line) {
         } else {
             try {
                 sport.close();
+                onboot = boot_error;
             } catch (e) { }
             if (opt.fragile) {
                 if (debug) {
@@ -490,7 +500,7 @@ function sendFile(filename) {
         return;
     }
     if (!status.print.clear) {
-        return evtlog("bed not marked clear. use *clear first");
+        return evtlog("bed not marked clear. use *clear first", {error: true});
     }
     status.print.run = true;
     status.print.clear = false;
@@ -519,7 +529,7 @@ function sendFile(filename) {
             });
         }
     } catch (e) {
-        evtlog("error sending file");
+        evtlog("error sending file", {error: true});
         console.log(e);
     }
     auto = auto_save;
@@ -614,7 +624,7 @@ function processInput2(line, channel) {
             file += ".gcode";
         }
         fs.unlinkSync(filedir + "/" + file);
-        checkFileDir();
+        checkFileDir(true);
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
             return evtlog("print in progress");
@@ -825,7 +835,7 @@ function write(line, flags) {
     }
 }
 
-function checkFileDir() {
+function checkFileDir(once) {
     if (!filedir) return;
     try {
         let valid = [];
@@ -844,7 +854,11 @@ function checkFileDir() {
         dircache = valid.sort((a, b) => {
             return b.time - a.time;
         });
-        setTimeout(checkFileDir, 2000);
+        if (once) {
+            processInput("*list");
+        } else {
+            setTimeout(checkFileDir, 2000);
+        }
     } catch (e) {
         console.log(e);
     }
@@ -881,6 +895,7 @@ function drophandler(req, res, next) {
         req.on('end', () => {
             fs.writeFileSync(filedir + "/" + name, body);
             res.end("file received");
+            checkFileDir(true);
         })
     } else {
         next();
@@ -946,6 +961,7 @@ if (opt.listen) {
             // store upload, if available
             if (upload) {
                 fs.writeFileSync(filedir + "/" + upload, socket.linebuf.buffer);
+                checkFileDir(true);
             }
         });
         clients.push(socket);

@@ -146,6 +146,7 @@ input {
     border-radius: 3px;
     font-weight: bold;
     font-size: 14px;
+    text-align: center;
 }
 #header button, #footer button, #sender button {
     background-color: #f5f5f5;
