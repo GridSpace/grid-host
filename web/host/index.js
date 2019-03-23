@@ -134,7 +134,7 @@ function updateImage(url, refresh) {
         }
         fetching.splice(p, 1);
     };
-    if (cache_new) {
+    if (cache_new || refresh) {
         fetching.push(u);
         i.onload = cb;
         i.src = u;
