@@ -53,6 +53,7 @@ class Connection {
                     .on("line", line => {
                         socket.lastRecv = Date.now();
                         line = line.toString();
+                        let spos = 0;
                         if (line === "*ready") {
                             socket._ready = true;
                             driver.api.Util.log({connected: this.device.name});
@@ -60,8 +61,8 @@ class Connection {
                                 socket.write(`*kick ${this.kick}\n`);
                                 this.kick = null;
                             }
-                        } else if (line.indexOf("*** {") === 0) {
-                            let info = JSON.parse(line.substring(4, line.length - 4));
+                        } else if ((spos = line.indexOf("*** {")) >= 0) {
+                            let info = JSON.parse(line.substring(spos + 4, line.length - 4));
                             let status = this.status;
                             status.state = info.print.run ? "PRINTING" : "IDLE";
                             status.progress = info.print.progress;

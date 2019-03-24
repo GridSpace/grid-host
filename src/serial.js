@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "rogue-004";
+const version = "rogue-0003";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -27,6 +27,7 @@ const os = require('os');
 const url = require('url');
 const http = require('http');
 const serve = require('serve-static');
+const moment = require('momemt');
 const connect = require('connect');
 const WebSocket = require('ws');
 const filedir = opt.dir || opt.filedir || `${process.cwd()}/tmp`;
@@ -154,7 +155,7 @@ function emit(line, flags) {
     clients.forEach(client => {
         let error = flags && flags.error;
         let cstat = (stat && client.request_status);
-        let clist = list;//(list && client.request_list);
+        let clist = (list && client.request_list) || (list && !flags.channel);
         let cmatch = flags && flags.channel === client;
         if (error || cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
@@ -225,7 +226,7 @@ function openSerialPort() {
             status.print.pause = paused = false;
             lineno = 1;
             setTimeout(() => {
-                if (status.device.lines === 0) {
+                if (status.device.lines < 2) {
                     evtlog("device not responding. reopening port.");
                     sport.close();
                 }
@@ -566,7 +567,7 @@ function processInput2(line, channel) {
             if (channel) {
                 channel.request_list = true;
             }
-            return evtlog(JSON.stringify(dircache), {list: true});
+            return evtlog(JSON.stringify(dircache), {list: true, channel});
         case "*clearkick":
             status.print.clear = true;
         case "*kick":
@@ -940,7 +941,10 @@ if (opt.probe) {
     return;
 }
 
-clients.push(process.stdout);
+clients.push({write: (line) => {
+    process.stdout.write(`[${moment().format("HH:mm:ss")}] ${line}`);
+});
+
 process.stdout.monitoring = true;
 
 if (opt.stdin) {

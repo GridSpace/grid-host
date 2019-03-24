@@ -413,8 +413,10 @@ function init() {
     };
     sock.onmessage = (evt) => {
         let msg = unescape(evt.data);
+        let spos = msg.indexOf("*** ");
+        let epos = msg.lastIndexOf(" ***");
         if (msg.indexOf("*** {") >= 0) {
-            let status = JSON.parse(msg.substring(4,msg.length-4));
+            let status = JSON.parse(msg.substring(spos+4, epos));
             last_set = status;
             if (status.state) {
                 $('state').value = status.print.pause ? "paused" : status.state;
@@ -510,7 +512,8 @@ function init() {
         } else if (msg.indexOf("*** [") >= 0) {
             let list = $('file-list');
             let html = [];
-            JSON.parse(msg.substring(4,msg.length-4)).forEach(file => {
+            let trim = msg.trim().substring(spos+4, epos);
+            JSON.parse(trim).forEach(file => {
                 let name = cleanName(file.name);
                 let ext = file.ext.charAt(0);
                 html.push(`<div class="row"><span>${ext}</span><label ondblclick="print('${name}','${ext}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
@@ -617,6 +620,4 @@ function init() {
     input_deselect();
     // restore settings
     set_jog(parseFloat(settings.jog_val) || 1, $(settings.jog_el || "j10"));
-    // log screen size
-    $('log').innerHTML = [window.innerWidth,window.innerHeight].join(' x ') + "<br>";
 }

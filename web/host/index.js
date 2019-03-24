@@ -250,7 +250,7 @@ function queue(q) {
         $(`q-${el.key}-kick`).onclick = () => {
             if (confirm(`resend file ${el.name} to ${el.target}`)) {
                 console.log({rekick: el.key});
-                fetch(`/api/resend?key=${el.key}`).then(v => console.log({kicked: v}));
+                fetch(`/api/resend?key=${el.key}&time=${Date.now()}`).then(v => console.log({kicked: v}));
             }
         };
         let d = $(`q-${el.key}`);

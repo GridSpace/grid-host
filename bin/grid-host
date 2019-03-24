@@ -318,6 +318,14 @@ const Web = {
             case "resend":
                 if (req.method !== 'GET') return next();
                 if (!query.key) return next();
+                if (!query.time) return next();
+
+                if (blocks[query.time]) {
+                    Util.log({block: query});
+                    return next();
+                }
+
+                blocks[query.time] = query;
 
                 queueEntry = Queue.get(query.key);
                 device = Devices.get(queueEntry.target);
@@ -544,6 +552,7 @@ var fs = require('fs'),
     tempDir = cwd + "/tmp";
     key = null,
     fn = null,
+    blocks = {}, // map for blocking dup requests
     setup = {
         // use command-line to override
         "config" : "etc/config.json",
