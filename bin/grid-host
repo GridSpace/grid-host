@@ -345,11 +345,14 @@ const Web = {
                     .then(sent => {
                         Util.log({send_ok: sent});
                         Queue.done(queueEntry);
+                        res.end(Util.encode({requeue:true}));
                     })
                     .catch(error => {
                         Util.log({send_error: error});
                         Queue.done(queueEntry, error);
+                        res.end(Util.encode({error:"requeue failed"}));
                     });
+
                 break;
 
             // queue new print job and assign a unique queue key
