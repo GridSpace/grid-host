@@ -941,7 +941,7 @@ if (opt.probe) {
     return;
 }
 
-clients.push({write: (line) => {
+clients.push({monitoring: true, write: (line) => {
     process.stdout.write(`[${moment().format("HH:mm:ss")}] ${line}`);
 }});
 
