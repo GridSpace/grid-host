@@ -27,7 +27,7 @@ const os = require('os');
 const url = require('url');
 const http = require('http');
 const serve = require('serve-static');
-const moment = require('momemt');
+const moment = require('moment');
 const connect = require('connect');
 const WebSocket = require('ws');
 const filedir = opt.dir || opt.filedir || `${process.cwd()}/tmp`;
@@ -943,7 +943,7 @@ if (opt.probe) {
 
 clients.push({write: (line) => {
     process.stdout.write(`[${moment().format("HH:mm:ss")}] ${line}`);
-});
+}});
 
 process.stdout.monitoring = true;
 
