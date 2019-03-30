@@ -572,6 +572,7 @@ function init() {
         input_deselect();
         if (istouch) {
             $('keypad').style.display = '';
+            $('nozzle').setSelectionRange(10, 10);
         }
         input = $('nozzle');
         input.classList.add('bg_green');
@@ -581,6 +582,7 @@ function init() {
         input_deselect();
         if (istouch) {
             $('keypad').style.display = '';
+            $('bed').setSelectionRange(10, 10);
         }
         input = $('bed');
         input.classList.add('bg_green');

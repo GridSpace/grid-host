@@ -325,6 +325,9 @@ class FFControl {
         if (this.state !== State.Connected) {
             this.error = "disconnected";
         }
+        if (!next) {
+            return;
+        }
         if (this.error && next.reject) {
             next.reject(this.error);
             return;
