@@ -417,6 +417,9 @@ function init() {
         let epos = msg.lastIndexOf(" ***");
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(spos+4, epos));
+            if (!last_set.device) {
+                $('log').innerHTML += `[${moment().format("HH:mm:ss")}] connected ${status.device.name}<br>`;
+            }
             last_set = status;
             if (status.state) {
                 $('state').value = status.print.pause ? "paused" : status.state;
