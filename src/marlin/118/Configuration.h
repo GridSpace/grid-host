@@ -74,7 +74,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_CONFIG_H_AUTHOR "(grid:bot, tmc+8825, 0002)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(grid:bot, tmc+8825, 0004)" // Who made the changes.
 //#define SHOW_BOOTSCREEN
 //#define STRING_SPLASH_LINE1 SHORT_BUILD_VERSION // will be shown during bootup in line 1
 //#define STRING_SPLASH_LINE2 WEBSITE_URL         // will be shown during bootup in line 2
@@ -548,7 +548,7 @@
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 105 }
 /** TMC2206 @ 1/16, 16 teeth x,y */
 /**    8825 @ 1/32, Z,e */
-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 100, 100, 800, 210 }
+#define DEFAULT_AXIS_STEPS_PER_UNIT   { 100, 100, 400, 210 }
 
 /**
  * Default Max Feed Rate (mm/s)
@@ -767,9 +767,9 @@
 // @section machine
 
 // Invert the stepper direction. Change (or reverse the motor connector) if an axis goes the wrong way.
-#define INVERT_X_DIR false
-#define INVERT_Y_DIR true
-#define INVERT_Z_DIR false
+#define INVERT_X_DIR true
+#define INVERT_Y_DIR false
+#define INVERT_Z_DIR true
 
 // Enable this option for Toshiba stepper drivers
 //#define CONFIG_STEPPERS_TOSHIBA
@@ -777,7 +777,7 @@
 // @section extruder
 
 // For direct drive extruder v9 set to true, for geared extruder set to false.
-#define INVERT_E0_DIR true
+#define INVERT_E0_DIR false
 #define INVERT_E1_DIR false
 #define INVERT_E2_DIR false
 #define INVERT_E3_DIR false
