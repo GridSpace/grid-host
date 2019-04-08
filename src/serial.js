@@ -105,6 +105,7 @@ const status = {
         debug: debug            // verbose serial port tracking
     },
     device: {
+        addr: [],               // ip addresses
         name: os.hostname(),    // device host name for web display
         ready: false,           // true when connected and post-init
         boot: 0,                // time of last boot
@@ -941,15 +942,26 @@ if (opt.probe) {
     return;
 }
 
+// add stdout to clients
 clients.push({monitoring: true, write: (line) => {
     process.stdout.write(`[${moment().format("HH:mm:ss")}] ${line}`);
 }});
 
 process.stdout.monitoring = true;
 
+// probe network interfaces
+let ifmap = os.getNetworkInterfaces();
+let ifkeys = Object.keys(ifmap).forEach(key => {
+    ifmap[key].forEach(int => {
+        if (int.internal === false && int.family === 'IPv4') {
+            status.device.addr.push(int.address);
+        }
+    });
+});
+
 if (opt.stdin) {
     new LineBuffer(process.stdin);
-    process.stdin.on("line", line => { processInput(line, process.stdout) });
+    process.stdin.on("line", line => { processInput(line, clients[0]) });
     status.clients.stdin = 1;
 }
 

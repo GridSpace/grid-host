@@ -418,7 +418,8 @@ function init() {
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(spos+4, epos));
             if (!last_set.device) {
-                $('log').innerHTML += `[${moment().format("HH:mm:ss")}] connected ${status.device.name}<br>`;
+                let msg = ['server',status.device.name,'@',status.device.addr.join(',')];
+                $('log').innerHTML += `[${moment().format("HH:mm:ss")}] ${msg.join(' ')}<br>`;
             }
             last_set = status;
             if (status.state) {
