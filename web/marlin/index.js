@@ -37,7 +37,14 @@ function alert_on_run() {
 }
 
 function reload() {
+console.log("reload")
     document.location = document.location;
+}
+
+function update_code() {
+    if (confirm("update code?")) {
+        send("*exec bin/update-code.sh");
+    }
 }
 
 function reboot() {
@@ -617,6 +624,12 @@ function init() {
     };
     $('b-ctrl').onclick = showControl;
     $('b-cmd').onclick = showCommand;
+    // reload page on status click
+    $('header').onclick = ev => {
+        if (ev.target.id === 'state') {
+            reload();
+        }
+    };
     // disable autocomplete
     let inputs = document.getElementsByTagName('input');
     for (let i=0; i<inputs.length; i++) {
