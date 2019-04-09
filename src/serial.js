@@ -952,7 +952,11 @@ process.stdout.monitoring = true;
 // probe network interfaces
 let ifmap = os.getNetworkInterfaces();
 let ifkeys = Object.keys(ifmap).forEach(key => {
-    ifmap[key].forEach(int => {
+    let ifc = ifmap[key];
+    if (!Array.isArray(ifc)) {
+        ifc = [ifc];
+    }
+    ifc.forEach(int => {
         if (int.internal === false && int.family === 'IPv4') {
             status.device.addr.push(int.address);
         }
