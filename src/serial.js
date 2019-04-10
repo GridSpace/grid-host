@@ -904,6 +904,26 @@ function drophandler(req, res, next) {
     }
 }
 
+// probe network interfaces
+function findNetworkAddress() {
+    status.device.addr = [];
+    let ifmap = os.getNetworkInterfaces();
+    let ifkeys = Object.keys(ifmap).forEach(key => {
+        let ifc = ifmap[key];
+        if (!Array.isArray(ifc)) {
+            ifc = [ifc];
+        }
+        ifc.forEach(int => {
+            if (int.internal === false && int.family === 'IPv4') {
+                status.device.addr.push(int.address);
+            }
+        });
+    });
+    if (status.device.addr.length === 0) {
+        setTimeout(findNetworkAddress, 5000);
+    }
+}
+
 // -- start it up --
 
 if (opt.help) {
@@ -948,20 +968,6 @@ clients.push({monitoring: true, write: (line) => {
 }});
 
 process.stdout.monitoring = true;
-
-// probe network interfaces
-let ifmap = os.getNetworkInterfaces();
-let ifkeys = Object.keys(ifmap).forEach(key => {
-    let ifc = ifmap[key];
-    if (!Array.isArray(ifc)) {
-        ifc = [ifc];
-    }
-    ifc.forEach(int => {
-        if (int.internal === false && int.family === 'IPv4') {
-            status.device.addr.push(int.address);
-        }
-    });
-});
 
 if (opt.stdin) {
     new LineBuffer(process.stdin);
@@ -1028,6 +1034,7 @@ function startup() {
     console.log({ devport: port || 'undefined', ctrlport: opt.listen, baud, mode, maxbuf: bufmax, auto: auto_int, version });
     openSerialPort();
     checkFileDir();
+    findNetworkAddress();
 }
 
 if (!port) {
