@@ -907,7 +907,7 @@ function drophandler(req, res, next) {
 // probe network interfaces
 function findNetworkAddress() {
     status.device.addr = [];
-    let ifmap = os.getNetworkInterfaces();
+    let ifmap = os.networkInterfaces();
     let ifkeys = Object.keys(ifmap).forEach(key => {
         let ifc = ifmap[key];
         if (!Array.isArray(ifc)) {
