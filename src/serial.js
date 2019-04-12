@@ -586,11 +586,11 @@ function processInput2(line, channel) {
         case "*resume": return resume();
         case "*clear":
             status.print.clear = true;
-            return evtlog("bed marked clear", {channel});
+            return evtlog("bed marked clear");
         case "*monitor on":
             if (channel && !channel.monitoring) {
                 channel.monitoring = true;
-                evtlog("monitoring enabled", {channel});
+                evtlog("monitoring enabled");
             }
             return;
         case "*monitor off":
@@ -620,7 +620,7 @@ function processInput2(line, channel) {
             // accumulate all input data to linebuffer w/ no line breaks
             channel.linebuf.enabled = false;
             upload = line.substring(8);
-            evtlog({upload}, {channel});
+            evtlog({upload});
         } else {
             evtlog({no_upload_possible: channel});
         }
