@@ -37,7 +37,6 @@ function alert_on_run() {
 }
 
 function reload() {
-console.log("reload")
     document.location = document.location;
 }
 

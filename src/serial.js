@@ -549,8 +549,12 @@ function processInput2(line, channel) {
     line = line.toString().trim();
     if (line.indexOf("*exec ") === 0) {
         let cmd = line.substring(6);
+        evtlog(`exec: ${cmd}`, {channel});
         exec(cmd, (err, stdout, stderr) => {
-            evtlog(JSON.stringify({cmd, err, stdout, stderr}));
+            evtlog(stdout, {channel});
+            if (stderr) {
+                evtlog(JSON.stringify({cmd, err, stdout, stderr}));
+            }
         });
         return;
     }
@@ -582,11 +586,11 @@ function processInput2(line, channel) {
         case "*resume": return resume();
         case "*clear":
             status.print.clear = true;
-            return evtlog("bed marked clear");
+            return evtlog("bed marked clear", {channel});
         case "*monitor on":
             if (channel && !channel.monitoring) {
                 channel.monitoring = true;
-                evtlog("monitoring enabled");
+                evtlog("monitoring enabled", {channel});
             }
             return;
         case "*monitor off":
@@ -616,7 +620,7 @@ function processInput2(line, channel) {
             // accumulate all input data to linebuffer w/ no line breaks
             channel.linebuf.enabled = false;
             upload = line.substring(8);
-            evtlog({upload});
+            evtlog({upload}, {channel});
         } else {
             evtlog({no_upload_possible: channel});
         }
@@ -629,7 +633,7 @@ function processInput2(line, channel) {
         checkFileDir(true);
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
-            return evtlog("print in progress");
+            return evtlog("print in progress", {channel});
         }
         let file = line.substring(6);
         if (file.indexOf(".gcode") < 0) {
