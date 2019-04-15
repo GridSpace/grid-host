@@ -491,10 +491,9 @@ function init() {
                 $('nozzle_temp').value = parseInt(status.temp.ext[0] || 0);
             }
             if (status.pos) {
-                $('xpos').value = parseFloat(status.pos.X).toFixed(1);
-                $('ypos').value = parseFloat(status.pos.Y).toFixed(1);
-                $('zpos').value = parseFloat(status.pos.Z).toFixed(1);
-                $('epos').value = parseFloat(status.pos.E).toFixed(1);
+                $('xpos').value = parseFloat(status.pos.X).toFixed(2);
+                $('ypos').value = parseFloat(status.pos.Y).toFixed(2);
+                $('zpos').value = parseFloat(status.pos.Z).toFixed(2);
             }
             // highlight X,Y,Z pod label when @ origin
             if (status.settings && status.settings.offset && status.pos) {

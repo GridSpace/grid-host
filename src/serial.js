@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "rogue-0003";
+const version = "rogue-0004";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
