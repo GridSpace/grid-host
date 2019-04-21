@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "rogue-0004";
+const version = "alpha-0005";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -66,6 +66,7 @@ let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
 let onboot = [];                // commands to run on boot (useful for abort)
 let boot_abort = [
+    "G92 X0 Y0 Z0 E0", // zero out so relative moves work
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
@@ -76,6 +77,7 @@ let boot_abort = [
     "M84"           // disable steppers
 ];
 let boot_error = [
+    "G92 X0 Y0 Z0 E0", // zero out so relative moves work
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan

@@ -585,8 +585,17 @@ function init() {
         }
         input = $('nozzle');
         input.classList.add('bg_green');
+        if (input.value === '0') {
+            input.value = settings.default_nozzle || '220';
+        }
         ev.stopPropagation();
     };
+    $('nozzle').ondblclick = (ev) => {
+        let sel = $('nozzle');
+        if (sel.value !== '0' && confirm('set default nozzle temp')) {
+            settings.default_nozzle = sel.value;
+        }
+    }
     $('bed').onclick = (ev) => {
         input_deselect();
         if (istouch) {
@@ -595,8 +604,17 @@ function init() {
         }
         input = $('bed');
         input.classList.add('bg_green');
+        if (input.value === '0') {
+            input.value = settings.default_bed || '55';
+        }
         ev.stopPropagation();
     };
+    $('bed').ondblclick = (ev) => {
+        let sel = $('bed');
+        if (sel.value !== '0' && confirm('set default bed temp')) {
+            settings.default_bed = sel.value;
+        }
+    }
     for (let i=0; i<10; i++) {
         $(`kp-${i}`).onclick = (ev) => {
             if (input) {
