@@ -66,22 +66,22 @@ let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
 let onboot = [];                // commands to run on boot (useful for abort)
 let boot_abort = [
-    "G92 X0 Y0 Z0 E0", // zero out so relative moves work
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
     "G91",          // relative moves
+    "G0 Z0.1",      // drop bed 0.1cm
     "G0 Z10",       // drop bed 1cm
     "G28 X Y",      // home X & Y
     "G90",          // restore absolute moves
     "M84"           // disable steppers
 ];
 let boot_error = [
-    "G92 X0 Y0 Z0 E0", // zero out so relative moves work
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
     "G91",          // relative moves
+    "G0 Z0.1",      // drop bed 0.1cm
     "G0 Z10",       // drop bed 1cm
     "G90",          // restore absolute moves
     "M84"           // disable steppers
@@ -773,7 +773,17 @@ function queue(line, flags) {
         write(line, flags);
     } else {
         if (priority) {
-            buf.splice(0, 0, {line, flags})
+            // find highest priority queue # and insert after
+            let ind = 0;
+            while (ind < buf.length) {
+                let el = buf[ind];
+                if (el.flags && el.flags.priority) {
+                    ind++;
+                    continue;
+                }
+                break;
+            }
+            buf.splice(ind, 0, {line, flags})
         } else {
             buf.push({line, flags});
         }
