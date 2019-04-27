@@ -568,9 +568,6 @@ function init() {
             input_deselect();
         }
     };
-    $('go_zero').onclick = () => {
-        send('G0X0Y0Z0');
-    };
     $('send').onclick = $('command').onkeyup = ev => {
         if (ev.type === 'click' || ev.keyCode === 13) {
             let cmd = $('command').value.trim();
