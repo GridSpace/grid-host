@@ -563,7 +563,12 @@ function init() {
     };
     $('send').onclick = $('command').onkeyup = ev => {
         if (ev.type === 'click' || ev.keyCode === 13) {
-            send($('command').value.trim());
+            let cmd = $('command').value.trim();
+            if (cmd.indexOf('url ') === 0) {
+                window.location = cmd.substring(4);
+            } else {
+                send(cmd);
+            }
             $('command').value = '';
         }
     };
