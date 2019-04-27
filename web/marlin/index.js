@@ -100,6 +100,16 @@ function off_clear() {
     send('M503');
 }
 
+function fan_on() {
+    if (alert_on_run()) return;
+    send('M106 255');
+}
+
+function fan_off() {
+    if (alert_on_run()) return;
+    send('M107');
+}
+
 function calibrate_pid() {
     if (alert_on_run()) return;
     if (confirm('run hot end PID calibration?')) {
