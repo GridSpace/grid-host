@@ -661,7 +661,7 @@ function mergeConfig(config) {
 
 Util.mkdirs([ tempDir ]);
 
-if (setup['config']) setup = mergeConfig(Util.decode(fs.readFileSync(setup['config'])));
+if (Util.lastmod(setup['config'])) setup = mergeConfig(Util.decode(fs.readFileSync(setup['config'])));
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
