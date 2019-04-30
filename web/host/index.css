@@ -51,11 +51,8 @@ td[onclick]:hover {
     cursor: pointer;
     background-color: #f5f5f5;
 }
-tr:hover th {
-    background-color: #fee;
-}
-tr:hover td {
-    background-color: #fee;
+tr:hover th, tr:hover td {
+    background-color: #f8f8dd;
 }
 
 .col {
