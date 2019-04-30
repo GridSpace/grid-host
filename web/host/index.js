@@ -9,6 +9,22 @@ function browse(url) {
     window.open(url, "_web_control_");
 }
 
+function enable(t) {
+    fetch(`/api/enable?target=${t}`)
+        .then(r => r.json())
+        .then(c => {
+            console.log({enable: c, t});
+        });
+}
+
+function disable(t) {
+    fetch(`/api/disable?target=${t}`)
+        .then(r => r.json())
+        .then(c => {
+            console.log({enable: c, t});
+        });
+}
+
 function targets(t) {
     let changed = false;
     let html = [
@@ -52,7 +68,11 @@ function targets(t) {
                 html.push(cell(`td id="${devid}-t0"`, ''));
                 html.push(cell(`td id="${devid}-t1"`, ''));
                 html.push(cell(`td id="${devid}-b"`, ''));
-                html.push(cell('td', 'cancel', {onclick: `print_cancel('${k}')`}));
+                html.push(cell('td class="actions"',
+                    cell(`a id=${devid}-da`, 'enable',  {onclick: `enable('${k}')`}  ) +
+                    cell(`a id=${devid}-en`, 'disable', {onclick: `disable('${k}')`} ) +
+                    cell(`a`, 'cancel', {onclick: `print_cancel('${k}')`} )
+                ));
             }
             html.push('</tr>');
         }
@@ -74,6 +94,13 @@ function targets(t) {
             stat.temps.T1.map(v => parseInt(v)).join(' / ') : '';
         $(`${devid}-b`).innerText = stat.temps && stat.temps.B ?
             stat.temps.B.map(v => parseInt(v)).join(' / ') : '';
+        if (v.disabled) {
+            $(`${devid}-da`).style.display = '';
+            $(`${devid}-en`).style.display = 'none';
+        } else {
+            $(`${devid}-da`).style.display = 'none';
+            $(`${devid}-en`).style.display = '';
+        }
     }
     for (let k in t) {
         if (t.hasOwnProperty(k)) {

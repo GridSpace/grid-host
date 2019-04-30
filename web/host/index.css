@@ -76,6 +76,24 @@ tr:hover td {
     background-color: white;
 }
 
+.actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.actions a {
+    background-color: #f5f5f5;
+    border: 3px solid #f5f5f5;
+    border-radius: 3px;
+    padding: 1px 6px 1px 6px;
+    margin: 0 1px 0 1px;
+}
+
+.actions a:hover {
+    background-color: white;
+}
+
 #top {
     padding: 0 8px 0 8px;
     text-align: center;
