@@ -809,7 +809,8 @@ for (let key in nif) {
 if (setup.org && (setup.host || setup.autohost)) {
     let args = [
         "org=" + encodeURIComponent(setup.org),
-        "host=" + encodeURIComponent(host)
+        "host=" + encodeURIComponent(host),
+        "auth=" + (setup.host ? "true" : "false")
     ].join('&');
 
     Util.log({register: host || "*autohost*", org: setup.org});
