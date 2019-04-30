@@ -152,6 +152,12 @@ const Devices = {
             active.name = name;
             active.driver = driver;
             active.status = { state: "offline" };
+            Object.keys(active).forEach(key => {
+                let val = active[key];
+                if (setup.local && typeof(val) === 'string' && val.indexOf('localhost') >= 0) {
+                    active[key] = val.replace('localhost', setup.local);
+                }
+            });
             resolved[name] = active;
             Util.log({activated: name, type});
         }
@@ -719,10 +725,6 @@ process.argv.slice(2).forEach(v => {
 
 Util.mkdirs([ tempDir ]);
 
-Config.load();
-
-Devices.resolve();
-
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
@@ -780,29 +782,31 @@ if (Util.lastmod(setup.queue)) Queue.load(Util.decode(fs.readFileSync(setup.queu
 Util.log("---------------------------------------------------------------");
 Util.log(report);
 
-/**
- * store org <> host map for auto-grid-host in kiri
- * if host not specified, use ip:port of grid-host server
- */
-if (setup.org && (setup.host || setup.autohost)) {
-    let host = setup.host || null;
-    let nif = require('os').networkInterfaces();
+/** find best network interface for public access */
+let host = setup.host || null;
+let nif = require('os').networkInterfaces();
 
-    for (let key in nif) {
-        if (host) break;
-        let nic = nif[key];
-        nic.forEach(ni => {
-            if (host) return;
-            if (!ni.internal && ni.family === "IPv4") {
+for (let key in nif) {
+    let nic = nif[key];
+    nic.forEach(ni => {
+        if (!ni.internal && ni.family === "IPv4") {
+            setup.local = ni.address;
+            if (!host) {
                 if (setup['https-port']) {
                     host = "https://" + ni.address + ":" + setup['https-port'];
                 } else {
                     host = "http://" + ni.address + ":" + setup['port'];
                 }
             }
-        });
-    }
+        }
+    });
+}
 
+/**
+ * store org <> host map for auto-grid-host in kiri
+ * if host not specified, use ip:port of grid-host server
+ */
+if (setup.org && (setup.host || setup.autohost)) {
     let args = [
         "org=" + encodeURIComponent(setup.org),
         "host=" + encodeURIComponent(host)
@@ -819,3 +823,9 @@ if (setup.org && (setup.host || setup.autohost)) {
         // Util.log(error);
     });
 }
+
+/** load and resolve devices */
+
+Config.load();
+
+Devices.resolve();

@@ -59,7 +59,7 @@ function targets(t) {
             let devid = `device-${k}`;
             html.push(`<tr id="${devid}">`);
             html.push(cell('th', k, {
-                onclick: `browse('${v.web}')`
+                onclick: v.web ? `browse('${v.web}')` : null
             }));
             html.push(cell('td', v.comment || ''));
             if (stat) {
