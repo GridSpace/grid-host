@@ -97,9 +97,11 @@ function targets(t) {
         if (v.disabled) {
             $(`${devid}-da`).style.display = '';
             $(`${devid}-en`).style.display = 'none';
+            $(`${devid}`).classList.add('disabled');
         } else {
             $(`${devid}-da`).style.display = 'none';
             $(`${devid}-en`).style.display = '';
+            $(`${devid}`).classList.remove('disabled');
         }
     }
     for (let k in t) {
