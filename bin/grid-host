@@ -725,6 +725,10 @@ process.argv.slice(2).forEach(v => {
 
 Util.mkdirs([ tempDir ]);
 
+/* load config */
+
+Config.load();
+
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
@@ -825,8 +829,6 @@ if (setup.org && (setup.host || setup.autohost)) {
     });
 }
 
-/** load and resolve devices */
-
-Config.load();
+/** resolve devices */
 
 Devices.resolve();
