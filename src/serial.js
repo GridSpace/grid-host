@@ -554,7 +554,11 @@ function processInput2(line, channel) {
         let cmd = line.substring(6);
         evtlog(`exec: ${cmd}`, {channel});
         exec(cmd, (err, stdout, stderr) => {
-            evtlog(stdout, {channel});
+            (stdout || stderr).split('\n').forEach(line => {
+                if (line) {
+                    evtlog("--> " + line, {channel});
+                }
+            });
             if (stderr) {
                 evtlog(JSON.stringify({cmd, err, stdout, stderr}));
             }
