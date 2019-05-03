@@ -702,6 +702,7 @@ process.argv.slice(2).forEach(v => {
         }
         switch (key) {
             case 'port':
+                key = 'http-port';
             case 'http-port':
             case 'https-port':
                 fn = parseInt;
@@ -734,7 +735,7 @@ if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
 var apiroot = "/api/",
     report = { starting: "grid:host" };
-    wport = setup['http-port'] || setup['port'],
+    wport = setup['http-port'],
     sport = setup['https-port'],
     handler = connect()
         .use(Web.init)
@@ -799,7 +800,7 @@ for (let key in nif) {
                 if (setup['https-port']) {
                     host = "https://" + ni.address + ":" + setup['https-port'];
                 } else {
-                    host = "http://" + ni.address + ":" + setup['port'];
+                    host = "http://" + ni.address + ":" + setup['http-port'];
                 }
             }
         }

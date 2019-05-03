@@ -109,6 +109,7 @@ const status = {
     device: {
         addr: [],               // ip addresses
         name: os.hostname(),    // device host name for web display
+        version,                // version of code running
         ready: false,           // true when connected and post-init
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully

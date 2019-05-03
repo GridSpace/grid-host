@@ -434,7 +434,8 @@ function init() {
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(spos+4, epos));
             if (!last_set.device) {
-                let msg = ['server',status.device.name,'@',status.device.addr.join(',')];
+                let dev = status.device || {};
+                let msg = [dev.version,dev.name,dev.addr.join(',')];
                 $('log').innerHTML += `[${moment().format("HH:mm:ss")}] ${msg.join(' ')}<br>`;
             }
             last_set = status;
