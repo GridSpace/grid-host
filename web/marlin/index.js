@@ -651,6 +651,9 @@ function init() {
         }
         ev.stopPropagation();
     };
+    $('showcam').onclick = () => {
+        window.location = '/camera.html';
+    };
     $('b-ctrl').onclick = showControl;
     $('b-cmd').onclick = showCommand;
     // reload page on status click

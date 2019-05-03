@@ -153,12 +153,12 @@
                     </div>
                 </div>
                 <div class="col panel label-group grow no-rm">
-                    <label>manual update</label>
-                    <button onclick="update_endstops()">endstop status</button>
-                    <button onclick="update_position()">position status</button>
-                    <button onclick="update_temps()">temps status</button>
-                    <label>M303</label>
-                    <button onclick="calibrate_pid()">calibrate nozzle pid</button>
+                    <label id="showcam">update status</label>
+                    <button onclick="update_endstops()">endstop</button>
+                    <button onclick="update_position()">position</button>
+                    <button onclick="update_temps()">temps</button>
+                    <label>calibrations</label>
+                    <button onclick="calibrate_pid()">nozzle pid</button>
                 </div>
             </div>
         </div>
