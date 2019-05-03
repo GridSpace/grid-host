@@ -9,7 +9,7 @@ function init() {
 function updateImage() {
     let time = Date.now();
     let img = new Image();
-    let url = `http://${location.host}/camera.jpg?time=${time}`;
+    let url = `http://${location.host}:80/camera.jpg?time=${time}`;
     img.onload = () => {
         document.documentElement.style.setProperty('--image-url', `url(${url})`);
         updateImage();
