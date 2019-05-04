@@ -40,6 +40,10 @@ function reload() {
     document.location = document.location;
 }
 
+function camera() {
+    window.location = '/camera.html';
+}
+
 function update_code() {
     if (confirm("update code?")) {
         send("*exec bin/update-code.sh");
@@ -650,9 +654,6 @@ function init() {
             setnozzle(42);
         }
         ev.stopPropagation();
-    };
-    $('showcam').onclick = () => {
-        window.location = '/camera.html';
     };
     $('b-ctrl').onclick = showControl;
     $('b-cmd').onclick = showCommand;
