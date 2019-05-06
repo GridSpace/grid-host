@@ -110,7 +110,9 @@ tr:hover th, tr:hover td {
 #top label {
     padding: 0 10px 0 10px;
 }
-
+#left {
+    height: 97%;
+}
 #targets {
     align-items: stretch;
     overflow-y: auto;
@@ -118,7 +120,6 @@ tr:hover th, tr:hover td {
 }
 #queue {
     overflow-y: auto;
-    height: 100%;
 }
 #preview{
     margin-left: 8px;
