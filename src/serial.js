@@ -14,6 +14,7 @@ const version = "alpha-0005";
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
 const spawn = require('child_process').spawn;
+const path = require('path');
 const opt = require('minimist')(process.argv.slice(2));
 const net = require('net');
 const fs = require('fs');
@@ -636,7 +637,10 @@ function processInput2(line, channel) {
         if (file.indexOf(".gcode") < 0) {
             file += ".gcode";
         }
-        fs.unlinkSync(filedir + "/" + file);
+        fs.unlinkSync(path.join(filedir, file));
+        try {
+            fs.unlinkSync(path.join(filedir, encodeURIComponent(file)));
+        } catch (e) { }
         checkFileDir(true);
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
@@ -646,7 +650,7 @@ function processInput2(line, channel) {
         if (file.indexOf(".gcode") < 0) {
             file += ".gcode";
         }
-        kickNamed(filedir + "/" + file);
+        kickNamed(path.join(filedir, file));
     } else if (line.indexOf("*send ") === 0) {
         sendFile(line.substring(6));
     } else if (line.charAt(0) !== "*") {
@@ -910,7 +914,7 @@ function headers(req, res, next) {
 function drophandler(req, res, next) {
     const dropkey = "/api/drop?name=";
     if (req.url.indexOf(dropkey) === 0 && req.method === 'POST') {
-        let name = req.url.substring(dropkey.length);
+        let name = decodeURIComponent(req.url.substring(dropkey.length));
         let body = '';
         req.on('data', data => {
             body += data.toString();
