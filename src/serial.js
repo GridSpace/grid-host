@@ -724,6 +724,10 @@ function abort() {
     }
     evtlog("print aborted", {error: true});
     onboot = boot_abort;
+    // if printing, ensure filament retracts
+    if (status.print.run) {
+        onboot = ["G0 E-4 F300"].concat(onboot);
+    }
     sport.close(); // forces re-init of marlin
 };
 
