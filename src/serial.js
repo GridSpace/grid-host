@@ -160,7 +160,7 @@ function emit(line, flags) {
     clients.forEach(client => {
         let error = flags && flags.error;
         let cstat = (stat && client.request_status);
-        let clist = (list && client.request_list) || (list && !flags.channel);
+        let clist = (list && client.request_list);// || (list && !flags.channel);
         let cmatch = flags && flags.channel === client;
         if (error || cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
@@ -762,7 +762,7 @@ function processQueue() {
             status.print.run = false;
             status.print.progress = "100.00";
             status.state = STATES.IDLE;
-            evtlog("print done " + ((status.print.end - status.print.start) / 60000) + " min");
+            evtlog(`print done ${status.print.filename} in ${((status.print.end - status.print.start) / 60000)} min`);
         }
     } else {
         if (status.print.run) {
@@ -834,7 +834,7 @@ function write(line, flags) {
                 flags.callback = () => {
                     status.print.prep = status.print.start;
                     status.print.start = Date.now();
-                    evtlog("print body");
+                    evtlog(`print body ${status.print.filename}`);
                 };
             }
         case 'G':
