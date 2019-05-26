@@ -872,6 +872,9 @@ function write(line, flags) {
     }
 }
 
+let known = {}; // known files
+let printCache = {}; // cache of print
+
 function checkFileDir(once) {
     if (!filedir) return;
     try {
@@ -886,10 +889,19 @@ function checkFileDir(once) {
             let ext = name.substring(lp+1);
             let short = name.substring(0,lp);
             let stat = fs.statSync(filedir + "/" + name);
+            let isnew = !known[name] || known[name] !== stat.mtimeMs;
+            if (isnew) {
+                known[name] = stat.mtimeMs;
+            }
             if (ext === "gcode" || ext === "nc" || ext === "hex") {
                 valid.push(recs[short] = {name, ext, size: stat.size, time: stat.mtimeMs});
             } else if (ext === "print") {
-                prints[short] = stat.mtime.getTime();
+                if (isnew) {
+                    try {
+                        printCache[short] = JSON.parse(fs.readFileSync(filedir + "/" + name));
+                    } catch (e) { }
+                }
+                prints[short] = printCache[short];
             }
         });
         Object.keys(prints).forEach(key => {

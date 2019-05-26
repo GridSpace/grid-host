@@ -83,8 +83,7 @@ function select(file, ext) {
         $('file-date').innerText = moment(new Date(file.time)).format('YY/MM/DD HH:mm:ss');
         $('file-size').innerText = file.size;
         if (file.last) {
-            $('file-print').innerText = moment(new Date(file.last)).format('YY/MM/DD HH:mm:ss');
-            // $('file-print').innerText = elapsed(file.last);
+            $('file-print').innerText = elapsed(file.last.end - file.last.start);
             $('file-last').style.display = 'inline-block';
         } else {
             $('file-last').style.display = 'none';
