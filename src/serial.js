@@ -515,7 +515,7 @@ function sendFile(filename) {
     status.print.filename = filename;
     status.print.start = Date.now();
     status.state = STATES.PRINTING;
-    evtlog(`print start ${filename}`);
+    evtlog(`print head ${filename}`);
     // prevent auto polling during send buffering
     let auto_save = auto;
     auto = false;
@@ -630,7 +630,7 @@ function processInput2(line, channel) {
             // accumulate all input data to linebuffer w/ no line breaks
             channel.linebuf.enabled = false;
             upload = line.substring(8);
-            evtlog({upload});
+            // evtlog({upload});
         } else {
             evtlog({no_upload_possible: channel});
         }
@@ -1027,10 +1027,12 @@ if (opt.listen) {
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
             status.clients.net--;
+            let buffer = socket.linebuf.buffer;
             // store upload, if available
-            if (upload) {
-                fs.writeFile(filedir + "/" + upload, socket.linebuf.buffer, (err) => {
-                    console.log({upload: upload, err});
+            if (upload && buffer && buffer.length) {
+                let size = buffer.length;
+                fs.writeFile(filedir + "/" + upload, buffer, (err) => {
+                    evtlog({upload: upload, size, err});
                     checkFileDir(true);
                 });
             }
