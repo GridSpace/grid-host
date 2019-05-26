@@ -230,6 +230,7 @@ input {
 }
 #file-list {
     position: absolute;
+    overflow-x: hidden;
     top: 0;
     left: 0;
     right: 0;
@@ -274,6 +275,7 @@ input {
     border-left: 1px dashed #888;
     text-align: left;
     width: 50%;
+    overflow-x: hidden;
 }
 #file-last {
     display: none;
@@ -284,6 +286,9 @@ input {
 }
 #file-info > div {
     padding: 3px 0 3px 0;
+}
+#file-actions > button {
+    width: 50%;
 }
 #filename {
     flex-grow: 1;

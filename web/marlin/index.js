@@ -70,6 +70,12 @@ function print_selected() {
     }
 }
 
+function delete_selected() {
+    if (selected) {
+        remove(selected.file);
+    }
+}
+
 function select(file, ext) {
     file = files[file];
     if (file) {
