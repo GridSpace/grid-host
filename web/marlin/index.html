@@ -105,27 +105,32 @@
                 <div id="files" class="panel">
                     <label>files</label>
                 </div>
-                <div id="file-list-wrap" class="col panel label-group over-y grow shrink">
-                    <div id="file-list" class="col shrink"></div>
+                <div id="file-list-wrap" class="row panel label-group over-y grow shrink">
+                    <div id="file-list" class="col grow"></div>
+                    <div id="file-detail" class="col grow">
+                        <div id="file-info">
+                            <div><label>date:</label><span id="file-date">...</span></div>
+                            <div><label>size:</label><span id="file-size">...</span></div>
+                            <div id="file-last"><label>print:</label><span id="file-print">...</span></div>
+                        </div>
+                        <div class="grow"></div>
+                        <div id="file-actions" class="col"><button id="file-go">(re)print</button></div>
+                    </div>
                 </div>
             </div>
             <div class="col">
                 <div class="col panel no-rm">
                     <div class="col label-group">
-                        <label>set bed temp</label>
+                        <label>set bed</label>
                         <div class="row align_center justify_center">
-                            <button class="dn" onclick="bed_temp_lower()">&lt;</button>
                             <input id="bed" value="" size="5" class="editable grow"></input>
-                            <button class="up" onclick="bed_temp_higher()">&gt;</button>
                             <button class="up" id="bed_toggle" onclick="bed_toggle()">on</button>
                         </div>
                     </div>
                     <div class="col label-group">
-                        <label>set extruder temp</label>
+                        <label>set extruder</label>
                         <div class="row align_center justify_center">
-                            <button class="dn"  onclick="nozzle_temp_lower()">&lt;</button>
                             <input id="nozzle" value="" size="5" class="editable grow"></input>
-                            <button class="up" onclick="nozzle_temp_higher()">&gt;</button>
                             <button class="up" id="nozzle_toggle" onclick="nozzle_toggle()">on</button>
                         </div>
                     </div>

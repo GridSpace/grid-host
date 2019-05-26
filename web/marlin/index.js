@@ -3,6 +3,7 @@ let interval = null;
 let timeout = null;
 let queue = [];
 let logs = [];
+let files = {};
 let ready = false;
 let sock = null;
 let last_jog = null;
@@ -59,6 +60,26 @@ function reboot() {
 function shutdown() {
     if (confirm("shutdown system?")) {
         send("*exec sudo halt -p");
+    }
+}
+
+function select(file, ext) {
+    if (ext === 'g') {
+        file = files[file];
+        if (file) {
+            $('file-detail').style.display = 'flex';
+            $('file-date').innerText = moment(new Date(file.time)).format('YY/MM/DD HH:mm:ss');
+            $('file-size').innerText = file.size;
+            if (file.last) {
+                $('file-print').innerText = moment(new Date(file.last)).format('YY/MM/DD HH:mm:ss');
+                // $('file-print').innerText = elapsed(file.last);
+                $('file-last').style.display = 'inline-block';
+            } else {
+                $('file-last').style.display = 'none';
+            }
+        }
+    } else {
+        $('file-detail').style.display = 'none';
     }
 }
 
@@ -165,18 +186,6 @@ function bed_temp() {
     return parseInt($('bed').value || '0');
 }
 
-function bed_temp_lower() {
-    $('bed').value = Math.max(0, bed_temp() - 5);
-    send('M140 S' + bed_temp());
-    send('M105');
-}
-
-function bed_temp_higher() {
-    $('bed').value = Math.min(100, bed_temp() + 5);
-    send('M140 S' + bed_temp());
-    send('M105');
-}
-
 function nozzle_toggle() {
     let toggle = $('nozzle_toggle');
     if (toggle.innerText === 'on') {
@@ -192,18 +201,6 @@ function nozzle_toggle() {
 
 function nozzle_temp() {
     return parseInt($('nozzle').value || '0');
-}
-
-function nozzle_temp_lower() {
-    $('nozzle').value = Math.max(0, nozzle_temp() - 5);
-    send('M104 S' + nozzle_temp());
-    send('M105');
-}
-
-function nozzle_temp_higher() {
-    $('nozzle').value = Math.min(300, nozzle_temp() + 5);
-    send('M104 S' + nozzle_temp());
-    send('M105');
 }
 
 function filament_load() {
@@ -537,10 +534,12 @@ function init() {
             let list = $('file-list');
             let html = [];
             let trim = msg.trim().substring(spos+4, epos);
+            files = {};
             JSON.parse(trim).forEach(file => {
                 let name = cleanName(file.name);
                 let ext = file.ext.charAt(0);
-                html.push(`<div class="row"><span>${ext}</span><label ondblclick="print('${name}','${ext}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
+                files[name] = file;
+                html.push(`<div class="row"><span>${ext}</span><label onclick="select('${name}','${ext}')" ondblclick="print('${name}','${ext}')">${name}</label><button onclick="remove('${name}')">x</button></div>`);
             });
             list.innerHTML = html.join('');
         } else if (msg.indexOf("***") >= 0) {

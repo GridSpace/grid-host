@@ -865,6 +865,8 @@ function write(line, flags) {
 function checkFileDir(once) {
     if (!filedir) return;
     try {
+        let prints = {};
+        let recs = {};
         let valid = [];
         fs.readdirSync(filedir).forEach(name => {
             let lp = name.lastIndexOf(".");
@@ -873,10 +875,15 @@ function checkFileDir(once) {
             }
             let ext = name.substring(lp+1);
             let short = name.substring(0,lp);
+            let stat = fs.statSync(filedir + "/" + name);
             if (ext === "gcode" || ext === "nc" || ext === "hex") {
-                let stat = fs.statSync(filedir + "/" + name);
-                valid.push({name, ext, size: stat.size, time: stat.mtimeMs});
+                valid.push(recs[short] = {name, ext, size: stat.size, time: stat.mtimeMs});
+            } else if (ext === "print") {
+                prints[short] = stat.mtime.getTime();
             }
+        });
+        Object.keys(prints).forEach(key => {
+            recs[key].last = prints[key];
         });
         dircache = valid.sort((a, b) => {
             return b.time - a.time;

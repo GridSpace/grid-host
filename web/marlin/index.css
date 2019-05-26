@@ -120,7 +120,6 @@ input {
 }
 .label-group {
     display: flex;
-    flex-direction: column;
     align-items: stretch;
     text-align: center;
 }
@@ -138,7 +137,7 @@ input {
 #header input {
     text-align: center;
 }
-#header input, #footer input {
+#header input, #footer input, #file-info input {
     background-color: white;
     margin: 0;
     padding: 3px 2px 3px 2px;
@@ -240,6 +239,20 @@ input {
     padding: 1px 3px 3px 3px;
     background-color: #eee;
 }
+#file-detail {
+    display: none;
+    font-size: 18px;
+    padding: 3px;
+    border-left: 1px dashed #888;
+    text-align: left;
+}
+#file-info label {
+    display: inline-block;
+    min-width: 60px;
+}
+#file-info > div {
+    padding: 3px 0 3px 0;
+}
 #filename {
     flex-grow: 1;
 }
@@ -255,6 +268,9 @@ input {
 }
 #keypad > div {
     justify-content: center;
+}
+#bed, #nozzle {
+    margin-left: 5px;
 }
 #bed_toggle, #nozzle_toggle {
     width: 3em;
