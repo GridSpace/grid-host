@@ -771,7 +771,7 @@ function processQueue() {
             let fn = status.print.filename;
             let lp = fn.lastIndexOf(".");
             fn = `${fn.substring(0,lp)}.print`;
-            fs.writeFilesync(fn, JSON.stringify(status.print));
+            fs.writeFileSync(fn, JSON.stringify(status.print));
             evtlog(`print done ${status.print.filename} in ${((status.print.end - status.print.start) / 60000)} min`);
         }
     } else {
@@ -1029,7 +1029,8 @@ if (opt.listen) {
             status.clients.net--;
             // store upload, if available
             if (upload) {
-                fs.writeFile(filedir + "/" + upload, socket.linebuf.buffer, () => {
+                fs.writeFile(filedir + "/" + upload, socket.linebuf.buffer, (err) => {
+                    console.log({upload: upload, err});
                     checkFileDir(true);
                 });
             }
