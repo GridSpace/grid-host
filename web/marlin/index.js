@@ -11,6 +11,7 @@ let last_set = {};      // last settings object
 let jog_val = 0.0;
 let input = null;       // active input for keypad
 let settings = localStorage;
+let selected = null;
 
 function $(id) {
     return document.getElementById(id);
@@ -63,23 +64,29 @@ function shutdown() {
     }
 }
 
+function print_selected() {
+    if (selected) {
+        print(selected.file, selected.ext);
+    }
+}
+
 function select(file, ext) {
-    if (ext === 'g') {
-        file = files[file];
-        if (file) {
-            $('file-detail').style.display = 'flex';
-            $('file-date').innerText = moment(new Date(file.time)).format('YY/MM/DD HH:mm:ss');
-            $('file-size').innerText = file.size;
-            if (file.last) {
-                $('file-print').innerText = moment(new Date(file.last)).format('YY/MM/DD HH:mm:ss');
-                // $('file-print').innerText = elapsed(file.last);
-                $('file-last').style.display = 'inline-block';
-            } else {
-                $('file-last').style.display = 'none';
-            }
+    file = files[file];
+    if (file) {
+        $('file-name').innerText = file.name;
+        $('file-date').innerText = moment(new Date(file.time)).format('YY/MM/DD HH:mm:ss');
+        $('file-size').innerText = file.size;
+        if (file.last) {
+            $('file-print').innerText = moment(new Date(file.last)).format('YY/MM/DD HH:mm:ss');
+            // $('file-print').innerText = elapsed(file.last);
+            $('file-last').style.display = 'inline-block';
+        } else {
+            $('file-last').style.display = 'none';
         }
+        $('file-go').innerText = (ext === 'g' ? 'build' : 'install');
+        selected = {file: file.name, ext};
     } else {
-        $('file-detail').style.display = 'none';
+        selected = null;
     }
 }
 

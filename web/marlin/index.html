@@ -6,7 +6,8 @@
         <link rel="stylesheet" type="text/css" href="index.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     </head>
-    <body onload="init()" class="col">
+    <body onload="init()" xclass="col">
+        <div id="body" class="col">
         <div id="header" class="row align_center">
             <input id="state" class="grow" cols=20 disabled />
             <span class="ten"></span>
@@ -105,16 +106,19 @@
                 <div id="files" class="panel">
                     <label>files</label>
                 </div>
-                <div id="file-list-wrap" class="row panel label-group over-y grow shrink">
-                    <div id="file-list" class="col grow"></div>
-                    <div id="file-detail" class="col grow">
+                <div id="file-wrap" class="row panel label-group grow">
+                    <div id="file-list-wrap">
+                        <div id="file-list" class="over-y"></div>
+                    </div>
+                    <div id="file-detail" class="col">
                         <div id="file-info">
+                            <div><label>name:</label><span id="file-name">...</span></div>
                             <div><label>date:</label><span id="file-date">...</span></div>
                             <div><label>size:</label><span id="file-size">...</span></div>
                             <div id="file-last"><label>print:</label><span id="file-print">...</span></div>
                         </div>
                         <div class="grow"></div>
-                        <div id="file-actions" class="col"><button id="file-go">(re)print</button></div>
+                        <div id="file-actions" class="col"><button id="file-go" onclick="print_selected()">build</button></div>
                     </div>
                 </div>
             </div>
@@ -188,6 +192,7 @@
             <button id="pause" onclick="pause()">||</button>
             <button id="resume" onclick="resume()">&gt;</button>
             <button id="abort" onclick="abort()">abort</button>
+        </div>
         </div>
     </body>
 </html>

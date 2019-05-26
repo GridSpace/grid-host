@@ -1,4 +1,15 @@
+div,span {
+    x-box-sizing: border-box;
+}
 body {
+    left: 0;
+    right: 0;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    position: fixed;
+}
+#body {
     font-size: 14px;
     font-family: sans-serif;
     align-items: center;
@@ -8,9 +19,12 @@ body {
     right: 0;
     margin: 0;
     padding: 0;
-    height: 480;
+    height: 480px;
+    min-height: 480px;
+    max-height: 480px;
     white-space: nowrap;
     overflow: hidden;
+    position: fixed;
 }
 div {
     margin: 0;
@@ -206,8 +220,23 @@ input {
     text-align: center;
     background-color: #def;
 }
-#file-list-wrap {
+#file-wrap {
     justify-content: flex-start;
+}
+#file-list-wrap {
+    position: relative;
+    display: block;
+    width: 50%;
+}
+#file-list {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 0;
+    margin: 0;
+    padding: 0;
 }
 #file-list div {
     border: 3px solid white;
@@ -240,11 +269,14 @@ input {
     background-color: #eee;
 }
 #file-detail {
-    display: none;
     font-size: 18px;
     padding: 3px;
     border-left: 1px dashed #888;
     text-align: left;
+    width: 50%;
+}
+#file-last {
+    display: none;
 }
 #file-info label {
     display: inline-block;

@@ -71,7 +71,6 @@ let boot_abort = [
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
     "G91",          // relative moves
-    "G0 Z0.1",      // drop bed 0.1cm
     "G0 Z10",       // drop bed 1cm
     "G28 X Y",      // home X & Y
     "G90",          // restore absolute moves
@@ -160,7 +159,7 @@ function emit(line, flags) {
     clients.forEach(client => {
         let error = flags && flags.error;
         let cstat = (stat && client.request_status);
-        let clist = (list && client.request_list);// || (list && !flags.channel);
+        let clist = (list && client.request_list) || (list && !flags.channel && !client.console);
         let cmatch = flags && flags.channel === client;
         if (error || cmatch || cstat || clist || (client.monitoring && !stat && !list)) {
             client.write(line + "\n");
@@ -726,7 +725,7 @@ function abort() {
     onboot = boot_abort;
     // if printing, ensure filament retracts
     if (status.print.run) {
-        onboot = ["G0 E-4 F300"].concat(onboot);
+        onboot = onboot.concat(["G1 E20 F300"]);
     }
     sport.close(); // forces re-init of marlin
 };
@@ -999,7 +998,7 @@ if (opt.probe) {
 }
 
 // add stdout to clients
-clients.push({monitoring: true, write: (line) => {
+clients.push({console: true, monitoring: true, write: (line) => {
     process.stdout.write(`[${moment().format("HH:mm:ss")}] ${line}`);
 }});
 
