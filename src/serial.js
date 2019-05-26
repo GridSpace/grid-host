@@ -507,6 +507,9 @@ function sendFile(filename) {
     if (!status.print.clear) {
         return evtlog("bed not marked clear. use *clear first", {error: true});
     }
+    if (fs.statSync(filename).size === 0) {
+        return evtlog("invalid file: empty", {error: true});
+    }
     status.print.run = true;
     status.print.clear = false;
     status.print.filename = filename;
@@ -765,6 +768,10 @@ function processQueue() {
             status.print.run = false;
             status.print.progress = "100.00";
             status.state = STATES.IDLE;
+            let fn = status.print.filename;
+            let lp = fn.lastIndexOf(".");
+            fn = `${fn.substring(0,lp)}.print`;
+            fs.writeFilesync(fn, JSON.stringify(status.print));
             evtlog(`print done ${status.print.filename} in ${((status.print.end - status.print.start) / 60000)} min`);
         }
     } else {
@@ -930,9 +937,10 @@ function drophandler(req, res, next) {
             body += data.toString();
         })
         req.on('end', () => {
-            fs.writeFileSync(filedir + "/" + name, body);
             res.end("file received");
-            checkFileDir(true);
+            fs.writeFile(filedir + "/" + name, body, () => {
+                checkFileDir(true);
+            });
         })
     } else {
         next();
@@ -1021,8 +1029,9 @@ if (opt.listen) {
             status.clients.net--;
             // store upload, if available
             if (upload) {
-                fs.writeFileSync(filedir + "/" + upload, socket.linebuf.buffer);
-                checkFileDir(true);
+                fs.writeFile(filedir + "/" + upload, socket.linebuf.buffer, () => {
+                    checkFileDir(true);
+                });
             }
         });
         clients.push(socket);
