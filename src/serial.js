@@ -635,15 +635,25 @@ function processInput2(line, channel) {
             evtlog({no_upload_possible: channel});
         }
     } else if (line.indexOf("*delete ") === 0) {
-        let file = line.substring(8);
-        if (file.indexOf(".gcode") < 0) {
-            file += ".gcode";
+        let base = line.substring(8);
+        let hex = base.indexOf(".hex") > 0;
+        let gcode = base.indexOf(".gcode");
+        let files = null;
+        if (gcode > 0) {
+            base = base.substring(0, gcode);
         }
-        fs.unlinkSync(path.join(filedir, file));
-        try {
-            fs.unlinkSync(path.join(filedir, encodeURIComponent(file)));
-        } catch (e) { }
-        checkFileDir(true);
+        if (!hex) {
+            files = [
+                path.join(filedir, base + ".gcode"),
+                path.join(filedir, base + ".print"),
+                path.join(filedir, encodeURIComponent(base + ".gcode"))
+            ];
+        } else {
+            files = [base];
+        }
+        rmfiles(files, (res) => {
+            checkFileDir(true);
+        });
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
             return evtlog("print in progress", {channel});
@@ -661,6 +671,19 @@ function processInput2(line, channel) {
         evtlog(`invalid command "${line.substring(1)}"`, {channel});
     }
 };
+
+function rmfiles(files, ondone, res) {
+    res = res || [];
+    if (files && files.length) {
+        let file = files.shift();
+        fs.unlink(file, (err) => {
+            res.push({file, err});
+            rmfiles(files, ondone, res);
+        });
+    } else {
+        ondone(res);
+    }
+}
 
 function update(hexfile) {
     if (updating) {
