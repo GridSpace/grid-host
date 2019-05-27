@@ -928,7 +928,9 @@ function checkFileDir(once) {
             }
         });
         Object.keys(prints).forEach(key => {
-            recs[key].last = prints[key];
+            if (recs[key]) {
+                recs[key].last = prints[key];
+            }
         });
         dircache = valid.sort((a, b) => {
             return b.time - a.time;
