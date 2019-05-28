@@ -1,4 +1,4 @@
-let istouch = 'ontouchstart' in document.documentElement || window.innerWidth === 800;
+let istouch = true;//'ontouchstart' in document.documentElement || window.innerWidth === 800;
 let interval = null;
 let timeout = null;
 let queue = [];

@@ -51,6 +51,12 @@ input {
     flex-direction: column;
     flex-shrink: 0;
 }
+.rel {
+    position: relative;
+}
+.abs {
+    position: absolute;
+}
 .shrink {
     flex-shrink: 1;
 }
@@ -296,6 +302,12 @@ input {
 #keypad {
     justify-content: flex-start;
     flex-grow: 0;
+    top: 104%;
+    right: -5px;
+    position: absolute;
+    background: rgba(255,255,255,0.90);
+    border: 4px solid rgba(0,0,0,0.25);
+    border-radius: 5px;
 }
 #keypad button {
     width: 20px;
