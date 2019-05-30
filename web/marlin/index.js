@@ -105,8 +105,7 @@ function print(file, ext) {
         return firmware_update(file);
     }
     if (!last_set.print.clear) {
-        alert('bed not cleared');
-        return;
+        send('*clear');
     }
     if (confirm(`start print "${file}"?`)) {
         send(`*kick ${file}`);
