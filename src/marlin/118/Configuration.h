@@ -74,7 +74,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_CONFIG_H_AUTHOR "(grid:bot, tmc+8825, 0004)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(grid:bot, tmc+8825, fullbed, 0005)" // Who made the changes.
 //#define SHOW_BOOTSCREEN
 //#define STRING_SPLASH_LINE1 SHORT_BUILD_VERSION // will be shown during bootup in line 1
 //#define STRING_SPLASH_LINE2 WEBSITE_URL         // will be shown during bootup in line 2
@@ -405,7 +405,7 @@
 // all forms of bed control obey this (PID, bang-bang, bang-bang with hysteresis)
 // setting this to anything other than 255 enables a form of PWM to the bed just like HEATER_BED_DUTY_CYCLE_DIVIDER did,
 // so you shouldn't use it unless you are OK with PWM on your bed.  (see the comment on enabling PIDTEMPBED)
-#define MAX_BED_POWER 220 // limits duty cycle to bed; 255=full current
+#define MAX_BED_POWER 255 // limits duty cycle to bed; 255=full current
 
 #if ENABLED(PIDTEMPBED)
 
@@ -574,7 +574,7 @@
  *   M204 T    Travel Acceleration
  */
 #define DEFAULT_ACCELERATION          1200    // X, Y, Z and E acceleration for printing moves
-#define DEFAULT_RETRACT_ACCELERATION  2000    // E acceleration for retracts
+#define DEFAULT_RETRACT_ACCELERATION  1200    // E acceleration for retracts
 #define DEFAULT_TRAVEL_ACCELERATION   2500    // X, Y, Z acceleration for travel (non printing) moves
 
 /**
