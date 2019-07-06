@@ -685,9 +685,22 @@ function rmfiles(files, ondone, res) {
     }
 }
 
-function update(hexfile) {
+function update(hexfile, retry) {
     if (updating) {
         return;
+    }
+    if (sport) {
+        if (retry === undefined) {
+            retry = 3;
+        }
+        if (retry === 0) {
+            evtlog(`update aborted. serial port open.`);
+            return;
+        }
+        evtlog(`update delayed. serial port open. retries left=${retry}`);
+        setTimeout(() => {
+            update(hexfile, retry-1);
+        }, 1000);
     }
     updating = true;
     let choose = hexfile || "marlin.ino.hex";
