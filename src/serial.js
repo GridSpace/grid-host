@@ -1072,7 +1072,7 @@ if (opt.listen) {
     net.createServer(socket => {
         status.clients.net++;
         socket.linebuf = new LineBuffer(socket);
-        socket.write("*ready\n");
+        socket.write(`*ready ${status.device.version} ${status.device.name}\n`);
         socket.on("line", line => { processInput(line, socket) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);

@@ -149,7 +149,7 @@ function fan_off() {
 function calibrate_pid() {
     if (alert_on_run()) return;
     if (confirm('run hot end PID calibration?')) {
-        send('M303 S220 C5 U1');
+        send('M303 S220 C8 U1');
     }
 }
 
