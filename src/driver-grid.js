@@ -54,7 +54,7 @@ class Connection {
                         socket.lastRecv = Date.now();
                         line = line.toString();
                         let spos = 0;
-                        if (line === "*ready") {
+                        if (line.indexOf("*ready") === 0) {
                             socket._ready = true;
                             driver.api.Util.log({connected: this.device.name});
                             if (this.kick) {
