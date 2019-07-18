@@ -1130,7 +1130,8 @@ if (opt.web || opt.webport) {
                 processInput(message, ws);
             });
 
-        ws.send("*ready\n");
+        let dev = status.device;
+        ws.send(`*ready ${dev.name} sw=${dev.version} fw=${dev.firm.ver}/${dev.firm.auth}\n`);
         ws.write = (data) => {
             try {
                 ws.send(data);
