@@ -110,6 +110,10 @@ const status = {
         addr: [],               // ip addresses
         name: os.hostname(),    // device host name for web display
         version,                // version of code running
+        firm: {                 // firmware version and author
+            ver: "?",
+            auth: "?"
+        },
         ready: false,           // true when connected and post-init
         boot: 0,                // time of last boot
         connect: 0,             // time port was opened successfully
@@ -434,9 +438,7 @@ function processPortOutput(line) {
     }
     // parse Marlin version
     if (line.indexOf("echo:Marlin") === 0) {
-        status.device.firm = {
-            ver: line.split(' ')[1]
-        };
+        status.device.firm.ver = line.split(' ')[1];
     }
     // parse last compile info
     if (line.indexOf("echo: Last Updated") === 0) {
@@ -1083,9 +1085,10 @@ if (opt.stdin) {
 
 if (opt.listen) {
     net.createServer(socket => {
+        let dev = status.device;
         status.clients.net++;
         socket.linebuf = new LineBuffer(socket);
-        socket.write(`*ready ${status.device.version} ${status.device.name}\n`);
+        socket.write(`*ready ${dev.name} sw=${dev.version} fw=${dev.firm.ver}/${dev.firm.auth}\n`);
         socket.on("line", line => { processInput(line, socket) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
