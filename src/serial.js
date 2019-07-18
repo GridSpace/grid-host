@@ -432,6 +432,16 @@ function processPortOutput(line) {
         status.estop.max[line.substring(0,1)] = line.substring(6);
         update = true;
     }
+    // parse Marlin version
+    if (line.indexOf("echo:Marlin") === 0) {
+        status.device.firm = {
+            ver: line.split(' ')[1];
+        };
+    }
+    // parse last compile info
+    if (line.indexOf("echo: Last Updated") === 0) {
+        status.device.firm.auth = line.substring(line.lastIndexOf('(')+1, line.lastIndexOf(')'));
+    }
     // parse M503 settings status
     if (line.indexOf("echo:  M") === 0) {
         line = line.substring(7).split(' ');
@@ -568,6 +578,7 @@ function processInput2(line, channel) {
         });
         return;
     }
+    let pretty = undefined;
     switch (line) {
         case "*exit": return process.exit(0);
         case "*bounce": return sport ? sport.close() : null;
@@ -609,6 +620,8 @@ function processInput2(line, channel) {
                 channel.monitoring = false;
             }
             return;
+        case "*status+":
+            pretty = 2;
         case "*status":
             status.now = Date.now();
             status.flags.auto = auto;
@@ -616,7 +629,7 @@ function processInput2(line, channel) {
             if (channel) {
                 channel.request_status = true;
             }
-            return evtlog(JSON.stringify(status), {status: true});
+            return evtlog(JSON.stringify(status,undefined,pretty), {status: true});
     }
     if (line.indexOf("*update ") === 0) {
         let file = line.substring(8);
