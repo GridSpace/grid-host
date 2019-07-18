@@ -435,7 +435,7 @@ function processPortOutput(line) {
     // parse Marlin version
     if (line.indexOf("echo:Marlin") === 0) {
         status.device.firm = {
-            ver: line.split(' ')[1];
+            ver: line.split(' ')[1]
         };
     }
     // parse last compile info
