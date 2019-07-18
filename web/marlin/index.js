@@ -445,11 +445,12 @@ function init() {
         let epos = msg.lastIndexOf(" ***");
         if (msg.indexOf("*** {") >= 0) {
             let status = JSON.parse(msg.substring(spos+4, epos));
-            // if (!last_set.device) {
-            //     let dev = status.device || {};
-            //     let msg = [dev.version,dev.name,dev.addr.join(',')];
-            //     $('log').innerHTML += `[${moment().format("HH:mm:ss")}] ${msg.join(' ')}<br>`;
-            // }
+            if (!last_set.device) {
+                let dev = status.device || {};
+                let msg = [dev.addr.join(',')];
+                // let msg = [dev.version,dev.name,dev.addr.join(',')];
+                $('log').innerHTML += `[${moment().format("HH:mm:ss")}] ${msg.join(' ')}<br>`;
+            }
             last_set = status;
             if (status.state) {
                 $('state').value = status.print.pause ? "paused" : status.state;
