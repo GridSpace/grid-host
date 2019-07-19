@@ -565,6 +565,14 @@ function processInput(line, channel) {
 
 function processInput2(line, channel) {
     line = line.toString().trim();
+    // remap *name to an *exec call
+    if (line.indexOf("*name ") === 0) {
+        line = `*exec sudo bin/update-name.sh ${line.substring(6)}`;
+    }
+    // remap *wifi to an *exec call
+    if (line.indexOf("*wifi ") === 0) {
+        line = `*exec sudo bin/update-wifi.sh ${line.substring(6)}`;
+    }
     if (line.indexOf("*exec ") === 0) {
         let cmd = line.substring(6);
         evtlog(`exec: ${cmd}`, {channel});
