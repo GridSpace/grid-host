@@ -1088,7 +1088,7 @@ if (opt.listen) {
         let dev = status.device;
         status.clients.net++;
         socket.linebuf = new LineBuffer(socket);
-        socket.write(`*ready ${dev.name} sw=${dev.version} fw=${dev.firm.ver}/${dev.firm.auth}\n`);
+        socket.write(`*ready ${dev.name} ${dev.version} ${dev.firm.auth} ${dev.addr.join(',')}\n`);
         socket.on("line", line => { processInput(line, socket) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
@@ -1131,7 +1131,7 @@ if (opt.web || opt.webport) {
             });
 
         let dev = status.device;
-        ws.send(`*ready ${dev.name} sw=${dev.version} fw=${dev.firm.ver}/${dev.firm.auth}\n`);
+        ws.send(`*ready ${dev.name} ${dev.version} ${dev.firm.auth} ${dev.addr.join(',')}\n`);
         ws.write = (data) => {
             try {
                 ws.send(data);
