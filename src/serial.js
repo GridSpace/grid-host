@@ -67,6 +67,7 @@ let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
 let onboot = [];                // commands to run on boot (useful for abort)
 let boot_abort = [
+    "G92 X0 Y0 Z0 E0",
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
@@ -77,11 +78,11 @@ let boot_abort = [
     "M84"           // disable steppers
 ];
 let boot_error = [
+    "G92 X0 Y0 Z0 E0",
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
     "G91",          // relative moves
-    "G0 Z0.1",      // drop bed 0.1cm
     "G0 Z10",       // drop bed 1cm
     "G90",          // restore absolute moves
     "M84"           // disable steppers
