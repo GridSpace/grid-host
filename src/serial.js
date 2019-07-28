@@ -217,6 +217,79 @@ function probeSerial(then) {
     });
 }
 
+function onSerialLine(line) {
+    status.device.lines++;
+    if (debug) {
+        let cmd = (match[0] || {line:''}).line;
+        console.log("<... " + (cmd ? cmd + " -- " + line : line));
+    }
+    status.device.line = Date.now();
+    line = line.toString().trim();
+    let matched = null;
+    if (starting && line.indexOf("echo:  M900") === 0) {
+        cmdlog("<-- " + line, {});
+        collect = [];
+        starting = false;
+        if (opt.kick) {
+            processInput("*clearkick");
+        }
+        status.state = STATES.IDLE;
+        evtlog("device ready");
+    } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
+        if (line.indexOf("ok ") === 0 && collect) {
+            line = line.substring(3);
+            collect.push(line);
+        }
+        matched = match.shift();
+        let from = matched ? matched.line : "???";
+        let flags = matched ? matched.flags : {};
+        if (line.charAt(0) === 'N') {
+            let lno = parseInt(line.split(' ')[0].substring(1));
+            if (lno !== flags.lineno) {
+                console.log({mismatch: line, lno, matched, collect});
+            }
+        }
+        // callbacks used by auto stats gathering
+        if (flags.callback) {
+            flags.callback(collect, matched.line);
+        }
+        // auto stats reporting
+        if (!matched || !matched.flags.auto) {
+            if (collect && collect.length) {
+                if (collect.length >= 4) {
+                    cmdlog("==> " + from, flags);
+                    collect.forEach((el, i) => {
+                        if (i === 0) {
+                            cmdlog("<-- " + el, flags);
+                        } else {
+                            cmdlog("    " + el, flags);
+                        }
+                    });
+                } else {
+                    cmdlog("==> " + from + " -- " + JSON.stringify(collect), flags);
+                }
+            }
+        }
+        status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
+        if (status.update) {
+            status.update = false;
+        }
+        collect = [];
+    } else if (collect) {
+        collect.push(line);
+    } else {
+        cmdlog("<-- " + line, {auto: matched});
+    }
+    // force output of eeprom settings because it doesn't happen under these conditions
+    if (line.indexOf("echo:EEPROM version mismatch") === 0) {
+        write("M503");
+    }
+    // status.buffer.match = match;
+    status.buffer.collect = collect;
+    processPortOutput(line);
+    processQueue();
+}
+
 function openSerialPort() {
     if (updating || !port || sport) {
         if (!status.device.ready) {
@@ -228,7 +301,7 @@ function openSerialPort() {
     sport = new SerialPort(port, { baudRate: baud })
         .on('open', function() {
             evtlog("open: " + port);
-            new LineBuffer(sport);
+            new LineBuffer(sport, onSerialLine);
             status.device.connect = Date.now();
             status.device.lines = 0;
             status.state = STATES.CONNECTING;
@@ -250,78 +323,7 @@ function openSerialPort() {
             status.device.connect = 0;
             status.device.ready = false;
         })
-        .on('line', function(line) {
-            status.device.lines++;
-            if (debug) {
-                let cmd = (match[0] || {line:''}).line;
-                console.log("<... " + (cmd ? cmd + " -- " + line : line));
-            }
-            status.device.line = Date.now();
-            line = line.toString().trim();
-            let matched = null;
-            if (starting && line.indexOf("echo:  M900") === 0) {
-                cmdlog("<-- " + line, {});
-                collect = [];
-                starting = false;
-                if (opt.kick) {
-                    processInput("*clearkick");
-                }
-                status.state = STATES.IDLE;
-                evtlog("device ready");
-            } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
-                if (line.indexOf("ok ") === 0 && collect) {
-                    line = line.substring(3);
-                    collect.push(line);
-                }
-                matched = match.shift();
-                let from = matched ? matched.line : "???";
-                let flags = matched ? matched.flags : {};
-                if (line.charAt(0) === 'N') {
-                    let lno = parseInt(line.split(' ')[0].substring(1));
-                    if (lno !== flags.lineno) {
-                        console.log({mismatch: line, lno, matched, collect});
-                    }
-                }
-                // callbacks used by auto stats gathering
-                if (flags.callback) {
-                    flags.callback(collect, matched.line);
-                }
-                // auto stats reporting
-                if (!matched || !matched.flags.auto) {
-                    if (collect && collect.length) {
-                        if (collect.length >= 4) {
-                            cmdlog("==> " + from, flags);
-                            collect.forEach((el, i) => {
-                                if (i === 0) {
-                                    cmdlog("<-- " + el, flags);
-                                } else {
-                                    cmdlog("    " + el, flags);
-                                }
-                            });
-                        } else {
-                            cmdlog("==> " + from + " -- " + JSON.stringify(collect), flags);
-                        }
-                    }
-                }
-                status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
-                if (status.update) {
-                    status.update = false;
-                }
-                collect = [];
-            } else if (collect) {
-                collect.push(line);
-            } else {
-                cmdlog("<-- " + line, {auto: matched});
-            }
-            // force output of eeprom settings because it doesn't happen under these conditions
-            if (line.indexOf("echo:EEPROM version mismatch") === 0) {
-                write("M503");
-            }
-            // status.buffer.match = match;
-            status.buffer.collect = collect;
-            processPortOutput(line);
-            processQueue();
-        })
+        // .on('line', onSerialLine)
         .on('close', function() {
             sport = null;
             evtlog("close");
