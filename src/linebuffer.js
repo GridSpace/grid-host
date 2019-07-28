@@ -4,6 +4,7 @@ class LineBuffer {
         if (!stream) {
             throw "missing stream";
         }
+        const lbuf = this;
         this.enabled = true;
         this.buffer = null;
         this.stream = stream;
@@ -12,12 +13,12 @@ class LineBuffer {
             stream.on("readable", () => {
                 let data;
                 while (data = stream.read()) {
-                  ondata(data);
+                  lbuf.ondata(data);
                 }
             });
         } else {
             stream.on("data", data => {
-                this.ondata(data);
+                lbuf.ondata(data);
             });
         }
     }
