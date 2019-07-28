@@ -14,7 +14,7 @@ class LineBuffer {
                 }
             });
         } else {
-            this.stream.on("data", ondata);
+            this.stream.on("data", this.ondata);
         }
     }
 
