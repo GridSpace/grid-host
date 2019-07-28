@@ -976,7 +976,9 @@ function checkFileDir(once) {
             }
         });
         dircache = valid.sort((a, b) => {
-            return b.time - a.time;
+            return a.ext === b.ext ?
+                b.time - a.time :
+                a.ext > b.ext ? 1 : -1;
         });
         if (once) {
             processInput("*list");
