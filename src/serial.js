@@ -761,12 +761,13 @@ function update(hexfile, retry) {
             evtlog("flash update failed", {error: true});
         })
         .on('exit', code => {
-            setTimeout(() => {
-                // delay releasing serial port
-                updating = false;
-            }, 3000);
+            updating = false;
             if (code === 0) {
                 evtlog(`flash update completed`, {error: true});
+                setTimeout(() => {
+                    // bounce controller after successful firmware update
+                    process.exit(0);
+                }, 1000);
             } else {
                 evtlog("flash update failed", {error: true});
             }
