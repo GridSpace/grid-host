@@ -1,20 +1,22 @@
 class LineBuffer {
 
     constructor(stream, online) {
-        if (!stream) throw "missing stream";
+        if (!stream) {
+            throw "missing stream";
+        }
         this.enabled = true;
         this.buffer = null;
         this.stream = stream;
         this.online = online;
         if (online) {
-            this.stream.on("readable", () => {
+            stream.on("readable", () => {
                 let data;
-                while (data = this.read()) {
+                while (data = stream.read()) {
                   ondata(data);
                 }
             });
         } else {
-            this.stream.on("data", this.ondata);
+            stream.on("data", this.ondata);
         }
     }
 
