@@ -666,23 +666,17 @@ function processInput2(line, channel) {
         }
     } else if (line.indexOf("*delete ") === 0) {
         let base = line.substring(8);
-        let hex = base.indexOf(".hex") > 0;
         let gcode = base.indexOf(".gcode");
         let files = null;
-        if (!hex) {
-            if (gcode > 0) {
-                base = base.substring(0, gcode);
-            }
-            files = [
-                path.join(filedir, base + ".gcode"),
-                path.join(filedir, base + ".print"),
-                path.join(filedir, encodeURIComponent(base + ".gcode"))
-            ];
-        } else {
-            files = [
-                path.join(filedir, base),
-            ];
+        if (gcode > 0) {
+            base = base.substring(0, gcode);
         }
+        files = [
+            path.join(filedir, base + ".hex"),
+            path.join(filedir, base + ".gcode"),
+            path.join(filedir, base + ".print"),
+            path.join(filedir, encodeURIComponent(base + ".gcode"))
+        ];
         rmfiles(files, (res) => {
             checkFileDir(true);
         });
