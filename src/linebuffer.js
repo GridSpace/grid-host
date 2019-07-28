@@ -1,18 +1,30 @@
 class LineBuffer {
 
-    constructor(stream) {
+    constructor(stream, online) {
         if (!stream) throw "missing stream";
         this.enabled = true;
         this.buffer = null;
         this.stream = stream;
-        this.stream.on("data", data => {
-            if (this.buffer) {
-                this.buffer = Buffer.concat([this.buffer, data]);
-            } else {
-                this.buffer = data;
-            }
-            this.nextLine();
-        });
+        this.online = online;
+        if (online) {
+            this.stream.on("readable", () => {
+                let data;
+                while (data = this.read()) {
+                  ondata(data);
+                }
+            });
+        } else {
+            this.stream.on("data", ondata);
+        }
+    }
+
+    ondata(data) {
+        if (this.buffer) {
+            this.buffer = Buffer.concat([this.buffer, data]);
+        } else {
+            this.buffer = data;
+        }
+        this.nextLine();
     }
 
     nextLine() {
@@ -25,7 +37,12 @@ class LineBuffer {
         const lf = data.indexOf("\n");
         if (lf && cr + 1 == lf) { left = 1 }
         if (lf >= 0) {
-            this.stream.emit("line", data.slice(0, lf - left));
+            let slice = data.slice(0, lf - left);
+            if (this.online) {
+                this.online(slice);
+            } else {
+                this.stream.emit("line", slice);
+            }
             this.buffer = data.slice(lf + 1);
             this.nextLine();
         }
