@@ -669,10 +669,10 @@ function processInput2(line, channel) {
         let hex = base.indexOf(".hex") > 0;
         let gcode = base.indexOf(".gcode");
         let files = null;
-        if (gcode > 0) {
-            base = base.substring(0, gcode);
-        }
         if (!hex) {
+            if (gcode > 0) {
+                base = base.substring(0, gcode);
+            }
             files = [
                 path.join(filedir, base + ".gcode"),
                 path.join(filedir, base + ".print"),
@@ -680,7 +680,7 @@ function processInput2(line, channel) {
             ];
         } else {
             files = [
-                path.join(filedir, base + ".hex"),
+                path.join(filedir, base),
             ];
         }
         rmfiles(files, (res) => {
