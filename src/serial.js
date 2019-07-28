@@ -761,7 +761,10 @@ function update(hexfile, retry) {
             evtlog("flash update failed", {error: true});
         })
         .on('exit', code => {
-            updating = false;
+            setTimeout(() => {
+                // delay releasing serial port
+                updating = false;
+            }, 3000);
             if (code === 0) {
                 evtlog(`flash update completed`, {error: true});
             } else {
