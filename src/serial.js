@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "v.001";
+const version = "v.002";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -21,8 +21,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 
 const oport = opt.device || opt.port || opt._[0]; // serial port device path
-const baud = parseInt(opt.baud || "250000");     // baud rate for serial port
-const bufmax = parseInt(opt.buflen || "8");      // max unack'd output lines
+const baud = parseInt(opt.baud || "250000");      // baud rate for serial port
 
 const os = require('os');
 const url = require('url');
@@ -42,6 +41,7 @@ const STATES = {
     FLASHING: "flashing"
 };
 
+let bufmax = parseInt(opt.buflen || "8"); // max unack'd output lines
 let port = oport;               // default port (possible to probe)
 let checksum = !opt.nocheck;    // use line numbers and checksums
 let lineno = 1;                 // next output line number
@@ -574,6 +574,7 @@ function processInput2(line, channel) {
     if (line.indexOf("*wifi ") === 0) {
         line = `*exec sudo bin/update-wifi.sh ${line.substring(6)}`;
     }
+    // handle *exec calls
     if (line.indexOf("*exec ") === 0) {
         let cmd = line.substring(6);
         evtlog(`exec: ${cmd}`, {channel});
@@ -587,6 +588,11 @@ function processInput2(line, channel) {
                 evtlog(JSON.stringify({cmd, err, stdout, stderr}));
             }
         });
+        return;
+    }
+    // handle *buf reset
+    if (line.indexOf('*buf ') === 0) {
+        bufmax = parseInt(line.substring(5));
         return;
     }
     let pretty = undefined;
