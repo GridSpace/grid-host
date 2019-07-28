@@ -679,7 +679,9 @@ function processInput2(line, channel) {
                 path.join(filedir, encodeURIComponent(base + ".gcode"))
             ];
         } else {
-            files = [base];
+            files = [
+                path.join(filedir, base + ".hex"),
+            ];
         }
         rmfiles(files, (res) => {
             checkFileDir(true);
