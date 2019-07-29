@@ -65,6 +65,7 @@ let debug = opt.debug;          // debug and dump all data
 let auto = true;                // true to enable interval collection of data
 let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
+let extrude = true;             // enable / disable extrusion
 let onboot = [];                // commands to run on boot (useful for abort)
 let boot_abort = [
     "G92 X0 Y0 Z0 E0",
@@ -369,7 +370,7 @@ function processPortOutput(line) {
             "M105": true
         };
         interval = setInterval(() => {
-            if (starting || !status.device.ready || auto_int === 0) {
+            if (starting || !status.device.ready || auto_int === 0 || auto === false) {
                 // console.log({starting, ready:status.device.ready, auto_int});
                 return;
             }
@@ -605,6 +606,8 @@ function processInput2(line, channel) {
         case "*auto off": return auto = false;
         case "*debug on": return debug = true;
         case "*debug off": return debug = false;
+        case "*extrude on": return extrude = true;
+        case "*extrude off": return extrude = false;
         case "*match":
             console.log({match});
             return;
@@ -645,6 +648,7 @@ function processInput2(line, channel) {
             status.now = Date.now();
             status.flags.auto = auto;
             status.flags.debug = debug;
+            status.flags.extrude = extrude;
             if (channel) {
                 channel.request_status = true;
             }
@@ -916,6 +920,9 @@ function write(line, flags) {
                 };
             }
         case 'G':
+            if (extrude === false) {
+                line = line.split(' ').filter(t => t.charAt(0) !== 'E').join(' ');
+            }
             match.push({line, flags});
             waiting++;
             status.buffer.waiting = waiting;
