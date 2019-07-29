@@ -513,7 +513,7 @@ function sendFile(filename) {
     status.state = STATES.PRINTING;
     evtlog(`print head ${filename}`);
     try {
-        fs.mkdirSync(stats.print.outdir);
+        fs.mkdirSync(status.print.outdir);
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
             evtlog(`spooling "${filename} to SD"`);
