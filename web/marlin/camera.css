@@ -2,7 +2,7 @@
     --image-url: url("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=");
 }
 
-body div {
+body {
     position: fixed;
     top: 0;
     left: 0;
@@ -12,9 +12,6 @@ body div {
     padding: 0;
     border: 0;
     background: #ddd;
-}
-
-#image {
     background: black;
     background-size: contain;
     background-position: center;

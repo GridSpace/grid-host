@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "v.002";
+const version = "sv003";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -31,7 +31,6 @@ const moment = require('moment');
 const connect = require('connect');
 const WebSocket = require('ws');
 const filedir = opt.dir || opt.filedir || `${process.cwd()}/tmp`;
-const auto_int_def = opt.auto >= 0 ? parseInt(opt.auto) : 1000;
 
 const STATES = {
     IDLE: "idle",
@@ -60,35 +59,31 @@ let collect = null;             // collect lines between oks
 let sport = null;               // bound serial port
 let upload = null;              // name of file being uploaded
 let mode = 'marlin';            // operating mode
-let interval = null;            // pointer to interval updater
 let debug = opt.debug;          // debug and dump all data
-let auto = true;                // true to enable interval collection of data
-let auto_lb = 0;                // interval last buffer size check
-let auto_int = auto_int_def;    // interval for auto collect in ms
 let extrude = true;             // enable / disable extrusion
 let onboot = [                  // commands to run on boot (useful for abort)
     "M155 S2"       // report temp every 2 seconds
 ];
 let boot_abort = [
     "G92 X0 Y0 Z0 E0",
-    "M155 S2"       // report temp every 2 seconds
+    "M155 S2",      // report temp every 2 seconds
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
     "G91",          // relative moves
-    "G0 Z10",       // drop bed 1cm
+    "G0 Z10 X0 Y0", // drop bed 1cm
     "G28 X Y",      // home X & Y
     "G90",          // restore absolute moves
     "M84"           // disable steppers
 ];
 let boot_error = [
     "G92 X0 Y0 Z0 E0",
-    "M155 S2"       // report temp every 2 seconds
+    "M155 S2",      // report temp every 2 seconds
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
     "G91",          // relative moves
-    "G0 Z10",       // drop bed 1cm
+    "G0 Z10 X0 Y0", // drop bed 1cm
     "G90",          // restore absolute moves
     "M84"           // disable steppers
 ];
@@ -109,8 +104,8 @@ const status = {
         collect: null           // lines collected against current command
     },
     flags: {                    // status of internal flags
-        auto: auto,             // auto update of certain parameters (temp)
-        debug: debug            // verbose serial port tracking
+        debug,                  // verbose serial port tracking
+        extrude                 // extrusion enabled / disabled
     },
     device: {
         addr: [],               // ip addresses
@@ -151,12 +146,17 @@ const status = {
         bed: null,              // bed
         ext: [ null ]           // extruders
     },
+    pos: {                      // current gcode position
+        X: 0,
+        Y: 0,
+        Z: 0,
+        E: 0
+    },
     estop: {                    // endstop status
         min: {},
         max: {}
     },
-    auto: {},                   // status of polling events (M114, etc)
-    settings: {},               // map of active settings
+    settings: {}                // map of active settings
 };
 
 // write line to all connected clients
@@ -193,9 +193,7 @@ function cmdlog(line, flags) {
     if (typeof(line) === 'object') {
         line = JSON.stringify(line);
     }
-    if (!flags || !(flags && flags.auto)) {
-        emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line, flags);
-    }
+    emit("[" + waiting + ":" + bufmax + "," + buf.length + ":" + maxout + "] " + line, flags);
 };
 
 // send *** message *** to all clients (not stdout unless stdin specified)
@@ -206,6 +204,7 @@ function evtlog(line, flags) {
     emit("*** " + line + " ***", flags);
 };
 
+// find the port with the controller
 function probeSerial(then) {
     let match = null;
     SerialPort.list((err, ports) => {
@@ -220,79 +219,6 @@ function probeSerial(then) {
         });
         then(match);
     });
-}
-
-function onSerialLine(line) {
-    status.device.lines++;
-    if (debug) {
-        let cmd = (match[0] || {line:''}).line;
-        console.log("<... " + (cmd ? cmd + " -- " + line : line));
-    }
-    status.device.line = Date.now();
-    line = line.toString().trim();
-    let matched = null;
-    if (starting && line.indexOf("echo:  M900") === 0) {
-        cmdlog("<-- " + line, {});
-        collect = [];
-        starting = false;
-        if (opt.kick) {
-            processInput("*clearkick");
-        }
-        status.state = STATES.IDLE;
-        evtlog("device ready");
-    } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
-        if (line.indexOf("ok ") === 0 && collect) {
-            line = line.substring(3);
-            collect.push(line);
-        }
-        matched = match.shift();
-        let from = matched ? matched.line : "???";
-        let flags = matched ? matched.flags : {};
-        if (line.charAt(0) === 'N') {
-            let lno = parseInt(line.split(' ')[0].substring(1));
-            if (lno !== flags.lineno) {
-                console.log({mismatch: line, lno, matched, collect});
-            }
-        }
-        // callbacks used by auto stats gathering
-        if (flags.callback) {
-            flags.callback(collect, matched.line);
-        }
-        // auto stats reporting
-        if (!matched || !matched.flags.auto) {
-            if (collect && collect.length) {
-                if (collect.length >= 4) {
-                    cmdlog("==> " + from, flags);
-                    collect.forEach((el, i) => {
-                        if (i === 0) {
-                            cmdlog("<-- " + el, flags);
-                        } else {
-                            cmdlog("    " + el, flags);
-                        }
-                    });
-                } else {
-                    cmdlog("==> " + from + " -- " + JSON.stringify(collect), flags);
-                }
-            }
-        }
-        status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
-        if (status.update) {
-            status.update = false;
-        }
-        collect = [];
-    } else if (collect) {
-        collect.push(line);
-    } else {
-        cmdlog("<-- " + line, {auto: matched});
-    }
-    // force output of eeprom settings because it doesn't happen under these conditions
-    if (line.indexOf("echo:EEPROM version mismatch") === 0) {
-        write("M503");
-    }
-    // status.buffer.match = match;
-    status.buffer.collect = collect;
-    processPortOutput(line);
-    processQueue();
 }
 
 function openSerialPort() {
@@ -323,8 +249,6 @@ function openSerialPort() {
             sport = null;
             console.log(error);
             setTimeout(openSerialPort, 2000);
-            clearInterval(interval);
-            interval = null;
             status.device.connect = 0;
             status.device.ready = false;
         })
@@ -339,8 +263,111 @@ function openSerialPort() {
         });
 }
 
+// handle a single line of serial input
+function onSerialLine(line) {
+    status.device.lines++;
+    if (debug) {
+        let cmd = (match[0] || {line:''}).line;
+        console.log("<... " + (cmd ? cmd + " -- " + line : line));
+    }
+    status.device.line = Date.now();
+    line = line.toString().trim();
+    let matched = false;
+    let istemp = false;
+    // parse M105/M155 temperature updates
+    if (line.indexOf("T:") === 0) {
+        istemp = true;
+        // eliminate spaces before slashes " /"
+        line = line.replace(/ \//g,'/').split(' ');
+        // parse extruder/bed temps
+        line.forEach(tok => {
+            tok = tok.split(":");
+            switch (tok[0]) {
+                case 'T':
+                    tok = tok[1].split("/");
+                    status.temp.ext[0] = parseFloat(tok[0]);
+                    status.target.ext[0] = parseFloat(tok[1]);
+                    update = true;
+                    break;
+                case 'B':
+                    tok = tok[1].split("/");
+                    status.temp.bed = parseFloat(tok[0]);
+                    status.target.bed = parseFloat(tok[1]);
+                    update = true;
+                    break;
+            }
+        });
+    }
+    if (starting && line.indexOf("echo:  M900") === 0) {
+        // look for end of output on newly opened port
+        cmdlog("<-- " + line, {});
+        collect = [];
+        starting = false;
+        if (opt.kick) {
+            processInput("*clearkick");
+        }
+        status.state = STATES.IDLE;
+        evtlog("device ready");
+    } else if (line.indexOf("ok") === 0 || line.indexOf("error:") === 0) {
+        // match output to an initiating command (from a queue)
+        if (line.indexOf("ok ") === 0 && collect) {
+            line = line.substring(3);
+            collect.push(line);
+        }
+        matched = match.shift();
+        let from = matched ? matched.line : "???";
+        let flags = matched ? matched.flags : {};
+        // if checksumming is enabled, lines start with Nxxxx
+        if (line.charAt(0) === 'N') {
+            let lno = parseInt(line.split(' ')[0].substring(1));
+            if (lno !== flags.lineno) {
+                console.log({mismatch: line, lno, matched, collect});
+            }
+        }
+        // callbacks used by M117 to track start of print
+        if (matched && flags.callback) {
+            flags.callback(collect, matched.line);
+        }
+        // emit collected lines
+        if (collect && collect.length) {
+            if (collect.length >= 4) {
+                cmdlog("==> " + from, flags);
+                collect.forEach((el, i) => {
+                    if (i === 0) {
+                        cmdlog("<-- " + el, flags);
+                    } else {
+                        cmdlog("    " + el, flags);
+                    }
+                });
+            } else {
+                cmdlog("==> " + from + " -- " + JSON.stringify(collect), flags);
+            }
+        }
+        status.buffer.waiting = waiting = Math.max(waiting - 1, 0);
+        if (status.update) {
+            status.update = false;
+        }
+        collect = [];
+    } else if (collect && !istemp) {
+        collect.push(line);
+    } else if (!istemp) {
+        cmdlog("<-- " + line, {matched});
+    }
+    // force output of eeprom settings because it doesn't happen under these conditions
+    if (line.indexOf("echo:EEPROM version mismatch") === 0) {
+        evtlog("M503 on eeprom version mismatch");
+        write("M503");
+    }
+    // status.buffer.match = match;
+    status.buffer.collect = collect;
+    processPortOutput(line);
+    processQueue();
+}
+
 function processPortOutput(line) {
-    if (line.length === 0) return;
+    if (line.length === 0) {
+        return;
+    }
     let update = false;
     if (line === "start") {
         lineno = 1;
@@ -365,59 +392,6 @@ function processPortOutput(line) {
             queue(cmd);
         });
         onboot = [];
-        // kill previous interval
-        clearInterval(interval);
-        // setup interval data collection
-        // prevent rescheduling a command until it's completed
-        let runflags = {
-            "M114": true
-        };
-        interval = setInterval(() => {
-            if (starting || !status.device.ready || auto_int === 0 || auto === false || status.print.run) {
-                // console.log({starting, ready:status.device.ready, auto_int});
-                return;
-            }
-            let priority = true;
-            let callback = (collect, line) => {
-                status.auto[line] = (status.auto[line] || 0) + 1;
-                runflags[line] = true;
-            };
-            // only queue when wait is decreasing or zero and not printing
-            if (buf.length === 0 || buf.length <= auto_lb - 3) {
-                for (let key in runflags) {
-                    if (runflags[key]) {
-                        runflags[key] = false;
-                        queue(key, {auto: true, priority, callback}); // get endstops
-                    }
-                }
-            } else if (debug) {
-                evtlog({auto_blocked: buf.length, last: auto_lb, waiting});
-            }
-            auto_lb = buf.length;
-        }, auto_int);
-    }
-    // parse M105 temperature updates
-    if (line.indexOf("T:") === 0) {
-        // eliminate spaces before slashes " /"
-        line = line.replace(/ \//g,'/').split(' ');
-        // parse extruder/bed temps
-        line.forEach(tok => {
-            tok = tok.split(":");
-            switch (tok[0]) {
-                case 'T':
-                    tok = tok[1].split("/");
-                    status.temp.ext[0] = parseFloat(tok[0]);
-                    status.target.ext[0] = parseFloat(tok[1]);
-                    update = true;
-                    break;
-                case 'B':
-                    tok = tok[1].split("/");
-                    status.temp.bed = parseFloat(tok[0]);
-                    status.target.bed = parseFloat(tok[1]);
-                    update = true;
-                    break;
-            }
-        });
     }
     // parse M114 x/y/z/e positions
     if (line.indexOf("X:") === 0) {
@@ -534,9 +508,6 @@ function sendFile(filename) {
     status.print.start = Date.now();
     status.state = STATES.PRINTING;
     evtlog(`print head ${filename}`);
-    // prevent auto polling during send buffering
-    let auto_save = auto;
-    auto = false;
     try {
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
@@ -558,7 +529,6 @@ function sendFile(filename) {
         evtlog("error sending file", {error: true});
         console.log(e);
     }
-    auto = auto_save;
 }
 
 function processInput(line, channel) {
@@ -604,8 +574,6 @@ function processInput2(line, channel) {
     switch (line) {
         case "*exit": return process.exit(0);
         case "*bounce": return sport ? sport.close() : null;
-        case "*auto on": return auto = true;
-        case "*auto off": return auto = false;
         case "*debug on": return debug = true;
         case "*debug off": return debug = false;
         case "*extrude on": return extrude = true;
@@ -648,7 +616,6 @@ function processInput2(line, channel) {
             pretty = 2;
         case "*status":
             status.now = Date.now();
-            status.flags.auto = auto;
             status.flags.debug = debug;
             status.flags.extrude = extrude;
             if (channel) {
@@ -910,10 +877,7 @@ function write(line, flags) {
         case '?': // grbl
         case '~': // grbl resume
         case 'M':
-            // eat / report M117
-            // if (line.indexOf('M117') === 0) {
-            //     return evtlog(line.substring(5));
-            // }
+            // consume & report M117 Start
             if (line.indexOf('M117 Start') === 0) {
                 flags.callback = () => {
                     status.print.prep = status.print.start;
@@ -926,17 +890,15 @@ function write(line, flags) {
             if (extrude === false) {
                 line = line.split(' ').filter(t => t.charAt(0) !== 'E').join(' ');
             }
-            // when printing, extract position from gcode
-            if (status.print.run) {
-                line.split(' ').forEach(t => {
-                    switch (t.charAt(0)) {
-                        case 'X': status.pos.X = parseFloat(t.substring(1)); break;
-                        case 'Y': status.pos.Y = parseFloat(t.substring(1)); break;
-                        case 'Z': status.pos.Z = parseFloat(t.substring(1)); break;
-                        case 'E': status.pos.E += parseFloat(t.substring(1)); break;
-                    }
-                });
-            }
+            // extract position from gcode
+            line.split(' ').forEach(t => {
+                switch (t.charAt(0)) {
+                    case 'X': status.pos.X = parseFloat(t.substring(1)); break;
+                    case 'Y': status.pos.Y = parseFloat(t.substring(1)); break;
+                    case 'Z': status.pos.Z = parseFloat(t.substring(1)); break;
+                    case 'E': status.pos.E += parseFloat(t.substring(1)); break;
+                }
+            });
             match.push({line, flags});
             waiting++;
             status.buffer.waiting = waiting;
@@ -1185,7 +1147,7 @@ if (opt.web || opt.webport) {
 }
 
 function startup() {
-    console.log({ devport: port || 'undefined', ctrlport: opt.listen, baud, mode, maxbuf: bufmax, auto: auto_int, version });
+    console.log({ devport: port || 'undefined', ctrlport: opt.listen, baud, mode, maxbuf: bufmax, version });
     openSerialPort();
     checkFileDir();
     findNetworkAddress();

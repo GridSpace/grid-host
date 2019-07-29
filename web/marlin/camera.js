@@ -1,8 +1,7 @@
 function init() {
-    document.getElementById('image').onclick = () => {
+    document.body.onclick = () => {
         window.location = `http://${location.hostname}:4080/index.html`;
     };
-
     updateImage();
 }
 
@@ -12,7 +11,7 @@ function updateImage() {
     let url = `http://${location.hostname}/camera.jpg?time=${time}`;
     img.onload = () => {
         document.documentElement.style.setProperty('--image-url', `url(${url})`);
-        updateImage();
+        setTimeout(updateImage, 1000);
     };
     img.src = url;
 }
