@@ -274,6 +274,7 @@ function onSerialLine(line) {
     line = line.toString().trim();
     let matched = false;
     let istemp = false;
+    let update = false;
     // parse M105/M155 temperature updates
     if (line.indexOf("T:") === 0) {
         istemp = true;
@@ -360,15 +361,14 @@ function onSerialLine(line) {
     }
     // status.buffer.match = match;
     status.buffer.collect = collect;
-    processPortOutput(line);
+    processPortOutput(line, update);
     processQueue();
 }
 
-function processPortOutput(line) {
+function processPortOutput(line, update) {
     if (line.length === 0) {
         return;
     }
-    let update = false;
     if (line === "start") {
         lineno = 1;
         update = true;
