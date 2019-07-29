@@ -66,9 +66,12 @@ let auto = true;                // true to enable interval collection of data
 let auto_lb = 0;                // interval last buffer size check
 let auto_int = auto_int_def;    // interval for auto collect in ms
 let extrude = true;             // enable / disable extrusion
-let onboot = [];                // commands to run on boot (useful for abort)
+let onboot = [                  // commands to run on boot (useful for abort)
+    "M155 S2"       // report temp every 2 seconds
+];
 let boot_abort = [
     "G92 X0 Y0 Z0 E0",
+    "M155 S2"       // report temp every 2 seconds
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
@@ -80,6 +83,7 @@ let boot_abort = [
 ];
 let boot_error = [
     "G92 X0 Y0 Z0 E0",
+    "M155 S2"       // report temp every 2 seconds
     "M104 S0 T0",   // extruder 0 heat off
     "M140 S0 T0",   // bed heat off
     "M107",         // shut off cooling fan
@@ -366,11 +370,10 @@ function processPortOutput(line) {
         // setup interval data collection
         // prevent rescheduling a command until it's completed
         let runflags = {
-            "M114": true,
-            "M105": true
+            "M114": true
         };
         interval = setInterval(() => {
-            if (starting || !status.device.ready || auto_int === 0 || auto === false) {
+            if (starting || !status.device.ready || auto_int === 0 || auto === false || status.print.run) {
                 // console.log({starting, ready:status.device.ready, auto_int});
                 return;
             }
