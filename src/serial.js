@@ -383,7 +383,6 @@ function processPortOutput(line) {
                 runflags[line] = true;
             };
             // only queue when wait is decreasing or zero and not printing
-            // if (buf.length === 0 && status.print.run === false) {
             if (buf.length === 0 || buf.length <= auto_lb - 3) {
                 for (let key in runflags) {
                     if (runflags[key]) {
@@ -923,8 +922,20 @@ function write(line, flags) {
                 };
             }
         case 'G':
+            // elide 'E' extrude moves when extrusion disabled
             if (extrude === false) {
                 line = line.split(' ').filter(t => t.charAt(0) !== 'E').join(' ');
+            }
+            // when printing, extract position from gcode
+            if (status.print.run) {
+                line.split(' ').forEach(t => {
+                    switch (t.charAt(0)) {
+                        case 'X': status.pos.X = parseFloat(t.substring(1)); break;
+                        case 'Y': status.pos.Y = parseFloat(t.substring(1)); break;
+                        case 'Z': status.pos.Z = parseFloat(t.substring(1)); break;
+                        case 'E': status.pos.E += parseFloat(t.substring(1)); break;
+                    }
+                });
             }
             match.push({line, flags});
             waiting++;
