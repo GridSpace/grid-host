@@ -132,7 +132,9 @@ const status = {
         pause: false,           // true if paused
         clear: false,           // bed is clear to print
         filename: null,         // current file name
-        progress: 0.0,
+        outdir: null,           // output of current print (images)
+        outseq: 0,              // output image sequence #
+        progress: 0.0,          // 0.00-100% progress tracker
         prep: 0,                // gcode pre start time
         start: 0,               // gcode print start time
         mark: 0,                // gcode last line out time
@@ -505,10 +507,13 @@ function sendFile(filename) {
     status.print.run = true;
     status.print.clear = false;
     status.print.filename = filename;
+    status.print.outdir = filename.substring(0, filename.lastIndexOf(".")) + ".output";
+    status.print.outseq = 0;
     status.print.start = Date.now();
     status.state = STATES.PRINTING;
     evtlog(`print head ${filename}`);
     try {
+        fs.mkdirSync(stats.print.outdir);
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
             evtlog(`spooling "${filename} to SD"`);
@@ -872,6 +877,14 @@ function write(line, flags) {
     flags = flags || {};
     switch (line.charAt(0)) {
         case ';':
+            // layer change. capture picture
+            if (line.indexOf(" layer ") > 0 && line.indexOf("@") > 0) {
+                let seq = (status.print.outseq++).toString().padStart(4,'0');
+                fs.link(
+                    "/var/www/html/camera.jpg",
+                    status.print.outdir + `/image-${seq}.jpg`,
+                    err => {});
+            }
             return;
         case '$': // grbl
         case '?': // grbl
