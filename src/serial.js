@@ -593,7 +593,7 @@ function processInput2(line, channel) {
                 return evtlog("print in progress");
             }
             return kickNext();
-        case "*update": return update();
+        case "*update": return update_firmware();
         case "*abort": return abort();
         case "*pause": return pause();
         case "*resume": return resume();
@@ -628,7 +628,7 @@ function processInput2(line, channel) {
         if (file.indexOf(".hex") < 0) {
             file += ".hex";
         }
-        return update(file);
+        return update_firmware(file);
     }
     if (line.indexOf("*upload ") === 0) {
         if (channel.linebuf) {
@@ -652,7 +652,7 @@ function processInput2(line, channel) {
             path.join(filedir, base + ".print"),
             path.join(filedir, encodeURIComponent(base + ".gcode"))
         ];
-        rmfiles(files, (res) => {
+        remove_files(files, (res) => {
             checkFileDir(true);
         });
     } else if (line.indexOf("*kick ") === 0) {
@@ -673,20 +673,20 @@ function processInput2(line, channel) {
     }
 };
 
-function rmfiles(files, ondone, res) {
+function remove_files(files, ondone, res) {
     res = res || [];
     if (files && files.length) {
         let file = files.shift();
         fs.unlink(file, (err) => {
             res.push({file, err});
-            rmfiles(files, ondone, res);
+            remove_files(files, ondone, res);
         });
     } else {
         ondone(res);
     }
 }
 
-function update(hexfile, retry) {
+function update_firmware(hexfile, retry) {
     if (updating) {
         return;
     }
@@ -700,7 +700,7 @@ function update(hexfile, retry) {
         }
         evtlog(`update delayed. serial port open. retries left=${retry}`);
         setTimeout(() => {
-            update(hexfile, retry-1);
+            update_firmware(hexfile, retry-1);
         }, 1000);
     }
     updating = true;
