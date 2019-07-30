@@ -522,8 +522,13 @@ function sendFile(filename) {
     status.state = STATES.PRINTING;
     evtlog(`print head ${filename}`);
     try {
-        let stat = fs.statSync(status.print.outdir);
-        if (stat.isDirectory()) {
+        let stat = null;
+        try {
+            stat = fs.statSync(status.print.outdir);
+        } catch (e) {
+            // no such directory
+        }
+        if (stat && stat.isDirectory()) {
             clear_dir(status.print.outdir);
         } else {
             fs.mkdirSync(status.print.outdir);
