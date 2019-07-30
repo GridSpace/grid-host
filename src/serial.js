@@ -495,7 +495,7 @@ function processPortOutput(line, update) {
 };
 
 function clear_dir(dir, remove) {
-    fs.readDirSync(dir).forEach(file => {
+    fs.readdirSync(dir).forEach(file => {
         fs.unlinkSync(path.join(dir, file));
     });
     if (remove) {
