@@ -301,7 +301,7 @@ function onSerialLine(line) {
             }
         });
     }
-    if (starting && line.indexOf("echo:  M900") === 0) {
+    if (starting && line.indexOf("M900 ") === 0) {
         // look for end of output on newly opened port
         cmdlog("<-- " + line, {});
         collect = [];
