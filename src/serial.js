@@ -494,6 +494,15 @@ function processPortOutput(line, update) {
     }
 };
 
+function clear_dir(dir, remove) {
+    fs.readDirSync(dir).forEach(file => {
+        fs.unlinkSync(path.join(dir, file));
+    });
+    if (remove) {
+        fs.rmdirSync(dir);
+    }
+}
+
 function sendFile(filename) {
     if (!checkDeviceReady()) {
         return;
@@ -513,7 +522,12 @@ function sendFile(filename) {
     status.state = STATES.PRINTING;
     evtlog(`print head ${filename}`);
     try {
-        fs.mkdirSync(status.print.outdir);
+        let stat = fs.statSync(status.print.outdir);
+        if (stat.isDirectory()) {
+            clear_dir(status.print.outdir);
+        } else {
+            fs.mkdirSync(status.print.outdir);
+        }
         let gcode = fs.readFileSync(filename).toString().split("\n");
         if (sdspool) {
             evtlog(`spooling "${filename} to SD"`);
@@ -658,6 +672,12 @@ function processInput2(line, channel) {
             path.join(filedir, encodeURIComponent(base + ".gcode"))
         ];
         remove_files(files, (res) => {
+            try {
+                clear_dir(path.join(filedir, base + ".output"), true);
+            } catch (e) {
+                evtlog(`no output dir for ${base}`);
+                console.log(e);
+            }
             checkFileDir(true);
         });
     } else if (line.indexOf("*kick ") === 0) {
@@ -952,7 +972,7 @@ function checkFileDir(once) {
             }
             let ext = name.substring(lp+1);
             let short = name.substring(0,lp);
-            let stat = fs.statSync(filedir + "/" + name);
+            let stat = fs.statSync(path.join(filedir, name));
             let isnew = !known[name] || known[name] !== stat.mtimeMs;
             if (isnew) {
                 known[name] = stat.mtimeMs;
@@ -962,7 +982,7 @@ function checkFileDir(once) {
             } else if (ext === "print") {
                 if (isnew) {
                     try {
-                        printCache[short] = JSON.parse(fs.readFileSync(filedir + "/" + name));
+                        printCache[short] = JSON.parse(fs.readFileSync(path.join(filedir, name)));
                     } catch (e) { }
                 }
                 prints[short] = printCache[short];
@@ -1018,7 +1038,7 @@ function drophandler(req, res, next) {
         })
         req.on('end', () => {
             res.end("file received");
-            fs.writeFile(filedir + "/" + name, body, () => {
+            fs.writeFile(path.join(filedir, name), body, () => {
                 checkFileDir(true);
             });
         })
@@ -1112,7 +1132,7 @@ if (opt.listen) {
             // store upload, if available
             if (upload && buffer && buffer.length) {
                 let size = buffer.length;
-                fs.writeFile(filedir + "/" + upload, buffer, (err) => {
+                fs.writeFile(path.join(filedir, upload), buffer, (err) => {
                     evtlog({upload: upload, size, err});
                     checkFileDir(true);
                 });
