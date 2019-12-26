@@ -20,6 +20,7 @@ const net = require('net');
 const fs = require('fs');
 const { exec } = require('child_process');
 
+const noboot = opt.noboot || false; // do not expect serial boot message
 const oport = opt.device || opt.port || opt._[0]; // serial port device path
 const baud = parseInt(opt.baud || "250000");      // baud rate for serial port
 
@@ -240,12 +241,19 @@ function openSerialPort() {
             status.state = STATES.CONNECTING;
             status.print.pause = paused = false;
             lineno = 1;
-            setTimeout(() => {
-                if (status.device.lines < 2) {
-                    evtlog("device not responding. reopening port.");
-                    sport.close();
-                }
-            }, 3000);
+            if (noboot) {
+                starting = false;
+                status.state = STATES.IDLE;
+                sport.write('\r\nM115\r\nM155 S2\r\n');
+                evtlog("device ready");
+            } else {
+                setTimeout(() => {
+                    if (status.device.lines < 2) {
+                        evtlog("device not responding. reopening port.");
+                        sport.close();
+                    }
+                }, 3000);
+            }
         })
         .on('error', function(error) {
             sport = null;
