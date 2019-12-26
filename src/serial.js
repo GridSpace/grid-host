@@ -245,7 +245,7 @@ function openSerialPort() {
                 sport.write('\r\nM115\r\n');
                 // fake old serial connection from 8-bit boards
                 onSerialLine('start');
-                onSerialLine('M900 ');
+                processPortOutput('M900 ', true);
             } else {
                 setTimeout(() => {
                     if (status.device.lines < 2) {
