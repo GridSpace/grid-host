@@ -242,10 +242,10 @@ function openSerialPort() {
             status.print.pause = paused = false;
             lineno = 1;
             if (noboot) {
-                starting = false;
-                status.state = STATES.IDLE;
-                sport.write('\r\nM115\r\nM155 S2\r\n');
-                evtlog("device ready");
+                sport.write('\r\nM115\r\n');
+                // fake old serial connection from 8-bit boards
+                onSerialLine('start');
+                onSerialLine('M900');
             } else {
                 setTimeout(() => {
                     if (status.device.lines < 2) {
