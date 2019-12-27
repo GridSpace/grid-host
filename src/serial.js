@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "sv003";
+const version = "sv004";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -242,10 +242,13 @@ function openSerialPort() {
             status.print.pause = paused = false;
             lineno = 1;
             if (noboot) {
-                sport.write('\r\nM115\r\n');
-                // fake old serial connection from 8-bit boards
+                sport.write('\r\n');
+                onboot.push('M503')
+                onboot.push('M115')
                 onSerialLine('start');
-                processPortOutput('M900 ', true);
+                onSerialLine('M900 ; forced start');
+                status.device.firm.ver = 'new';
+                status.device.firm.auth = 'new';
             } else {
                 setTimeout(() => {
                     if (status.device.lines < 2) {
