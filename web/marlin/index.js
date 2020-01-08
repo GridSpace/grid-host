@@ -125,6 +125,7 @@ function off_set() {
     if (alert_on_run()) return;
     if (last_set && last_set.pos) {
         let pos = last_set.pos;
+        // send('M408');
         send(`M206 X-${pos.X} Y-${pos.Y} Z-${pos.Z}`);
         send('M503');
     }
@@ -227,6 +228,7 @@ function filament_unload() {
 function goto_home() {
     if (alert_on_run()) return;
     send('G28');
+    send('M18');
 }
 
 function disable_motors() {
