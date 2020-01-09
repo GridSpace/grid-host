@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "v005";
+const version = "v006";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -900,7 +900,8 @@ function queue(line, flags) {
         maxout = Math.max(maxout, buf.length);
     }
     if (returnHome) {
-        queue('G0X0Y0Z0', flags);
+        queue('G0 X0.5 Y0.5 F6000', flags);
+        queue('G0 Z1', flags);
     }
 };
 
