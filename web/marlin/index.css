@@ -187,6 +187,7 @@ input {
 }
 #t-cmd {
     display: none;
+    min-height: 1px;
 }
 #header {
     width: 790px;

@@ -900,8 +900,8 @@ function queue(line, flags) {
         maxout = Math.max(maxout, buf.length);
     }
     if (returnHome) {
-        queue('G0 X0.5 Y0.5 F6000', flags);
-        queue('G0 Z1', flags);
+        queue('G0 X0.5 Y0.5 F9000', flags);
+        queue('G0 Z1 F200', flags);
     }
 };
 

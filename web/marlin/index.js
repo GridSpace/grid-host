@@ -401,6 +401,7 @@ function showCommand() {
     $('t-cmd').style.display = 'flex';
     $('b-ctrl').style.display = 'block';
     $('b-cmd').style.display = 'none';
+    $('command').focus();
 }
 
 function init() {
@@ -593,6 +594,7 @@ function init() {
     };
     $('clear').onclick = () => {
         $('log').innerHTML = '';
+        $('command').focus();
     };
     let input_deselect = document.body.onclick = (ev) => {
         if (input) {
