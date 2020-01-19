@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "v006";
+const version = "Serial [007]";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -210,12 +210,14 @@ function evtlog(line, flags) {
 // find the port with the controller
 function probeSerial(then) {
     let match = null;
-    SerialPort.list((err, ports) => {
+    SerialPort.list().then(ports => {
         ports.forEach(port => {
+            let path = port.path || port.comName;
+            let manu = port.manufacturer ? port.manufacturer.toLowerCase().trim() : '';
             if (port.pnpId) {
-                match = port.comName;
-            } else if (port.manufacturer && port.manufacturer.toLowerCase().indexOf("arduino") >= 0) {
-                match = port.comName;
+                match = path;
+            } else if (manu.indexOf("arduino") >= 0 || manu.indexOf('marlinfw.org') >= 0) {
+                match = path;
             } else if (!match && (port.vendorId || port.productId || port.serialNumber)) {
                 match = port.comnName;
             }
@@ -242,13 +244,17 @@ function openSerialPort() {
             status.print.pause = paused = false;
             lineno = 1;
             if (noboot) {
-                sport.write('\r\n');
+                sport.write('\r\nM110 N0\r\n');
+                sport.flush();
                 onboot.push('M503')
                 onboot.push('M115')
                 onSerialLine('start');
                 onSerialLine('M900 ; forced start');
                 status.device.firm.ver = 'new';
                 status.device.firm.auth = 'new';
+                if (!opt.buflen) {
+                    bufmax = 3;
+                }
             } else {
                 setTimeout(() => {
                     if (status.device.lines < 2) {
@@ -382,6 +388,7 @@ function processPortOutput(line, update) {
     if (line.length === 0) {
         return;
     }
+    // 8-bit marlin systems send "start" on a serial port open
     if (line === "start") {
         lineno = 1;
         update = true;
@@ -462,12 +469,29 @@ function processPortOutput(line, update) {
         }
         update = true;
     }
+    // parse M115 output
+    if (line.indexOf("FIRMWARE_NAME:") === 0) {
+        let fni = line.indexOf("FIRMWARE_NAME:");
+        let sci = line.indexOf("SOURCE_CODE_URL:");
+        if (fni >= 0 && sci > fni) {
+            status.device.firm.ver = line.substring(fni + 14, sci).trim();
+        }
+        let mti = line.indexOf("MACHINE_TYPE:");
+        let eci = line.indexOf("EXTRUDER_COUNT:");
+        if (mti > 0 && eci > mti) {
+            status.device.firm.auth = line.substring(mti + 13, eci).trim();
+        }
+    }
     // resend on checksum errors
     if (line.indexOf("Resend:") === 0) {
         let from = line.split(' ')[1];
         evtlog(`resend from ${from}`, {error: true});
         sport.close();
-        process.exit(-1);
+        // if (debug) {
+        //     return;
+        // } else {
+            process.exit(-1);
+        // }
     }
     // catch fatal errors and reboot
     if (!opt.noerror && line.indexOf("Error:") === 0) {
@@ -1117,10 +1141,10 @@ if (opt.grbl) {
 }
 
 if (opt.probe) {
-    SerialPort.list((err, ports) => {
+    SerialPort.list().then(ports => {
         ports.forEach(port => {
             console.log({
-                com: port.comName,
+                com: port.path || port.comName,
                 pnp: port.pnpId        || null,
                 man: port.manufacturer || null,
                 ven: port.vendorId     || null,

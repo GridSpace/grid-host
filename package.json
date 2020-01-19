@@ -27,7 +27,7 @@
         "moment": "^2.22.2",
         "pngjs": "^3.3.2",
         "progress-stream": "^1.2.0",
-        "serialport": "^7.0.0",
+        "serialport": "^8.0.0",
         "serve-static": "^1.13.2",
         "ws": "^5.2.0"
     }
