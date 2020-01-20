@@ -327,6 +327,7 @@ input {
 }
 #log {
     font-family: monospace;
+    font-size: smaller;
     overflow-y: auto;
     padding: 5px;
 }
