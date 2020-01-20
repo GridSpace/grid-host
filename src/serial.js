@@ -32,6 +32,7 @@ const moment = require('moment');
 const connect = require('connect');
 const WebSocket = require('ws');
 const filedir = opt.dir || opt.filedir || `${process.cwd()}/tmp`;
+const bedclear = ".bedclear";
 
 const STATES = {
     IDLE: "idle",
@@ -39,6 +40,22 @@ const STATES = {
     CONNECTING: "connecting",
     PRINTING: "printing",
     FLASHING: "flashing"
+};
+
+const MCODE = {
+    M92:  "steps_per",
+    M201: "accel_max",
+    M203: "feedrate_max",
+    M204: "accel",
+    M205: "advanced",
+    M206: "home_offset",
+    M301: "pid_tuning",
+    M420: "UBL",
+    M851: "z_probe_offset",
+    M900: "linear_advance",
+    M906: "stepper_current",
+    M913: "hybrid_threshold",
+    M914: "stallguard_threshold"
 };
 
 let bufmax = parseInt(opt.buflen || "8"); // max unack'd output lines
@@ -63,31 +80,25 @@ let mode = 'marlin';            // operating mode
 let debug = opt.debug;          // debug and dump all data
 let extrude = true;             // enable / disable extrusion
 let onboot = [                  // commands to run on boot (useful for abort)
-    "M155 S2"       // report temp every 2 seconds
+    "M155 S2",          // report temp every 2 seconds
+    "M114",             // get position
+    "M119"              // get endstop status
 ];
 let boot_abort = [
-    "G92 X0 Y0 Z0 E0",
-    "M155 S2",      // report temp every 2 seconds
-    "M104 S0 T0",   // extruder 0 heat off
-    "M140 S0 T0",   // bed heat off
-    "M107",         // shut off cooling fan
-    "G91",          // relative moves
-    "G0 Z10 X0 Y0", // drop bed 1cm
-    "G28 X Y",      // home X & Y
-    "G90",          // restore absolute moves
-    "M84"           // disable steppers
+    "G21",              // metric units
+    "G90",              // absolute moves
+    "G92 X0 Y0 Z0 E0",  // zero out XYZE
+    "M155 S2",          // report temp every 2 seconds
+    "M104 S0 T0",       // extruder 0 heat off
+    "M140 S0 T0",       // bed heat off
+    "M107",             // shut off cooling fan
+    "G91",              // set relative moves
+    "G0 Z10 X0 Y0",     // drop bed 1cm
+    "G28 X Y",          // home X & Y
+    "G90",              // restore absolute moves
+    "M84"               // disable steppers
 ];
-let boot_error = [
-    "G92 X0 Y0 Z0 E0",
-    "M155 S2",      // report temp every 2 seconds
-    "M104 S0 T0",   // extruder 0 heat off
-    "M140 S0 T0",   // bed heat off
-    "M107",         // shut off cooling fan
-    "G91",          // relative moves
-    "G0 Z10 X0 Y0", // drop bed 1cm
-    "G90",          // restore absolute moves
-    "M84"           // disable steppers
-];
+let boot_error = boot_abort.slice();
 
 // marlin-centric, to be fixed
 const status = {
@@ -139,7 +150,8 @@ const status = {
         prep: 0,                // gcode pre start time
         start: 0,               // gcode print start time
         mark: 0,                // gcode last line out time
-        end: 0                  // gcode end of queue time
+        end: 0,                 // gcode end of queue time
+        emit: 0                 // total mm extruded
     },
     target: {                   // target temp
         bed: null,              // bed
@@ -153,7 +165,8 @@ const status = {
         X: 0,
         Y: 0,
         Z: 0,
-        E: 0
+        E: 0,
+        rel: false              // relative moves
     },
     estop: {                    // endstop status
         min: {},
@@ -208,7 +221,7 @@ function evtlog(line, flags) {
 };
 
 // find the port with the controller
-function probeSerial(then) {
+function probe_serial(then) {
     let match = null;
     SerialPort.list().then(ports => {
         ports.forEach(port => {
@@ -226,18 +239,18 @@ function probeSerial(then) {
     });
 }
 
-function openSerialPort() {
+function on_serial_port() {
     if (updating || !port || sport) {
         if (!status.device.ready) {
             status.state = updating ? STATES.FLASHING : STATES.NODEVICE;
         }
-        setTimeout(openSerialPort, 2000);
+        setTimeout(on_serial_port, 2000);
         return;
     }
     sport = new SerialPort(port, { baudRate: baud })
         .on('open', function() {
             evtlog("open: " + port);
-            new LineBuffer(sport, onSerialLine);
+            new LineBuffer(sport, on_serial_line);
             status.device.connect = Date.now();
             status.device.lines = 0;
             status.state = STATES.CONNECTING;
@@ -248,8 +261,8 @@ function openSerialPort() {
                 sport.flush();
                 onboot.push('M503')
                 onboot.push('M115')
-                onSerialLine('start');
-                onSerialLine('M900 ; forced start');
+                on_serial_line('start');
+                on_serial_line('M900 ; forced start');
                 status.device.firm.ver = 'new';
                 status.device.firm.auth = 'new';
                 if (!opt.buflen) {
@@ -267,15 +280,15 @@ function openSerialPort() {
         .on('error', function(error) {
             sport = null;
             console.log(error);
-            setTimeout(openSerialPort, 2000);
+            setTimeout(on_serial_port, 2000);
             status.device.connect = 0;
             status.device.ready = false;
         })
-        // .on('line', onSerialLine)
+        // .on('line', on_serial_line)
         .on('close', function() {
             sport = null;
             evtlog("close");
-            setTimeout(openSerialPort, 2000);
+            setTimeout(on_serial_port, 2000);
             status.device.close = Date.now();
             status.device.ready = false;
             status.state = STATES.NODEVICE;
@@ -283,7 +296,7 @@ function openSerialPort() {
 }
 
 // handle a single line of serial input
-function onSerialLine(line) {
+function on_serial_line(line) {
     status.device.lines++;
     if (debug) {
         let cmd = (match[0] || {line:''}).line;
@@ -324,7 +337,7 @@ function onSerialLine(line) {
         collect = [];
         starting = false;
         if (opt.kick) {
-            processInput("*clearkick");
+            process_input("*clearkick");
         }
         status.state = STATES.IDLE;
         evtlog("device ready");
@@ -380,11 +393,11 @@ function onSerialLine(line) {
     }
     // status.buffer.match = match;
     status.buffer.collect = collect;
-    processPortOutput(line, update);
-    processQueue();
+    process_port_output(line, update);
+    process_queue();
 }
 
-function processPortOutput(line, update) {
+function process_port_output(line, update) {
     if (line.length === 0) {
         return;
     }
@@ -395,7 +408,6 @@ function processPortOutput(line, update) {
         starting = true;
         status.device.ready = true;
         status.device.boot = Date.now();
-        status.print.clear = false;
         status.buffer.waiting = waiting = 0;
         collect = null;
         match = [];
@@ -447,24 +459,13 @@ function processPortOutput(line, update) {
     // parse M503 settings status
     if (line.indexOf("echo:  M") === 0) {
         line = line.substring(7).split(' ');
-        let code = {
-            // M149: "temp_units",
-            // M200: "filament",
-            M92:  "steps_per",
-            M203: "feedrate_max",
-            M201: "accel_max",
-            M204: "accel",
-            M205: "advanced",
-            M206: "offset",
-            // M145: "heatup",
-            M301: "pid",
-            M900: "lin_advance"
-        }[line.shift()] || null;
+        let code = line.shift();
+        let desc = MCODE[code] || null;
         let map = {};
         line.forEach(tok => {
             map[tok.substring(0,1)] = parseFloat(tok.substring(1));
         });
-        if (code) {
+        if (desc) {
             status.settings[code] = map;
         }
         update = true;
@@ -487,11 +488,7 @@ function processPortOutput(line, update) {
         let from = line.split(' ')[1];
         evtlog(`resend from ${from}`, {error: true});
         sport.close();
-        // if (debug) {
-        //     return;
-        // } else {
-            process.exit(-1);
-        // }
+        process.exit(-1);
     }
     // catch fatal errors and reboot
     if (!opt.noerror && line.indexOf("Error:") === 0) {
@@ -529,6 +526,36 @@ function processPortOutput(line, update) {
     }
 };
 
+function bed_clear() {
+    try {
+        status.print.clear = true;
+        fs.closeSync(fs.openSync(bedclear, 'w'));
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+function bed_dirty() {
+    status.print.clear = false;
+    if (is_bed_clear()) {
+        try {
+            fs.unlinkSync(bedclear);
+        } catch (e) {
+            console.log(e);
+        }
+        evtlog("marking bed dirty");
+    }
+}
+
+function is_bed_clear() {
+    try {
+        let stat = fs.statSync(bedclear);
+        return status.print.clear = true;
+    } catch (e) {
+        return status.print.clear = false;
+    }
+}
+
 function clear_dir(dir, remove) {
     fs.readdirSync(dir).forEach(file => {
         fs.unlinkSync(path.join(dir, file));
@@ -538,18 +565,17 @@ function clear_dir(dir, remove) {
     }
 }
 
-function sendFile(filename) {
-    if (!checkDeviceReady()) {
+function send_file(filename) {
+    if (!check_device_ready()) {
         return;
     }
-    if (!status.print.clear) {
+    if (!is_bed_clear()) {
         return evtlog("bed not marked clear. use *clear first", {error: true});
     }
     if (fs.statSync(filename).size === 0) {
         return evtlog("invalid file: empty", {error: true});
     }
     status.print.run = true;
-    status.print.clear = false;
     status.print.filename = filename;
     status.print.outdir = filename.substring(0, filename.lastIndexOf(".")) + ".output";
     status.print.outseq = 0;
@@ -590,15 +616,15 @@ function sendFile(filename) {
     }
 }
 
-function processInput(line, channel) {
+function process_input(line, channel) {
     try {
-        processInput2(line, channel);
+        process_input_two(line, channel);
     } catch (e) {
         console.trace(line, e);
     }
 }
 
-function processInput2(line, channel) {
+function process_input_two(line, channel) {
     line = line.toString().trim();
     // remap *name to an *exec call
     if (line.indexOf("*name ") === 0) {
@@ -646,18 +672,18 @@ function processInput2(line, channel) {
             }
             return evtlog(JSON.stringify(dircache), {list: true, channel});
         case "*clearkick":
-            status.print.clear = true;
+            bed_clear();
         case "*kick":
             if (status.print.run) {
                 return evtlog("print in progress");
             }
-            return kickNext();
+            return kick_next();
         case "*update": return update_firmware();
         case "*abort": return abort();
         case "*pause": return pause();
         case "*resume": return resume();
         case "*clear":
-            status.print.clear = true;
+            bed_clear();
             return evtlog("bed marked clear");
         case "*monitor on":
             if (channel && !channel.monitoring) {
@@ -718,7 +744,7 @@ function processInput2(line, channel) {
                 evtlog(`no output dir for ${base}`);
                 console.log(e);
             }
-            checkFileDir(true);
+            check_file_dir(true);
         });
     } else if (line.indexOf("*kick ") === 0) {
         if (status.print.run) {
@@ -728,11 +754,11 @@ function processInput2(line, channel) {
         if (file.indexOf(".gcode") < 0) {
             file += ".gcode";
         }
-        kickNamed(path.join(filedir, file));
+        kick_named(path.join(filedir, file));
     } else if (line.indexOf("*send ") === 0) {
-        sendFile(line.substring(6));
+        send_file(line.substring(6));
     } else if (line.charAt(0) !== "*") {
-        queuePriority(line, channel);
+        queue_priority(line, channel);
     } else {
         evtlog(`invalid command "${line.substring(1)}"`, {channel});
     }
@@ -818,7 +844,7 @@ function update_firmware(hexfile, retry) {
     proc.stderr.on('line', line => { if (line.toString().trim()) evtlog(line.toString()) });
 }
 
-function checkDeviceReady() {
+function check_device_ready() {
     if (!status.device.ready) {
         evtlog("device missing or not ready", {error: true});
         return false;
@@ -827,7 +853,7 @@ function checkDeviceReady() {
 }
 
 function abort() {
-    if (!checkDeviceReady()) {
+    if (!check_device_ready()) {
         return;
     }
     evtlog("print aborted", {error: true});
@@ -840,7 +866,7 @@ function abort() {
 };
 
 function pause() {
-    if (paused || !checkDeviceReady()) {
+    if (paused || !check_device_ready()) {
         return;
     }
     evtlog("execution paused", {error: true});
@@ -848,15 +874,15 @@ function pause() {
 };
 
 function resume() {
-    if (!paused || !checkDeviceReady()) {
+    if (!paused || !check_device_ready()) {
         return;
     }
     evtlog("execution resumed", {error: true});
     status.print.pause = paused = false;
-    processQueue();
+    process_queue();
 };
 
-function processQueue() {
+function process_queue() {
     if (processing) {
         return;
     }
@@ -929,8 +955,28 @@ function queue(line, flags) {
     }
 };
 
-function queuePriority(line, channel) {
+function queue_priority(line, channel) {
     queue(line, {priority: true, channel});
+}
+
+function tokenize_line(line) {
+    let toks = [];
+    let cur = '';
+    for (let i=0; i<line.length; i++) {
+        let char = line[i];
+        if (char >= 'A' && char <= 'Z') {
+            if (cur.length > 0) {
+                toks.push(cur);
+            }
+            cur = char;
+        } else if ((char >= '0' && char <= '9') || char === '.' || char === '-') {
+            cur += char;
+        }
+        if (i === line.length - 1 && cur.length > 0) {
+            toks.push(cur);
+        }
+    }
+    return toks;
 }
 
 function write(line, flags) {
@@ -971,19 +1017,35 @@ function write(line, flags) {
                 };
             }
         case 'G':
-            // elide 'E' extrude moves when extrusion disabled
-            if (extrude === false) {
-                line = line.split(' ').filter(t => t.charAt(0) !== 'E').join(' ');
-            }
-            // extract position from gcode
-            line.split(' ').forEach(t => {
-                switch (t.charAt(0)) {
-                    case 'X': status.pos.X = parseFloat(t.substring(1)); break;
-                    case 'Y': status.pos.Y = parseFloat(t.substring(1)); break;
-                    case 'Z': status.pos.Z = parseFloat(t.substring(1)); break;
-                    case 'E': status.pos.E += parseFloat(t.substring(1)); break;
+            let toks = tokenize_line(line);
+            // look for G0 / G1 moves
+            if (toks[0] === 'G0' || toks[0] === 'G1') {
+                // elide 'E' extrude moves when extrusion disabled
+                if (extrude === false) {
+                    toks = toks.filter(t => t.charAt(0) !== 'E');
                 }
-            });
+                // extract position from gcode
+                toks.slice(1).forEach(t => {
+                    let axis = t.charAt(0);
+                    let val = parseFloat(t.substring(1));
+                    if (status.pos.rel || axis === 'E') {
+                        status.pos[axis] += val;
+                    } else {
+                        status.pos[axis] = val;
+                    }
+                    // mark bed dirty on first gcode extrusion of print
+                    if (status.print.run && axis === 'E') {
+                        if (status.print.emit === 0) {
+                            bed_dirty();
+                        }
+                        stats.print.emit += val;
+                    }
+                });
+            } else if (toks[0] === 'G90') {
+                status.pos.rel = false;
+            } else if (toks[0] === 'G91') {
+                status.pos.rel = true;
+            }
             match.push({line, flags});
             waiting++;
             status.buffer.waiting = waiting;
@@ -1011,7 +1073,7 @@ function write(line, flags) {
 let known = {}; // known files
 let printCache = {}; // cache of print
 
-function checkFileDir(once) {
+function check_file_dir(once) {
     if (!filedir) return;
     try {
         let prints = {};
@@ -1051,23 +1113,23 @@ function checkFileDir(once) {
                 a.ext > b.ext ? 1 : -1;
         });
         if (once) {
-            processInput("*list");
+            process_input("*list");
         } else {
-            setTimeout(checkFileDir, 2000);
+            setTimeout(check_file_dir, 2000);
         }
     } catch (e) {
         console.log(e);
     }
 };
 
-function kickNamed(name) {
-    sendFile(name);
+function kick_named(name) {
+    send_file(name);
 }
 
-function kickNext() {
+function kick_next() {
     for (let i=0; i<dircache.length; i++) {
         if (dircache[i].ext === 'gcode') {
-            return sendFile(filedir + "/" + dircache[0].name);
+            return send_file(filedir + "/" + dircache[0].name);
         }
     }
     evtlog("no valid files", {error: true});
@@ -1080,7 +1142,7 @@ function headers(req, res, next) {
     next();
 }
 
-function drophandler(req, res, next) {
+function drop_handler(req, res, next) {
     const dropkey = "/api/drop?name=";
     if (req.url.indexOf(dropkey) === 0 && req.method === 'POST') {
         let name = decodeURIComponent(req.url.substring(dropkey.length));
@@ -1091,7 +1153,7 @@ function drophandler(req, res, next) {
         req.on('end', () => {
             res.end("file received");
             fs.writeFile(path.join(filedir, name), body, () => {
-                checkFileDir(true);
+                check_file_dir(true);
             });
         })
     } else {
@@ -1100,7 +1162,7 @@ function drophandler(req, res, next) {
 }
 
 // probe network interfaces
-function findNetworkAddress() {
+function find_net_address() {
     status.device.addr = [];
     let ifmap = os.networkInterfaces();
     let ifkeys = Object.keys(ifmap).forEach(key => {
@@ -1115,7 +1177,7 @@ function findNetworkAddress() {
         });
     });
     if (status.device.addr.length === 0) {
-        setTimeout(findNetworkAddress, 5000);
+        setTimeout(find_net_address, 5000);
     }
 }
 
@@ -1166,7 +1228,7 @@ process.stdout.monitoring = true;
 
 if (opt.stdin) {
     new LineBuffer(process.stdin);
-    process.stdin.on("line", line => { processInput(line, clients[0]) });
+    process.stdin.on("line", line => { process_input(line, clients[0]) });
     status.clients.stdin = 1;
 }
 
@@ -1176,7 +1238,7 @@ if (opt.listen) {
         status.clients.net++;
         socket.linebuf = new LineBuffer(socket);
         socket.write(`*ready ${dev.name} ${dev.version} ${dev.firm.auth} ${dev.addr.join(',')}\n`);
-        socket.on("line", line => { processInput(line, socket) });
+        socket.on("line", line => { process_input(line, socket) });
         socket.on("close", () => {
             clients.splice(clients.indexOf(socket),1);
             status.clients.net--;
@@ -1186,7 +1248,7 @@ if (opt.listen) {
                 let size = buffer.length;
                 fs.writeFile(path.join(filedir, upload), buffer, (err) => {
                     evtlog({upload: upload, size, err});
-                    checkFileDir(true);
+                    check_file_dir(true);
                 });
             }
         });
@@ -1199,7 +1261,7 @@ if (opt.web || opt.webport) {
     const webport = parseInt(opt.webport) || 4080;
     const handler = connect()
         .use(headers)
-        .use(drophandler)
+        .use(drop_handler)
         .use(serve(process.cwd() + "/" + webdir + "/"));
     const server = http.createServer(handler).listen(webport);
     const wss = new WebSocket.Server({ server });
@@ -1214,7 +1276,7 @@ if (opt.web || opt.webport) {
                 console.log({wss_error: error});
             })
             .on('message', (message) => {
-                processInput(message, ws);
+                process_input(message, ws);
             });
 
         let dev = status.device;
@@ -1233,13 +1295,14 @@ if (opt.web || opt.webport) {
 
 function startup() {
     console.log({ devport: port || 'undefined', ctrlport: opt.listen, baud, mode, maxbuf: bufmax, version });
-    openSerialPort();
-    checkFileDir();
-    findNetworkAddress();
+    is_bed_clear();
+    on_serial_port();
+    check_file_dir();
+    find_net_address();
 }
 
 if (!port) {
-    probeSerial(nport => {
+    probe_serial(nport => {
         if (nport) {
             port = nport;
         }
