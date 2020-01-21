@@ -754,7 +754,6 @@ function process_input_two(line, channel) {
                 clear_dir(path.join(filedir, base + ".output"), true);
             } catch (e) {
                 evtlog(`no output dir for ${base}`);
-                console.log(e);
             }
             check_file_dir(true);
         });
@@ -1207,14 +1206,14 @@ function grid_spool() {
     if (!opt.grid) {
         return;
     }
+    const url = opt.grid === true ? "http://grid.space" : opt.grid;
     const stat = encodeURIComponent(JSON.stringify(status));
     const uuid = encodeURIComponent(status.device.uuid);
     const opts = [
         `uuid=${uuid}`,
-        `stat=${stat}`,
-        // `busy=chillin`
+        `stat=${stat}`
     ].join('&');
-    http.get(`http://localhost:8080/api/grid_up?${opts}`, (res) => {
+    http.get(`${url}/api/grid_up?${opts}`, (res) => {
         const { headers, statusCode, statusMessage } = res;
         // console.log([headers, statusCode, statusMessage]);
         let body = '';
@@ -1226,11 +1225,15 @@ function grid_spool() {
                 setTimeout(grid_spool, 100);
             } else {
                 let [file, gcode] = body.split("\0");
-                console.log({file, gcode: gcode.length});
-                fs.writeFile(path.join(filedir, file), gcode, () => {
-                    check_file_dir(true);
-                    kick_named(path.join(filedir, file));
-                });
+                if (file && gcode) {
+                    console.log({file, gcode: gcode.length});
+                    fs.writeFile(path.join(filedir, file), gcode, () => {
+                        check_file_dir(true);
+                        kick_named(path.join(filedir, file));
+                    });
+                } else {
+                    console.log({body});
+                }
             }
         });
         res.on('error', error => {
