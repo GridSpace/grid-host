@@ -430,6 +430,8 @@ function process_port_output(line, update) {
             queue(cmd);
         });
         onboot = [];
+        // allow remote spooling
+        grid_spool();
     }
     // parse M114 x/y/z/e positions
     if (line.indexOf("X:") === 0) {
@@ -1199,6 +1201,30 @@ function get_set_uuid() {
     } catch (e) {
         fs.writeFileSync(".uuid", uuid);
     }
+}
+
+function grid_spool() {
+    if (!opt.grid) {
+        return;
+    }
+    const stat = encodeURIComponent(JSON.stringify(status));
+    const uuid = encodeURIComponent(status.device.uuid);
+    const opts = [
+        `uuid=${uuid}`,
+        `stat=${stat}`,
+        `busy=chillin`
+    ].join('&');
+    http.get(`http://localhost:8080/api/grid_up?${opts}`, (res) => {
+        const { headers, statusCode, statusMessage } = res;
+        console.log([headers, statusCode, statusMessage]);
+        let body = '';
+        res.on('data', data => {
+            body += data.toString();
+        });
+        res.on('end', () => {
+            console.log({body});
+        });
+    });
 }
 
 // -- start it up --
