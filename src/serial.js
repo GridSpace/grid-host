@@ -1195,10 +1195,10 @@ function find_net_address() {
 // look for existing uuid or generate a new one
 function get_set_uuid() {
     try {
-        let olduuid = fs.readFileSync(".uuid");
-        uuid = olduuid.toString();
+        let olduuid = fs.readFileSync("etc/uuid");
+        status.device.uuid = uuid = olduuid.toString();
     } catch (e) {
-        fs.writeFileSync(".uuid", uuid);
+        fs.writeFileSync("etc/uuid", uuid);
     }
 }
 
