@@ -99,6 +99,11 @@ let boot_abort = [
     "M84"               // disable steppers
 ];
 let boot_error = boot_abort.slice();
+let uuid = [
+    Date.now().toString(36),
+    Math.round(Math.random() * 0xffffffff).toString(36),
+    Math.round(Math.random() * 0xffffffff).toString(36),
+].join('-');
 
 // marlin-centric, to be fixed
 const status = {
@@ -122,6 +127,7 @@ const status = {
     device: {
         addr: [],               // ip addresses
         name: os.hostname(),    // device host name for web display
+        uuid,
         version,                // version of code running
         firm: {                 // firmware version and author
             ver: "?",
@@ -482,6 +488,10 @@ function process_port_output(line, update) {
         if (mti > 0 && eci > mti) {
             status.device.firm.auth = line.substring(mti + 13, eci).trim();
         }
+        // let uui = line.indexOf("UUID:");
+        // if (uui > 0) {
+        //     status.device.uuid = line.substring(uui + 5);
+        // }
     }
     // resend on checksum errors
     if (line.indexOf("Resend:") === 0) {
@@ -1181,6 +1191,16 @@ function find_net_address() {
     }
 }
 
+// look for existing uuid or generate a new one
+function get_set_uuid() {
+    try {
+        let olduuid = fs.readFileSync(".uuid");
+        uuid = olduuid.toString();
+    } catch (e) {
+        fs.writeFileSync(".uuid", uuid);
+    }
+}
+
 // -- start it up --
 
 if (opt.help) {
@@ -1295,6 +1315,7 @@ if (opt.web || opt.webport) {
 
 function startup() {
     console.log({ devport: port || 'undefined', ctrlport: opt.listen, baud, mode, maxbuf: bufmax, version });
+    get_set_uuid();
     is_bed_clear();
     on_serial_port();
     check_file_dir();
