@@ -9,7 +9,7 @@
  * firmwares.
  */
 
-const version = "Serial [007]";
+const version = "Serial [008]";
 
 const LineBuffer = require("./linebuffer");
 const SerialPort = require('serialport');
@@ -1050,7 +1050,7 @@ function write(line, flags) {
                         if (status.print.emit === 0) {
                             bed_dirty();
                         }
-                        stats.print.emit += val;
+                        status.print.emit += val;
                     }
                 });
             } else if (toks[0] === 'G90') {
@@ -1212,18 +1212,34 @@ function grid_spool() {
     const opts = [
         `uuid=${uuid}`,
         `stat=${stat}`,
-        `busy=chillin`
+        // `busy=chillin`
     ].join('&');
     http.get(`http://localhost:8080/api/grid_up?${opts}`, (res) => {
         const { headers, statusCode, statusMessage } = res;
-        console.log([headers, statusCode, statusMessage]);
+        // console.log([headers, statusCode, statusMessage]);
         let body = '';
         res.on('data', data => {
             body += data.toString();
         });
         res.on('end', () => {
-            console.log({body});
+            if (body === 'reconnect') {
+                setTimeout(grid_spool, 100);
+            } else {
+                let [file, gcode] = body.split("\0");
+                console.log({file, gcode: gcode.length});
+                fs.writeFile(path.join(filedir, file), gcode, () => {
+                    check_file_dir(true);
+                    kick_named(path.join(filedir, file));
+                });
+            }
         });
+        res.on('error', error => {
+            console.log({http_get_error: error});
+            setTimeout(grid_spool, 2000);
+        });
+    }).on('error', error => {
+        console.log({grid_up_error: error});
+        setTimeout(grid_spool, 2000);
     });
 }
 
