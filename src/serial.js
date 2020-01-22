@@ -27,6 +27,7 @@ const baud = parseInt(opt.baud || "250000");      // baud rate for serial port
 const os = require('os');
 const url = require('url');
 const http = require('http');
+const https = require('https');
 const serve = require('serve-static');
 const moment = require('moment');
 const connect = require('connect');
@@ -1206,14 +1207,15 @@ function grid_spool() {
     if (!opt.grid) {
         return;
     }
-    const url = opt.grid === true ? "http://grid.space" : opt.grid;
+    const url = opt.grid === true ? "https://grid.space" : opt.grid;
     const stat = encodeURIComponent(JSON.stringify(status));
     const uuid = encodeURIComponent(status.device.uuid);
     const opts = [
         `uuid=${uuid}`,
         `stat=${stat}`
     ].join('&');
-    http.get(`${url}/api/grid_up?${opts}`, (res) => {
+    const proto = url.indexOf("https:") >= 0 ? https : http;
+    proto.get(`${url}/api/grid_up?${opts}`, (res) => {
         const { headers, statusCode, statusMessage } = res;
         // console.log([headers, statusCode, statusMessage]);
         let body = '';
