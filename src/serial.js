@@ -27,6 +27,7 @@ const baud = parseInt(opt.baud || "250000");      // baud rate for serial port
 const os = require('os');
 const url = require('url');
 const http = require('http');
+const https = require('https');
 const serve = require('serve-static');
 const moment = require('moment');
 const connect = require('connect');
@@ -1195,10 +1196,10 @@ function find_net_address() {
 // look for existing uuid or generate a new one
 function get_set_uuid() {
     try {
-        let olduuid = fs.readFileSync(".uuid");
-        uuid = olduuid.toString();
+        let olduuid = fs.readFileSync("etc/uuid");
+        status.device.uuid = uuid = olduuid.toString();
     } catch (e) {
-        fs.writeFileSync(".uuid", uuid);
+        fs.writeFileSync("etc/uuid", uuid);
     }
 }
 
@@ -1206,14 +1207,15 @@ function grid_spool() {
     if (!opt.grid) {
         return;
     }
-    const url = opt.grid === true ? "http://grid.space" : opt.grid;
+    const url = opt.grid === true ? "https://grid.space" : opt.grid;
     const stat = encodeURIComponent(JSON.stringify(status));
     const uuid = encodeURIComponent(status.device.uuid);
     const opts = [
         `uuid=${uuid}`,
         `stat=${stat}`
     ].join('&');
-    http.get(`${url}/api/grid_up?${opts}`, (res) => {
+    const proto = url.indexOf("https:") >= 0 ? https : http;
+    proto.get(`${url}/api/grid_up?${opts}`, (res) => {
         const { headers, statusCode, statusMessage } = res;
         // console.log([headers, statusCode, statusMessage]);
         let body = '';
