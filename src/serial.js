@@ -1234,6 +1234,7 @@ function grid_spool() {
                 } else {
                     console.log({body});
                 }
+                setTimeout(grid_spool, 1000);
             }
         });
         res.on('error', error => {
