@@ -542,6 +542,7 @@ function process_port_output(line, update) {
 function bed_clear() {
     try {
         status.print.clear = true;
+        status.update = true;
         fs.closeSync(fs.openSync(bedclear, 'w'));
     } catch (e) {
         console.log(e);
@@ -550,6 +551,7 @@ function bed_clear() {
 
 function bed_dirty() {
     status.print.clear = false;
+    status.update = true;
     if (is_bed_clear()) {
         try {
             fs.unlinkSync(bedclear);
@@ -1023,6 +1025,7 @@ function write(line, flags) {
             // consume & report M117 Start
             if (line.indexOf('M117 Start') === 0) {
                 flags.callback = () => {
+                    bed_dirty();
                     status.print.prep = status.print.start;
                     status.print.start = Date.now();
                     evtlog(`print body ${status.print.filename}`);
@@ -1047,9 +1050,6 @@ function write(line, flags) {
                     }
                     // mark bed dirty on first gcode extrusion of print
                     if (status.print.run && axis === 'E') {
-                        if (status.print.emit === 0) {
-                            bed_dirty();
-                        }
                         status.print.emit += val;
                     }
                 });
