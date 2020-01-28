@@ -66,6 +66,8 @@ class Connection {
                             let status = this.status;
                             status.state = info.print.run ? "PRINTING" : "IDLE";
                             status.progress = info.print.progress;
+                            status.filename = info.print.filename;
+                            status.printing = info.print.run || false;
                             status.temps = {
                                 T0: [ info.temp.ext[0], info.target.ext[0] ],
                                 B:  [ info.temp.bed, info.target.bed ]

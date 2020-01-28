@@ -1,6 +1,16 @@
 let lastT = {};
 let lastQ = [];
 
+String.prototype.hashCode = function(){
+    var hash = 0;
+    for (var i = 0; i < this.length; i++) {
+        var character = this.charCodeAt(i);
+        hash = ((hash<<5)-hash)+character;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+}
+
 function $(id) {
     return document.getElementById(id);
 }
@@ -56,7 +66,7 @@ function targets(t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
             let stat = v.status;
-            let devid = `device-${k}`;
+            let devid = `device-${k.hashCode()}`;
             html.push(`<tr id="${devid}">`);
             html.push(cell('th', k, {
                 onclick: v.web ? `browse('${v.web}')` : null
@@ -85,7 +95,7 @@ function targets(t) {
     for (let k in t) {
         let v = t[k];
         let stat = v.status;
-        let devid = `device-${k}`;
+        let devid = `device-${k.hashCode()}`;
         $(`${devid}-st`).innerText = stat.state || '-';
         $(`${devid}-pr`).innerText = stat.progress || 0;
         $(`${devid}-t0`).innerText = stat.temps && stat.temps.T0 ?
@@ -107,7 +117,7 @@ function targets(t) {
     for (let k in t) {
         if (t.hasOwnProperty(k)) {
             let v = t[k];
-            let d = $(`device-${k}`);
+            let d = $(`device-${k.hashCode()}`);
             let time = Date.now().toString(36);
             d.onmouseover = () => {
                 d._hover = true;

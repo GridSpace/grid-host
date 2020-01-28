@@ -23,7 +23,7 @@
         "buffer-crc32": "^0.2.13",
         "connect": "^3.6.6",
         "form-data": "^1.0.1",
-        "minimist": "^1.2.0",
+        "minimist": "*",
         "moment": "^2.22.2",
         "pngjs": "^3.3.2",
         "progress-stream": "^1.2.0",

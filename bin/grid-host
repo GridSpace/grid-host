@@ -5,6 +5,9 @@
 const MaxHistory = 100;
 
 const moment = require('moment');
+const util = require('util');
+const opt = require('minimist')(process.argv.slice(2));
+const debug = opt.debug || false;
 
 /** Config API */
 
@@ -35,13 +38,20 @@ const Config = {
 /** Common Utilities */
 
 const Util = {
-    log: (o) => {
-        let mark = moment().format('YYMMDD-hhmmss');
-        if (typeof(o) === 'object') {
-            console.log(mark, JSON.stringify(o));
-        } else {
-            console.log(mark, o);
-        }
+    log: function() {
+        console.log(
+            moment().format('YYMMDD.HHmmss'),
+            [...arguments]
+                .map(v => util.inspect(v, {
+                    maxArrayLength: null,
+                    breakLength: Infinity,
+                    colors: debug,
+                    compact: true,
+                    sorted: true,
+                    depth: null
+                }))
+                .join(' ')
+        );
     },
 
     lastmod: (path) => {
@@ -120,6 +130,7 @@ const Devices = {
                 continue;
             }
             delete el.driver;
+            delete el.grid;
             out[key] = el;
         }
         return Util.encode(out,4);
@@ -599,19 +610,102 @@ const Web = {
     }
 };
 
+String.prototype.hashCode = function(){
+    var hash = 0;
+    for (var i = 0; i < this.length; i++) {
+        var character = this.charCodeAt(i);
+        hash = ((hash<<5)-hash)+character;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+}
+
+/** setup grid spool job delivery */
+function grid_spool(device) {
+    const recon = () => {
+        grid_spool(device);
+    };
+    const status = Object.assign({}, device.status);
+    status.state = (status.state || '').toLowerCase();
+    status.device = {
+        addr: [ setup.host ],
+        port: setup['http-port'],
+        name: `[GH] ${device.name}`
+    };
+    status.print = {
+        run: status.printing || (status.progress > 0) || false,
+        filename: status.filename || '',
+        progress: status.progress || 0
+    }
+    if (!device.uuid) {
+        device.uuid = `uu-${device.name.hashCode()}`;
+    }
+    const opts = [
+        `uuid=${encodeURIComponent(device.uuid)}`,
+        `stat=${encodeURIComponent(JSON.stringify(status))}`
+    ].join('&');
+    let timer = Date.now();
+    let grid = https.get(`https://grid.space/api/grid_up?${opts}`, (res) => {
+        const { headers, statusCode, statusMessage } = res;
+        let body = '';
+        res.on('data', data => {
+            body += data.toString();
+        });
+        res.on('end', () => {
+            timer = Date.now() - timer;
+            if (body === 'superceded') {
+                // we have overlapping outbound calls (bad on us)
+                return;
+            }
+            if (body === 'reconnect') {
+                // Util.log({name: device.name, reconnect: timer});
+                setTimeout(recon, 100);
+            } else {
+                let [file, gcode] = body.split("\0");
+                if (file && gcode) {
+                    Util.log({file, gcode: gcode.length});
+                    device.driver.send(device, {name: file, data: gcode});
+                } else {
+                    if (body.length > 80) {
+                        body = body.split('\n').slice(0,10);
+                    }
+                    Util.log({grid_up_reply: body, timer});
+                }
+                setTimeout(recon, 1000);
+            }
+        });
+        res.on('error', error => {
+            Util.log({http_get_error: error});
+            setTimeout(recon, 2000);
+        });
+    }).on('error', error => {
+        Util.log({grid_up_error: error});
+        setTimeout(recon, 2000);
+    });
+    return grid;
+}
+
 /** update active device status */
 function updateActive() {
     for (let name in Devices.map) {
-        let active = Devices.map[name];
-        let driver = active.driver;
-        if (driver.status) {
+        let device = Devices.map[name];
+        let driver = device.driver;
+        if (driver.status && !device.disabled) {
             driver
-                .status(active)
+                .status(device)
                 .then(status => {
-                    active.status = status;
+                    device.status = status;
+                    if (!device.grid) {
+                        device.grid = grid_spool(device);
+                    }
                 })
                 .catch(error => {
-                    // Util.log({name, error});
+                    // kill grid-spool
+                    Util.log({name, error});
+                    if (device.grid) {
+                        device.grid.abort();
+                        device.grid = null;
+                    }
                 });
         }
     }
@@ -621,7 +715,7 @@ function updateActive() {
  * Start it up
  ********************************************* */
 
-var fs = require('fs'),
+let fs = require('fs'),
     url = require('url'),
     http = require('http'),
     https = require('https')
@@ -712,8 +806,6 @@ process.argv.slice(2).forEach(v => {
             case 'config':
             case 'queue':
                 break;
-            default:
-                throw "invalid option: " + key;
         }
         if (!split) return;
     }
@@ -733,7 +825,7 @@ Config.load();
 if (setup['ssl-key']) setup['ssl-key'] = fs.readFileSync(setup['ssl-key']);
 if (setup['ssl-cert']) setup['ssl-cert'] = fs.readFileSync(setup['ssl-cert']);
 
-var apiroot = "/api/",
+let apiroot = "/api/",
     report = { starting: "grid:host" };
     wport = setup['http-port'],
     sport = setup['https-port'],
@@ -797,6 +889,7 @@ for (let key in nif) {
         if (!ni.internal && ni.family === "IPv4") {
             setup.local = ni.address;
             if (!host) {
+                setup.host = ni.address;
                 if (setup['https-port']) {
                     host = "https://" + ni.address + ":" + setup['https-port'];
                 } else {
