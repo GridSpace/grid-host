@@ -680,7 +680,7 @@ function grid_spool(device) {
         });
     }).on('error', error => {
         Util.log({grid_up_error: error});
-        setTimeout(recon, 2000);
+        device.grid = null;
     });
     return grid;
 }
@@ -695,7 +695,12 @@ function updateActive() {
                 .status(device)
                 .then(status => {
                     device.status = status;
-                    if (!device.grid) {
+                    if (status.state === 'offline') {
+                        if (device.grid) {
+                            device.grid.abort();
+                            device.grid = null;
+                        }
+                    } else if (!device.grid) {
                         device.grid = grid_spool(device);
                     }
                 })
