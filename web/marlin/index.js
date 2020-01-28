@@ -121,6 +121,11 @@ function remove(file) {
     }
 }
 
+function off_go() {
+    if (alert_on_run()) return;
+    send('G0X0Y0');
+}
+
 function off_set() {
     if (alert_on_run()) return;
     if (last_set && last_set.pos) {
