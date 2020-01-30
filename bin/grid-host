@@ -837,7 +837,7 @@ let apiroot = "/api/",
     handler = connect()
         .use(Web.init)
         .use(Web.api)
-        .use(Web.serve(cwd + "/web/host/"))
+        .use(Web.serve(cwd + "/web/"))
         .use(Web.serve(tempDir))
     ;
 
