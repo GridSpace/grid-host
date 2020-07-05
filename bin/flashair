@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/** Copyright 2014-2018 Stewart Allen <so@a3z.co> -- All Rights Reserved */
+/** Copyright Stewart Allen <sa@grid.space> -- All Rights Reserved */
 
 const FormData = require('form-data');
 const args = process.argv.slice(2);
