@@ -633,8 +633,8 @@ function grid_spool(device) {
     const status = Object.assign({}, device.status);
     status.state = (status.state || '').toLowerCase();
     status.device = {
-        addr: [ setup.host ],
-        port: setup['http-port'],
+        addr: [ device.host || setup.host ],
+        port: device.port || setup['http-port'],
         name: `${device.name}`,
         mode: status.mode || ''
     };

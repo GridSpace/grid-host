@@ -1,5 +1,7 @@
 const http = require('http');
 
+// https://github.com/Duet3D/RepRapFirmware/wiki/HTTP-requests.md
+
 const driver = {
     name: "duet",
 
