@@ -1,5 +1,5 @@
 {
-    "port": 8181,
+    "http-port": 8181,
     "https-port": 8443,
     "ssl-cert": "etc/ssl-local-cert.pem",
     "ssl-key": "etc/ssl-local-key.pem",
