@@ -19,7 +19,7 @@ Octoprint.
 
 ## Options:
 
-`--port` Port for HTTP (defaults to 8081)
+`--port` Port for HTTP (defaults to 8111)
 
 `--https-port` Port for HTTPS (defaults to none/off)
 
